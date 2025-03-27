@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Self, Sequence, Tuple, Union
 import logging
 
@@ -18,7 +19,8 @@ class TimeSeries:
         df:pd.DataFrame, 
         time_col:Optional[str] = None, 
         value_cols: Optional[Union[List[str], str]] = None,
-        freq: Optional[Union[str, int]] = 'h'
+        freq: Optional[Union[str, int]] = 'h',
+        ts_type:Optional[str] ='determ'
     ) -> Self:
         """
         Build a deterministic TimeSeries instance from a selection of columns of a DataFrame.
@@ -37,6 +39,8 @@ class TimeSeries:
             Can be a single column name or a list of column names.
         freq : Optional[Union[str, int]], default None
             The frequency of the time series data.
+        ts_type : Optional[str], default 'determ'
+             The type of the time series, use 'quantile' - for quantile forecasts, 'determ' - for deterministic series and 'sampled' - for sampled series
 
         Returns
         -------
@@ -52,22 +56,41 @@ class TimeSeries:
             if time_col not in df.columns:
                 logger.error("Initialization failed: time_col not found in the DataFrame.")
                 raise ValueError(f"Column {time_col} not found in the DataFrame.")
-            determ_cols = ["value"]
+            
+            t0_index = pd.date_range(start=df[time_col].min(), end=df[time_col].max(), freq=freq)
             features = value_cols
             col_dim_names = ["feature", "representation"]
             row_dim_names =["offset", "time_stamp"]
-            t0_index = pd.date_range(start=df[time_col].min(), end=df[time_col].max(), freq=freq)
-            point_0_index = [pd.Timedelta(0)]
-            point_0_row_index = pd.MultiIndex.from_product([point_0_index, t0_index], names=row_dim_names)
-            determ_col_index = pd.MultiIndex.from_product([features, determ_cols], names=col_dim_names)
-            df = df[features]
-            determ_ts = pd.DataFrame(df.values,index=point_0_row_index,columns=determ_col_index)
+            if ts_type == 'determ':
+                determ_cols = ["value"]
+                point_0_index = [pd.Timedelta(0)]
+                point_0_row_index = pd.MultiIndex.from_product([point_0_index, t0_index], names=row_dim_names)
+                determ_col_index = pd.MultiIndex.from_product([features, determ_cols], names=col_dim_names)
+                df = df[features]
+                determ_ts = pd.DataFrame(df.values,index=point_0_row_index,columns=determ_col_index)
+                return cls(determ_ts)
+            elif ts_type == 'sampled':
+                sampled_cols = [f"s_{i}" for i in range(16)]
+                point_1_index = [pd.Timedelta(1, unit="h")] 
+                point_1_row_index = pd.MultiIndex.from_product([point_1_index, t0_index], names=row_dim_names)
+                sampled_col_index = pd.MultiIndex.from_product([features, sampled_cols], names=col_dim_names)
+                sampled_ts = pd.DataFrame(df.loc[:,df.columns!=time_col].values,index=point_1_row_index, columns=sampled_col_index)
+                return cls(sampled_ts)
+            elif ts_type == 'quantile':
+                # quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
+                # range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
+                # range_row_index = pd.MultiIndex.from_product([range_index, t0_index], names=row_dim_names)
+                # quant_col_index = pd.MultiIndex.from_product([features, quant_cols], names=col_dim_names)
+                # quant_ts = pd.DataFrame(df.values,index=range_row_index,columns=quant_col_index)
+                # return cls(quant_ts)
+                # TODO: Implement quantile time series 
+                pass
         else:
             logger.error("Initialization failed: time_col is not provided.")
             raise ValueError(f"Invalid type of time_col: it needs to be of type str.") 
             
             
-        return cls(determ_ts)
+        return None
 
     def to_samples(self,n_samples:int):
         pass 
