@@ -83,8 +83,10 @@ class TimeSeries:
                 quant_col_index = pd.MultiIndex.from_product([features, quant_cols], names=col_dim_names)
                 quant_ts = pd.DataFrame(df.values,index=range_row_index,columns=quant_col_index)
                 return cls(quant_ts)
-                # TODO: Implement quantile time series 
-                #pass
+            else:
+                logger.error("incorrect ts_type was provided")
+                raise ValueError("Invalid type of timeseries was provided")
+                
         else:
             logger.error("Initialization failed: time_col is not provided.")
             raise ValueError(f"Invalid type of time_col: it needs to be of type str.") 
@@ -118,6 +120,7 @@ class TimeSeries:
         if n_samples <= 0:
             logger.error("n_samples is not positive integer")
             raise ValueError("n_samples must be a positive integer.")
+        
         probs = np.random.uniform(0, 1, (n_samples, self.data.shape[1]))  # Random probabilities
         sampled_data = pd.DataFrame(
             {col: np.quantile(self.data[col], probs[:, i]) for i, col in enumerate(self.data.columns)},
@@ -125,8 +128,36 @@ class TimeSeries:
         )
         return sampled_data
 
-    def to_quantiles(self):
-        pass 
+    def to_quantiles(self, quantiles:List[float] = [0.1,0.5,0.9]) -> pd.DataFrame:
+        """
+        Compute empirical quantiles from the time series data.
+
+        This method calculates the specified quantiles for each column in the time series.
+        The quantiles summarize the distribution of values and can be useful for probabilistic forecasting.
+
+        Parameters
+        ----------
+        quantile_levels : list of float
+            A list of quantile levels (between 0 and 1) to compute.
+            Example: [0.1, 0.5, 0.9] for 10th, 50th (median), and 90th percentiles.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame where each row corresponds to a quantile level and 
+            each column corresponds to a feature in the time series.
+
+        Raises
+        ------
+        ValueError
+            If any quantile level is not between 0 and 1.
+        """
+        
+        if not all(0 <= q <= 1 for q in quantiles):
+            raise ValueError("Quantile levels must be between 0 and 1.")
+        quantile_values = self.data.quantile(quantiles) 
+        return quantile_values
+    
     def by_time(self,horizon):
         pass 
     def by_horizon(self,t0):
