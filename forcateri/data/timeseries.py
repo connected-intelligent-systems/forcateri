@@ -77,23 +77,54 @@ class TimeSeries:
                 sampled_ts = pd.DataFrame(df.loc[:,df.columns!=time_col].values,index=point_1_row_index, columns=sampled_col_index)
                 return cls(sampled_ts)
             elif ts_type == 'quantile':
-                # quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
-                # range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
-                # range_row_index = pd.MultiIndex.from_product([range_index, t0_index], names=row_dim_names)
-                # quant_col_index = pd.MultiIndex.from_product([features, quant_cols], names=col_dim_names)
-                # quant_ts = pd.DataFrame(df.values,index=range_row_index,columns=quant_col_index)
-                # return cls(quant_ts)
+                quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
+                range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
+                range_row_index = pd.MultiIndex.from_product([range_index, t0_index], names=row_dim_names)
+                quant_col_index = pd.MultiIndex.from_product([features, quant_cols], names=col_dim_names)
+                quant_ts = pd.DataFrame(df.values,index=range_row_index,columns=quant_col_index)
+                return cls(quant_ts)
                 # TODO: Implement quantile time series 
-                pass
+                #pass
         else:
             logger.error("Initialization failed: time_col is not provided.")
             raise ValueError(f"Invalid type of time_col: it needs to be of type str.") 
             
             
         return None
+    def to_samples(self, n_samples: int) -> pd.DataFrame:
+        """
+        Generate Monte Carlo samples based on quantiles for each column.
 
-    def to_samples(self,n_samples:int):
-        pass 
+        This method generates synthetic samples by applying Monte Carlo sampling 
+        to the empirical quantiles of each column in the time series DataFrame. 
+        The sampling is done independently for each feature using inverse transform sampling.
+
+        Parameters
+        ----------
+        n_samples : int
+            The number of samples to generate.
+
+        Returns
+        -------
+        pd.DataFrame
+            A DataFrame containing `n_samples` rows, where each column is sampled 
+            based on the empirical quantile function of the corresponding feature.
+
+        Raises
+        ------
+        ValueError
+            If `n_samples` is not a positive integer.
+        """
+        if n_samples <= 0:
+            logger.error("n_samples is not positive integer")
+            raise ValueError("n_samples must be a positive integer.")
+        probs = np.random.uniform(0, 1, (n_samples, self.data.shape[1]))  # Random probabilities
+        sampled_data = pd.DataFrame(
+            {col: np.quantile(self.data[col], probs[:, i]) for i, col in enumerate(self.data.columns)},
+            columns=self.data.columns
+        )
+        return sampled_data
+
     def to_quantiles(self):
         pass 
     def by_time(self,horizon):
