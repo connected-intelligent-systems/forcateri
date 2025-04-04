@@ -23,7 +23,7 @@ class TimeSeries:
         ts_type:Optional[str] ='determ'
     ) -> Self:
         """
-        Build a deterministic TimeSeries instance from a selection of columns of a DataFrame.
+        Build a TimeSeries instance based on time series type from a selection of columns of a DataFrame.
         One column (or the DataFrame index) has to represent the time,
         and a list of columns `value_cols` has to represent the values for this time series.
 
@@ -93,6 +93,63 @@ class TimeSeries:
             
             
         return None
+    
+    @classmethod
+    def from_group_dataframe(cls,
+        df:pd.DataFrame, 
+        group_col:str,
+        time_col:Optional[str] = None, 
+        value_cols: Optional[Union[List[str], str]] = None,
+        freq: Optional[Union[str, int]] = 'h',
+        ts_type:Optional[str] ='determ',    
+    ) -> List[pd.DataFrame]:
+        """
+        Build TimeSeries instances for each group in the DataFrame.
+
+        This method groups the DataFrame by the specified `group_col` and applies the logic
+        from `from_dataframe` to each group. Each group is expected to contain a time column (or index)
+        and one or more value columns representing the time series data.
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The DataFrame from which to initialize the instances.
+        group_col : str
+            The column name used for grouping the data. Each unique value in this column will
+            result in a separate TimeSeries instance.
+        time_col : Optional[str], default None
+            The name of the column in the DataFrame that contains time information.
+            If provided, this column must exist in the DataFrame.
+        value_cols : Optional[Union[List[str], str]], default None
+            The name(s) of the column(s) in the DataFrame that contain the values.
+            Can be a single column name or a list of column names.
+        freq : Optional[Union[str, int]], default 'h'
+            The frequency of the time series data.
+        ts_type : Optional[str], default 'determ'
+            The type of the time series to create. Use 'quantile' for quantile forecasts,
+            'determ' for deterministic series, and 'sampled' for sampled series.
+
+        Returns
+        -------
+        List[TimeSeries]
+            A list of TimeSeries instances, one for each unique group in the DataFrame.
+
+        Raises
+        ------
+        ValueError
+            If `group_col` is not found in the DataFrame.
+        """
+        if group_col not in df.columns:
+            logger.error("Initialization failed: group_col not found in the DataFrame.")
+            raise ValueError(f"Column {group_col} not found in the DataFrame.")
+        unique_group = df[group_col].unique()
+        ts_dict = {}
+        for group_id in unique_group:
+            df_group = df[df[group_col] == group_id]
+            ts_instance  = cls.from_dataframe(df_group,time_col, value_cols,freq,ts_type)
+            ts_dict[group_id] = ts_instance
+        return ts_dict
+    
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
         Generate Monte Carlo samples based on quantiles for each column.
@@ -152,7 +209,7 @@ class TimeSeries:
         ValueError
             If any quantile level is not between 0 and 1.
         """
-        
+
         if not all(0 <= q <= 1 for q in quantiles):
             raise ValueError("Quantile levels must be between 0 and 1.")
         quantile_values = self.data.quantile(quantiles) 
