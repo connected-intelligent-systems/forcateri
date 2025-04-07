@@ -77,11 +77,12 @@ class TimeSeries:
                 sampled_ts = pd.DataFrame(df.loc[:,df.columns!=time_col].values,index=point_1_row_index, columns=sampled_col_index)
                 return cls(sampled_ts)
             elif ts_type == 'quantile':
+                #The functionality to be checked
                 quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
                 range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
                 range_row_index = pd.MultiIndex.from_product([range_index, t0_index], names=row_dim_names)
                 quant_col_index = pd.MultiIndex.from_product([features, quant_cols], names=col_dim_names)
-                quant_ts = pd.DataFrame(df.values,index=range_row_index,columns=quant_col_index)
+                quant_ts = pd.DataFrame(df.loc[:,df.columns!=time_col].values,index=range_row_index,columns=quant_col_index)
                 return cls(quant_ts)
             else:
                 logger.error("incorrect ts_type was provided")
@@ -174,16 +175,18 @@ class TimeSeries:
         ValueError
             If `n_samples` is not a positive integer.
         """
-        if n_samples <= 0:
-            logger.error("n_samples is not positive integer")
-            raise ValueError("n_samples must be a positive integer.")
+        # if n_samples <= 0:
+        #     logger.error("n_samples is not positive integer")
+        #     raise ValueError("n_samples must be a positive integer.")
         
-        probs = np.random.uniform(0, 1, (n_samples, self.data.shape[1]))  # Random probabilities
-        sampled_data = pd.DataFrame(
-            {col: np.quantile(self.data[col], probs[:, i]) for i, col in enumerate(self.data.columns)},
-            columns=self.data.columns
-        )
-        return sampled_data
+        # probs = np.random.uniform(0, 1, (n_samples, self.data.shape[1]))  # Random probabilities
+        # sampled_data = pd.DataFrame(
+        #     {col: np.quantile(self.data[col], probs[:, i]) for i, col in enumerate(self.data.columns)},
+        #     columns=self.data.columns
+        # )
+        # return sampled_data
+        #TODO from quantiles to samples, This method is not really applicable
+        pass
 
     def to_quantiles(self, quantiles:List[float] = [0.1,0.5,0.9]) -> pd.DataFrame:
         """
@@ -210,12 +213,72 @@ class TimeSeries:
             If any quantile level is not between 0 and 1.
         """
 
-        if not all(0 <= q <= 1 for q in quantiles):
-            raise ValueError("Quantile levels must be between 0 and 1.")
-        quantile_values = self.data.quantile(quantiles) 
-        return quantile_values
-    
-    def by_time(self,horizon):
-        pass 
-    def by_horizon(self,t0):
+        # if not all(0 <= q <= 1 for q in quantiles):
+        #     raise ValueError("Quantile levels must be between 0 and 1.")
+        # quantile_values = self.data.quantile(quantiles) 
+        # return quantile_values
         pass
+    def by_time(self,horizon:Optional[Union[int,pd.Timestamp]]=None):
+        """
+        Filter the data by a specific point in time or a time-based offset.
+
+        Parameters
+        ----------
+        horizon : int or pd.Timestamp, optional
+            - If a `pd.Timestamp` is provided, returns data corresponding to that exact timestamp.
+            - If an `int` is provided, this can be used to implement logic such as selecting
+            the last `n` time steps or indexing based on time step position (TODO).
+            - If None or an unsupported type, a ValueError is raised.
+
+        Returns
+        -------
+        pd.DataFrame
+            A filtered subset of the original time series data based on the specified horizon.
+
+        Raises
+        ------
+        ValueError
+            If the provided `horizon` is neither a `pd.Timestamp` nor an `int`.
+
+        Notes
+        -----
+        The DataFrame is assumed to have a MultiIndex where one of the levels is time-based.
+        The `swaplevel(axis=0)` is used for convenient access by timestamp. Ensure that
+        after swapping, timestamps are accessible at the top level of the index.
+        """
+        if isinstance(horizon,pd.Timestamp):
+            return self.data.swaplevel(axis=0).loc(horizon) 
+        elif isinstance(horizon,int):
+            #TODO the logic to handle int horizon
+            pass 
+        else:
+            logger.error("Incorrect format")
+            raise ValueError("Please provide the pd.timestamp as horizon")
+        
+    def by_horizon(self, t0):
+        """
+        Return forecasts made at time `t0`, reindexed by their actual timestamps.
+
+        Parameters
+        ----------
+        t0 : pd.Timestamp
+            The time at which forecasts were made.
+
+        Returns
+        -------
+        pd.DataFrame
+            Forecasted values with the actual forecast time as the index.
+
+        Raises
+        ------
+        KeyError
+            If `t0` is not in the index.
+        """
+        try:
+            forecasts = self.data.loc[t0]
+            forecasts['time_stamp'] = forecasts.index + t0
+            forecasts.set_index("time_stamp", inplace=True, drop=True)
+            return forecasts
+        except KeyError:
+            logger.error(f"{t0} not found in forecast data.")
+            raise ValueError(f"{t0} offset is not found in the forecast data")
