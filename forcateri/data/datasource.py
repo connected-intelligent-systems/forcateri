@@ -7,8 +7,10 @@ class DataSource(ABC):
     The base class for data sources
     """
     @abstractmethod
-    def __init__(self, name:str):
+    def __init__(self, name:str, source_type:str):
         self.name = name 
+        self.source_type = source_type
+        self.last_updated = None
         
     @abstractmethod
     def get_data(self) -> List[TimeSeries]:
