@@ -19,7 +19,9 @@ class CachedAPIData(DataSource):
     def update_local_copy(self):
         #TODO update the logic later
         pass
+    @abstractmethod
     def get_data(self) -> List[TimeSeries]:
+
         if self.local_copy:
             if self.is_up2date():
                 self._fetch_from_cache()
