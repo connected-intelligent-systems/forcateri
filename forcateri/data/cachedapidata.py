@@ -1,25 +1,30 @@
-from datasource import DataSource
+from .datasource import DataSource
 from typing import List
 from pathlib import Path
 from abc import abstractmethod
-from timeseries import TimeSeries
+from datetime import datetime
+from .timeseries import TimeSeries
 
 class CachedAPIData(DataSource):
     
-    def __init__(self,name:str):
-        super.__init__(name=name,source_type="cached_api")
+    def __init__(self,**kwargs):
+        super().__init__(name=kwargs['name'],source_type="cached_api")
         #local_copy to be dynamically updated after the download.
         self.local_copy: Path = None
 
-    def is_up2date():
+    def is_up2date(self):
         #TODO update the logic later
+        self.last_updated = datetime.now()
         return True
-    def update_local_copy():
+    def update_local_copy(self):
         #TODO update the logic later
         pass
     def get_data(self) -> List[TimeSeries]:
-        if self.local_copy and self.is_up2date():
-            self._fetch_from_cache()
+        if self.local_copy:
+            if self.is_up2date():
+                self._fetch_from_cache()
+            else:
+                self.update_local_copy()
         else:
             self._fetch_data_from_api()
 
