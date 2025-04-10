@@ -1,8 +1,8 @@
 from abc import ABC,abstractmethod
-from typing import List
+from typing import List,Optional
 from .timeseries import TimeSeries
 from datetime import datetime
-from typing import Optional
+
 
 class DataSource(ABC):
     """
