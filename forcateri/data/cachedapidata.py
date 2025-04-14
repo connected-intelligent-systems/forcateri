@@ -7,6 +7,7 @@ from .timeseries import TimeSeries
 
 class CachedAPIData(DataSource):
     
+    @abstractmethod
     def __init__(self,**kwargs):
         super().__init__(name=kwargs['name'],source_type="cached_api")
         #local_copy to be dynamically updated after the download.

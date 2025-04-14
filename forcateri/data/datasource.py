@@ -8,6 +8,7 @@ class DataSource(ABC):
     """
     The base class for data sources
     """
+    @abstractmethod
     def __init__(self,**kwargs):
         self.name = kwargs['name']
         self.source_type = kwargs['source_type']

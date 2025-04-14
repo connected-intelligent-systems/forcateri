@@ -10,7 +10,7 @@ __pycache__/
 *.csv
 # Distribution / packaging
 .Python
-data/
+_data/
 build/
 develop-eggs/
 dist/
