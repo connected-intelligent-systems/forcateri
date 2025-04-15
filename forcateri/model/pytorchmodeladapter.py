@@ -1,4 +1,4 @@
 from .modeladapter import ModelAdapter
 
 class PytorchModelAdapter(ModelAdapter):
-    pass
+    raise NotImplementedError("Subclasses is not yet implemented.")

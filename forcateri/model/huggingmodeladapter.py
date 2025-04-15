@@ -1,4 +1,4 @@
 from .modeladapter import ModelAdapter
 
 class HuggingModelAdapter(ModelAdapter):
-    pass
+    raise NotImplementedError("Subclasses is not yet implemented.")

@@ -31,3 +31,12 @@ class DartsModelAdapter(ModelAdapter):
         
     def to_model_format(ts) -> Any:
         return super().to_model_format()
+    
+    def predict(self):
+        raise NotImplementedError("Subclasses must implement this method.")
+    def tune(self):
+        raise NotImplementedError("Subclasses must implement this method.")
+    def load(self):
+        raise NotImplementedError("Subclasses must implement this method.")
+    def save(self):
+        raise NotImplementedError("Subclasses must implement this method.")
