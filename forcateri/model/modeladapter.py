@@ -27,9 +27,9 @@ class ModelAdapter(ABC):
         self.static:Optional[TimeSeries] = None
     
     @abstractmethod
-    def fit(self, target:Optional[TimeSeries], **kwargs):
+    def fit(self, **kwargs):
         try:
-            transformed_ts = self.to_model_format(target)
+            transformed_ts = self.to_model_format(kwargs['target'])
             self.target = transformed_ts 
         except:
             raise InvalidTimeSeriesError("The time series cannot be transformed to model's timeseries format")
