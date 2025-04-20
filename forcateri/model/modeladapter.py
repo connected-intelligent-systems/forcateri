@@ -17,6 +17,9 @@ class ModelNotFittedError(ModelAdapterError):
 class InvalidTimeSeriesError(ModelAdapterError):
     """Raised when an invalid TimeSeries object is provided."""
     pass
+class InvalidModelTypeError(ModelAdapterError):
+    '''Raised when invalid model is instanciated'''
+    pass
 
 class ModelAdapter(ABC):
     @abstractmethod
@@ -28,12 +31,12 @@ class ModelAdapter(ABC):
     
     @abstractmethod
     def fit(self, **kwargs):
-        try:
-            transformed_ts = self.to_model_format(kwargs['target'])
-            self.target = transformed_ts 
-        except:
-            raise InvalidTimeSeriesError("The time series cannot be transformed to model's timeseries format")
-        
+        # try:
+        #     transformed_ts = self.to_model_format(kwargs['target'])
+        #     self.target = transformed_ts 
+        # except:
+        #     raise InvalidTimeSeriesError("The time series cannot be transformed to model's timeseries format")
+        pass
         
 
     @abstractmethod
@@ -74,7 +77,7 @@ class ModelAdapter(ABC):
         pass 
 
     @abstractmethod
-    def to_time_series(model_output):
+    def to_time_series(ts:Any) -> TimeSeries:
         pass
 
     @classmethod

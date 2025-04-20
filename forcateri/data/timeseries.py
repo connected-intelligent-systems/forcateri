@@ -96,7 +96,7 @@ class TimeSeries:
         return None
     
     @classmethod
-    def from_group_dataframe(cls,
+    def from_group_df(cls,
         df:pd.DataFrame, 
         group_col:str,
         time_col:Optional[str] = None, 

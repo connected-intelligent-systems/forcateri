@@ -16,8 +16,9 @@ class CachedAPIData(DataSource):
     @abstractmethod
     def is_up2date(self):
         #TODO update the logic later
-        self.last_updated = datetime.now()
-        return True
+        # self.last_updated = datetime.now()
+        # return True
+        pass
     
     @abstractmethod
     def update_local_copy(self):
