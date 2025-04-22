@@ -10,8 +10,6 @@ class DataSource(ABC):
     """
     @abstractmethod
     def __init__(self,**kwargs):
-        self.name = kwargs['name']
-        self.source_type = kwargs['source_type']
         self.last_updated:Optional[datetime] = None
         
     @abstractmethod
