@@ -1,6 +1,6 @@
 from .dartsmodeladapter import DartsModelAdapter
 from darts.dataprocessing.transformers import Scaler
-from darts import TimeSeries as darts_TimeSeries
+from darts import TimeSeries as DartsTimeSeries
 from darts.dataprocessing.transformers import Scaler
 from darts.models import TCNModel
 import logging
