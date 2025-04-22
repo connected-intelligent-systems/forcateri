@@ -1,14 +1,19 @@
-from typing import List, Optional
+from typing import List,Optional, Any, Union, Tuple
 from forcateri.baltbestapi.baltbestapidata import BaltBestAPIData
 from ..data.timeseries import TimeSeries
 import pandas as pd
 from datetime import datetime
+import logging
 
 class BaltBestAggregatedAPIData(BaltBestAPIData):
     
     def __init__(self,**kwargs):
         super().__init__(name=kwargs['name'], url=kwargs['url'],local_copy = kwargs['local_copy'])
-        self.ts: Optional[List[TimeSeries]] = None
+        self.ts: dict[int,TimeSeries] = None
+        self.target: dict[int,TimeSeries]  = None
+        self.known: dict[int,TimeSeries]  = None
+        self.observed: dict[int,TimeSeries]  = None
+        self.static: dict[int,TimeSeries]  = None
 
     def get_data(self):
         super().get_data()
@@ -56,55 +61,43 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
                                                value_cols=self.value_cols,
                                                freq = self.freq
                                                )
-    def to_pandas(self):
-        """
-        Converts all time series in the `self.ts` dictionary to a single flattened pandas DataFrame.
 
-        Each time series DataFrame is:
-        - Reset to move the timestamp index into a column
-        - Stripped of any 'offset' column (if present)
-        - Flattened if it contains MultiIndex columns (e.g., ('feature', 'value'))
-        - Augmented with a column named `self.group_col` to identify the original series (e.g., room ID)
+
+    def _separate_ts(self, target: str, known: Union[str,list[str]], observed: Union[str,list[str]], static: Union[str,list[str]]=None):
+        """
+        Separate the TimeSeries instance into target, known, observed, and static components.
+
+        The method processes the `ts` attribute, which is expected to be a TimeSeries object,
+        and assigns its components to the instance's attributes: `target`, `known`, `observed`, and `static`.
+
+        Parameters
+        ----------
+        None
 
         Returns
         -------
-        pd.DataFrame
-            A concatenated DataFrame containing all time series data, with a `time_stamp` column and
-            a group column (e.g., 'room_id') indicating the source of each row.
+        None
+            This method modifies the instance's attributes to store the separated components of the TimeSeries.
         """
-        all_dfs = []
-
-        def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
-            # Reset index to make 'time_stamp' a column
-            df_reset = df.reset_index()
-
-            # Drop the 'offset' column if it's not needed
-            if 'offset' in df_reset.columns:
-                df_reset = df_reset.drop(columns='offset')
-
-            # Flatten the column MultiIndex
-            df_reset.columns = [
-                col if not isinstance(col, tuple) else col[0] for col in df_reset.columns
-            ]
-
-            # Ensure 'time_stamp' is the first column
-            cols = df_reset.columns.tolist()
-            if 'time_stamp' in cols:
-                cols.insert(0, cols.pop(cols.index('time_stamp')))
-                df_reset = df_reset[cols]
-
-            
-
-            return df_reset
-
+        
+        if self.ts is None:
+            raise ValueError("Fetch the data first")
+        self.target = {}
+        self.known = {}
+        self.observed = {}
+        self.static = {}
         for id, ts_obj in self.ts.items():
-            flat_df = flatten_timeseries_df(ts_obj.data)
-            flat_df[self.group_col] = id
-            all_dfs.append(flat_df)
+            data = ts_obj.data
+            if target is not None:
+                self.target[id] = data[[target]]
+            if known is not None:
+                self.known[id] = data[[known]] if isinstance(known, str) else data[known]
+            if observed is not None:
+                self.observed[id] = data[[observed]] if isinstance(observed, str) else data[observed]
+            if static is not None:
+                self.static[id] = data[[static]] if isinstance(static, str) else data[static]
+        
 
-        return pd.concat(all_dfs, ignore_index=True)
-
-    
     def is_up2date(self):
         #TODO update the logic later
         self.last_updated = datetime.now()
