@@ -3,10 +3,12 @@ from ...data.timeseries import TimeSeries
 from typing import List,Optional, Any, Union, Tuple
 import logging
 from pathlib import Path
+import os
 import pandas as pd
 from darts.models.forecasting.forecasting_model import ForecastingModel
 from darts.dataprocessing.transformers import Scaler
 from darts import TimeSeries as DartsTimeSeries
+from ..model_exceptions import InvalidModelTypeError
 
 class DartsModelAdapter(ModelAdapter):
     def __init__(self, model:ForecastingModel, 
@@ -173,8 +175,58 @@ class DartsModelAdapter(ModelAdapter):
         raise NotImplementedError("Subclasses must implement this method.")
     def tune(self):
         raise NotImplementedError("Subclasses must implement this method.")
-    def load(self):
-        raise NotImplementedError("Subclasses must implement this method.")
-    def save(self):
-        raise NotImplementedError("Subclasses must implement this method.")
+    
+    def load(self, path: Union[Path, str]) -> None:
+        """
+            if not os.path.exists(path):
+                logging.error(f"Model file does not exist at {path}")
+                raise ModelAdapterError(f"Model file does not exist at {path}")
+            model = ForecastingModel.load_model(path)
+
+        Parameters
+        ----------
+        path : Union[Path, str]
+            The file path to the saved model.
+
+        Raises
+        ------
+        InvalidModelTypeError
+            If the loaded model is not a valid Darts forecasting model.
+        ModelAdapterError
+            If the model fails to load due to file not found or other I/O errors.
+        """
+        try:
+            model = ForecastingModel.load_model(path)
+            if not isinstance(model, ForecastingModel):
+                raise InvalidModelTypeError("The loaded model is not a valid Darts model.")
+            else:
+                self.model = model
+                logging.info(f"Model loaded from {path}")
+        except Exception as e:
+            logging.error(f"Failed to load the model from {path}, check the model path")
+            raise ModelAdapterError("Failed to load the model.") from e
+        
+        
+    def save(self,path: Union[Path, str]) -> None:
+        """
+        Saves the model to the specified path.
+
+        Parameters
+        ----------
+        path : Union[Path, str]
+            The file path where the model will be saved.
+
+        Raises
+        ------
+        ModelAdapterError
+            If the model fails to save due to I/O errors.
+        """
+        try:
+            if not os.path.exists(path):
+                os.makedirs(os.path.dirname(path), exist_ok=True)
+            self.model.save(path)
+            logging.info(f"Model saved to {path}")
+        except Exception as e:
+            logging.error(f"Failed to save the model to {path}")
+            raise ModelAdapterError("Failed to save the model.") from e
     
