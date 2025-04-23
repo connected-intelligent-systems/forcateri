@@ -5,7 +5,7 @@ from ..data.timeseries import TimeSeries
 from typing import List,Optional, Any, Union
 import logging
 import pickle
-from ..model.model_exceptions import ModelNotFittedError
+from ..model.modelexceptions import ModelNotFittedError
 
 
 class ModelAdapter(ABC):

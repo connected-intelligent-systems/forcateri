@@ -4,7 +4,7 @@ from darts import TimeSeries as DartsTimeSeries
 from darts.dataprocessing.transformers import Scaler
 from darts.models import TCNModel
 import logging
-from ..modeladapter import InvalidModelTypeError, ModelAdapterError
+from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
 
 class DartsTCNModel(DartsModelAdapter):
     def __init__(self, model:TCNModel,*args,**kwargs):
