@@ -5,21 +5,8 @@ from ..data.timeseries import TimeSeries
 from typing import List,Optional, Any, Union
 import logging
 import pickle
+from ..model.model_exceptions import ModelNotFittedError
 
-class ModelAdapterError(Exception):
-    """Base exception for errors in the ModelAdapter."""
-    pass
-
-class ModelNotFittedError(ModelAdapterError):
-    """Raised when an operation is attempted that requires a fitted model."""
-    pass
-
-class InvalidTimeSeriesError(ModelAdapterError):
-    """Raised when an invalid TimeSeries object is provided."""
-    pass
-class InvalidModelTypeError(ModelAdapterError):
-    '''Raised when invalid model is instanciated'''
-    pass
 
 class ModelAdapter(ABC):
     @abstractmethod
@@ -55,21 +42,9 @@ class ModelAdapter(ABC):
 
     @abstractmethod
     def save(self,path: Union[Path, str]) -> None:
-        
         pass
-        '''
-        if path is None:
-            path = self._default_save_path + ".pkl"
-        path = Path(path)
-        try:
-            path.parent.mkdir(parents=True,exist_ok=True)
-            with open(path,'wb') as f:
-                pickle.dump(self,f)
-            logging.info(f"model saved to {path}")
-        except Exception as e:
-            logging.error(f"Failed to save model to {path}: {e}")
-            raise IOError(f"Could not save model: {e}")
-        '''
+
+        
 
 
     @abstractmethod
