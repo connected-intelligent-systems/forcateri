@@ -207,10 +207,7 @@ class DartsModelAdapter(ModelAdapter):
     
     def load(self, path: Union[Path, str]) -> None:
         """
-            if not os.path.exists(path):
-                logging.error(f"Model file does not exist at {path}")
-                raise ModelAdapterError(f"Model file does not exist at {path}")
-            model = ForecastingModel.load_model(path)
+        Loads a model from the specified path.
 
         Parameters
         ----------
