@@ -166,7 +166,7 @@ class DartsModelAdapter(ModelAdapter):
             return _split_single(ts)
         
     def to_time_series(ts:DartsTimeSeries):
-        #Need to think of the way to implement this method
+        #Need to think of the way to implement this method.
         return super().to_time_series()
     
     def predict(self):
