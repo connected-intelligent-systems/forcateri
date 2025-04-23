@@ -11,18 +11,10 @@ from ..model.modelexceptions import ModelNotFittedError
 class ModelAdapter(ABC):
     @abstractmethod
     def __init__(self, *args,**kwargs):
-        self.target:Optional[TimeSeries] = None 
-        self.known:Optional[TimeSeries] = None 
-        self.observed:Optional[TimeSeries] = None 
-        self.static:Optional[TimeSeries] = None
+        pass
     
     @abstractmethod
     def fit(self, **kwargs):
-        # try:
-        #     transformed_ts = self.to_model_format(kwargs['target'])
-        #     self.target = transformed_ts 
-        # except:
-        #     raise InvalidTimeSeriesError("The time series cannot be transformed to model's timeseries format")
         pass
         
 

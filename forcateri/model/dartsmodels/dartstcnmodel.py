@@ -5,13 +5,27 @@ from darts.dataprocessing.transformers import Scaler
 from darts.models import TCNModel
 import logging
 from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
+from darts.utils.likelihood_models import QuantileRegression
 
 class DartsTCNModel(DartsModelAdapter):
-    def __init__(self, model:TCNModel,*args,**kwargs):
-        if not isinstance(model,TCNModel):
-            logging.error("The DartsTCNModel accepts only TCN model from darts library")
-            raise InvalidModelTypeError
-        super().__init__(model,*args,**kwargs)
+    def __init__(self, *args,**kwargs):
+        
+        super().__init__(*args,**kwargs)
+        self.model = TCNModel(
+            input_chunk_length=kwargs.get('input_chunk_length', 7),
+            output_chunk_length=kwargs.get('output_chunk_length', 5),
+            kernel_size=kwargs.get('kernel_size', 3),
+            num_filters=kwargs.get('num_filters', 32),
+            dilation_base=kwargs.get('dilation_base', 2),
+            num_layers=kwargs.get('num_layers', 3),
+            dropout=kwargs.get('dropout', 0.1),
+            weight_norm=kwargs.get('weight_norm', True),
+            n_epochs=kwargs.get('n_epochs', 100),
+            batch_size=kwargs.get('batch_size', 32),
+            optimizer_kwargs=kwargs.get('optimizer_kwargs', {'lr': 1e-3}),
+            random_state=kwargs.get('random_state', None),
+            likelihood=kwargs.get('likelihood', QuantileRegression([0.1, 0.5, 0.9])),
+        )
 
         self.scaler_target = Scaler()
         self.scaler_cov = Scaler()
