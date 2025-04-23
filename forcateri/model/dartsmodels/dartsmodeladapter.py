@@ -1,4 +1,5 @@
-from ..modeladapter import ModelAdapter, ModelAdapterError
+from ..modelexceptions import  ModelAdapterError,InvalidModelTypeError
+from ..modeladapter import ModelAdapter
 from ...data.timeseries import TimeSeries
 from typing import List,Optional, Any, Union, Tuple
 import logging
@@ -8,7 +9,7 @@ import pandas as pd
 from darts.models.forecasting.forecasting_model import ForecastingModel
 from darts.dataprocessing.transformers import Scaler
 from darts import TimeSeries as DartsTimeSeries
-from ..model_exceptions import InvalidModelTypeError
+
 
 class DartsModelAdapter(ModelAdapter):
     def __init__(self, model:ForecastingModel, 
@@ -42,26 +43,8 @@ class DartsModelAdapter(ModelAdapter):
             
         if self.model.supports_static_covariates and self.static is not None:
             self.fit_args["static_covariates"] = self.to_model_format(ts = self.static)
-
-    def flatten_ts(self, ts: dict[int, TimeSeries]) -> pd.DataFrame:
-        """
-        Converts all time series in the `self.ts` dictionary to a single flattened pandas DataFrame.
-
-        Each time series DataFrame is:
-        - Reset to move the timestamp index into a column
-        - Stripped of any 'offset' column (if present)
-        - Flattened if it contains MultiIndex columns (e.g., ('feature', 'value'))
-        - Augmented with a column named `self.group_col` to identify the original series (e.g., room ID)
-
-        Returns
-        -------
-        pd.DataFrame
-            A concatenated DataFrame containing all time series data, with a `time_stamp` column and
-            a group column (e.g., 'room_id') indicating the source of each row.
-        """
-        all_dfs = []
-
-        def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
+    
+    def flatten_timeseries_df(self,df: pd.DataFrame) -> pd.DataFrame:
             # Reset index to make 'time_stamp' a column
             df_reset = df.reset_index()
 
@@ -83,45 +66,91 @@ class DartsModelAdapter(ModelAdapter):
             
 
             return df_reset
-        #TODO revise the logic of the flatten_timeseries_df function
-        for id, ts_obj in ts.items():
-            flat_df = flatten_timeseries_df(ts_obj)
-            flat_df[self.group_col] = id
-            all_dfs.append(flat_df)
 
-        return pd.concat(all_dfs, ignore_index=True)
+    # def flatten_ts(self, ts: dict[int, TimeSeries]) -> pd.DataFrame:
+    #     """
+    #     Converts all time series in the `self.ts` dictionary to a single flattened pandas DataFrame.
+
+    #     Each time series DataFrame is:
+    #     - Reset to move the timestamp index into a column
+    #     - Stripped of any 'offset' column (if present)
+    #     - Flattened if it contains MultiIndex columns (e.g., ('feature', 'value'))
+    #     - Augmented with a column named `self.group_col` to identify the original series (e.g., room ID)
+
+    #     Returns
+    #     -------
+    #     pd.DataFrame
+    #         A concatenated DataFrame containing all time series data, with a `time_stamp` column and
+    #         a group column (e.g., 'room_id') indicating the source of each row.
+    #     """
+    #     all_dfs = []
+
         
-    def to_model_format(self, ts: dict[int,TimeSeries]) -> DartsTimeSeries:
+    #     #TODO revise the logic of the flatten_timeseries_df function
+    #     for id, ts_obj in ts.items():
+    #         flat_df = self.flatten_timeseries_df(ts_obj)
+    #         flat_df[self.group_col] = id
+    #         all_dfs.append(flat_df)
+
+    #     return pd.concat(all_dfs, ignore_index=True)
+    
+    def to_model_format(self, ts: Union[TimeSeries, List[TimeSeries]]) -> Union[DartsTimeSeries, List[DartsTimeSeries]]:
         """
-        Converts a dictionary of TimeSeries objects into a DartsTimeSeries object.
-        This method takes a dictionary where the keys are integers and the values are 
-        TimeSeries objects, flattens the data, and converts it into a DartsTimeSeries 
-        object. The conversion can handle grouped data if a grouping column is specified.
+        Converts a TimeSeries object or a list of TimeSeries objects into a DartsTimeSeries object.
+        This method takes a TimeSeries object or a list of TimeSeries objects, flattens the data, 
+        and converts it into a DartsTimeSeries object. The conversion can handle grouped data if 
+        a grouping column is specified.
+
         Args:
-            ts (dict[int, TimeSeries]): A dictionary where keys are integers and values 
-                are TimeSeries objects to be converted.
+            ts (Union[TimeSeries, List[TimeSeries]]): A TimeSeries object or a list of TimeSeries 
+                objects to be converted.
+
         Returns:
             DartsTimeSeries: A DartsTimeSeries object created from the input data.
-        Notes:
-            - If `self.group_col` is specified, the method uses `from_group_dataframe` 
-              to create the DartsTimeSeries object, grouping by the specified column.
-            - If `self.group_col` is not specified, the method uses `from_dataframe` 
-              to create the DartsTimeSeries object.
-            - The `value_cols` are determined by excluding the group and time columns 
-              from the flattened data.
         """
+        def process_single_time_series(t: TimeSeries) -> DartsTimeSeries:
+            data = self.flatten_timeseries_df(t)
+            data[self.time_col] = pd.to_datetime(data[self.time_col]).dt.tz_localize(None)
+            value_cols = [col for col in data.columns if col not in [self.group_col, self.time_col]]
+            return DartsTimeSeries.from_dataframe(data, time_col=self.time_col, value_cols=value_cols, freq=self.freq)
+
+        if isinstance(ts, list):
+            return [process_single_time_series(t) for t in ts]
+        else:
+            return process_single_time_series(ts)
+        
+
+    # def to_model_format_old(self, ts: dict[int,TimeSeries]) -> DartsTimeSeries:
+    #     """
+    #     Converts a dictionary of TimeSeries objects into a DartsTimeSeries object.
+    #     This method takes a dictionary where the keys are integers and the values are 
+    #     TimeSeries objects, flattens the data, and converts it into a DartsTimeSeries 
+    #     object. The conversion can handle grouped data if a grouping column is specified.
+    #     Args:
+    #         ts (dict[int, TimeSeries]): A dictionary where keys are integers and values 
+    #             are TimeSeries objects to be converted.
+    #     Returns:
+    #         DartsTimeSeries: A DartsTimeSeries object created from the input data.
+    #     Notes:
+    #         - If `self.group_col` is specified, the method uses `from_group_dataframe` 
+    #           to create the DartsTimeSeries object, grouping by the specified column.
+    #         - If `self.group_col` is not specified, the method uses `from_dataframe` 
+    #           to create the DartsTimeSeries object.
+    #         - The `value_cols` are determined by excluding the group and time columns 
+    #           from the flattened data.
+    #     """
 
      
         
-        data = self.flatten_ts(ts)
-        value_cols = [col for col in data.columns if col not in [self.group_col, self.time_col]]
-        data[self.time_col] = pd.to_datetime(data[self.time_col])
-        data[self.time_col] = data[self.time_col].dt.tz_localize(None)
-        if self.group_col:
-            darts_ts = DartsTimeSeries.from_group_dataframe(data,time_col=self.time_col,group_cols=self.group_col, value_cols=value_cols, freq=self.freq)
-        else:
-            darts_ts = DartsTimeSeries.from_dataframe(data,time_col=self.time_col,value_cols=value_cols, freq=self.freq)
-        return darts_ts
+    #     data = self.flatten_ts(ts)
+    #     value_cols = [col for col in data.columns if col not in [self.group_col, self.time_col]]
+    #     data[self.time_col] = pd.to_datetime(data[self.time_col])
+    #     data[self.time_col] = data[self.time_col].dt.tz_localize(None)
+    #     if self.group_col:
+    #         darts_ts = DartsTimeSeries.from_group_dataframe(data,time_col=self.time_col,group_cols=self.group_col, value_cols=value_cols, freq=self.freq)
+    #     else:
+    #         darts_ts = DartsTimeSeries.from_dataframe(data,time_col=self.time_col,value_cols=value_cols, freq=self.freq)
+    #     return darts_ts
     
     def split_series(self,
         ts: Union[DartsTimeSeries, List[DartsTimeSeries]],
