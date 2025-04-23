@@ -55,15 +55,14 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
             .asfreq()
             .drop(columns=[self.group_col])
             .reset_index())
-        self.ts = TimeSeries.from_group_df(df=df,
+        self.ts, self.ts_dict = TimeSeries.from_group_df(df=df,
                                                group_col = self.group_col,
                                                time_col=self.time_col,
                                                value_cols=self.value_cols,
                                                freq = self.freq
                                                )
 
-
-    def _separate_ts(self, target: str, known: Union[str,list[str]], observed: Union[str,list[str]], static: Union[str,list[str]]=None):
+    def _separate_ts(self, target: str, known: Union[str, list[str]], observed: Union[str, list[str]], static: Union[str, list[str]] = None):
         """
         Separate the TimeSeries instance into target, known, observed, and static components.
 
@@ -72,7 +71,14 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
 
         Parameters
         ----------
-        None
+        target : str
+            The column name for the target variable.
+        known : Union[str, list[str]]
+            The column name(s) for the known variables.
+        observed : Union[str, list[str]]
+            The column name(s) for the observed variables.
+        static : Union[str, list[str]], optional
+            The column name(s) for the static variables, by default None.
 
         Returns
         -------
@@ -82,20 +88,20 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         
         if self.ts is None:
             raise ValueError("Fetch the data first")
-        self.target = {}
-        self.known = {}
-        self.observed = {}
-        self.static = {}
-        for id, ts_obj in self.ts.items():
+        self.target = []
+        self.known = []
+        self.observed = []
+        self.static = []
+        for ts_obj in self.ts:
             data = ts_obj.data
             if target is not None:
-                self.target[id] = data[[target]]
+                self.target.append(data[[target]])
             if known is not None:
-                self.known[id] = data[[known]] if isinstance(known, str) else data[known]
+                self.known.append(data[[known]] if isinstance(known, str) else data[known])
             if observed is not None:
-                self.observed[id] = data[[observed]] if isinstance(observed, str) else data[observed]
+                self.observed.append(data[[observed]] if isinstance(observed, str) else data[observed])
             if static is not None:
-                self.static[id] = data[[static]] if isinstance(static, str) else data[static]
+                self.static.append(data[[static]] if isinstance(static, str) else data[static])
         
 
     def is_up2date(self):

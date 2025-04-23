@@ -145,11 +145,14 @@ class TimeSeries:
             raise ValueError(f"Column {group_col} not found in the DataFrame.")
         unique_group = df[group_col].unique()
         ts_dict = {}
-        for group_id in unique_group:
+        ts_list = []
+        for i,group_id in enumerate(unique_group):
             df_group = df[df[group_col] == group_id]
             ts_instance  = cls.from_dataframe(df_group,time_col, value_cols,freq,ts_type)
             ts_dict[group_id] = ts_instance
-        return ts_dict
+            ts_list.append(ts_instance)
+            ts_dict[i] = group_id
+        return ts_list,ts_dict
     
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
