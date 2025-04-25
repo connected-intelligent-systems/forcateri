@@ -9,11 +9,11 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
     
     def __init__(self,**kwargs):
         super().__init__(name=kwargs['name'], url=kwargs['url'],local_copy = kwargs['local_copy'])
-        self.ts: dict[int,TimeSeries] = None
-        self.target: dict[int,TimeSeries]  = None
-        self.known: dict[int,TimeSeries]  = None
-        self.observed: dict[int,TimeSeries]  = None
-        self.static: dict[int,TimeSeries]  = None
+        self.ts = []
+        self.target = []
+        self.known = []
+        self.observed = []
+        self.static = []
 
     def get_data(self):
         super().get_data()
@@ -88,10 +88,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         
         if self.ts is None:
             raise ValueError("Fetch the data first")
-        self.target = []
-        self.known = []
-        self.observed = []
-        self.static = []
+        
         for ts_obj in self.ts:
             data = ts_obj.data
             if target is not None:
