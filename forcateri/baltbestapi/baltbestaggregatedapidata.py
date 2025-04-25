@@ -10,10 +10,16 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
     def __init__(self,**kwargs):
         super().__init__(name=kwargs['name'], url=kwargs['url'],local_copy = kwargs['local_copy'])
         self.ts = []
-        self.target = []
-        self.known = []
-        self.observed = []
-        self.static = []
+        self.target:str = kwargs.get('target', None)
+        self.group_col:str = kwargs.get('group_col', None)
+        self.time_col:str = kwargs.get('time_col', None)
+        #self.value_cols:List[str] = kwargs.get('value_cols', None)
+        self.freq:str = kwargs.get('freq', '60min')
+        self.known:Union[str,List[str]] = kwargs.get('known', None)
+        self.observed:Union[str,List[str]] = kwargs.get('observed', None)
+        self.static:Union[str,List[str]] = kwargs.get('static', None)
+        self.value_colst:List[str] = self._get_value_cols(self.target, self.known, self.observed, self.static)
+        self.ts_dict = {}
 
     def get_data(self):
         super().get_data()
@@ -62,43 +68,57 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
                                                freq = self.freq
                                                )
 
-    def _separate_ts(self, target: str, known: Union[str, list[str]], observed: Union[str, list[str]], static: Union[str, list[str]] = None):
+    def _get_value_cols(self, *args: Union[str, List[str], None]) -> List[str]:
         """
-        Separate the TimeSeries instance into target, known, observed, and static components.
-
-        The method processes the `ts` attribute, which is expected to be a TimeSeries object,
-        and assigns its components to the instance's attributes: `target`, `known`, `observed`, and `static`.
-
-        Parameters
-        ----------
-        target : str
-            The column name for the target variable.
-        known : Union[str, list[str]]
-            The column name(s) for the known variables.
-        observed : Union[str, list[str]]
-            The column name(s) for the observed variables.
-        static : Union[str, list[str]], optional
-            The column name(s) for the static variables, by default None.
-
-        Returns
-        -------
-        None
-            This method modifies the instance's attributes to store the separated components of the TimeSeries.
+        Safely merges input variables into a single flat list.
         """
+        result = []
+        for arg in args:
+            if arg is None:
+                continue
+            if isinstance(arg, list):
+                result.extend(arg)
+            else:
+                result.append(arg)
+        return result
+
+    # def _separate_ts(self, target: str, known: Union[str, list[str]], observed: Union[str, list[str]], static: Union[str, list[str]] = None):
+    #     """
+    #     Separate the TimeSeries instance into target, known, observed, and static components.
+
+    #     The method processes the `ts` attribute, which is expected to be a TimeSeries object,
+    #     and assigns its components to the instance's attributes: `target`, `known`, `observed`, and `static`.
+
+    #     Parameters
+    #     ----------
+    #     target : str
+    #         The column name for the target variable.
+    #     known : Union[str, list[str]]
+    #         The column name(s) for the known variables.
+    #     observed : Union[str, list[str]]
+    #         The column name(s) for the observed variables.
+    #     static : Union[str, list[str]], optional
+    #         The column name(s) for the static variables, by default None.
+
+    #     Returns
+    #     -------
+    #     None
+    #         This method modifies the instance's attributes to store the separated components of the TimeSeries.
+    #     """
         
-        if self.ts is None:
-            raise ValueError("Fetch the data first")
+    #     if self.ts is None:
+    #         raise ValueError("Fetch the data first")
         
-        for ts_obj in self.ts:
-            data = ts_obj.data
-            if target is not None:
-                self.target.append(data[[target]])
-            if known is not None:
-                self.known.append(data[[known]] if isinstance(known, str) else data[known])
-            if observed is not None:
-                self.observed.append(data[[observed]] if isinstance(observed, str) else data[observed])
-            if static is not None:
-                self.static.append(data[[static]] if isinstance(static, str) else data[static])
+    #     for ts_obj in self.ts:
+    #         data = ts_obj.data
+    #         if target is not None:
+    #             self.target.append(data[[target]])
+    #         if known is not None:
+    #             self.known.append(data[[known]] if isinstance(known, str) else data[known])
+    #         if observed is not None:
+    #             self.observed.append(data[[observed]] if isinstance(observed, str) else data[observed])
+    #         if static is not None:
+    #             self.static.append(data[[static]] if isinstance(static, str) else data[static])
         
 
     def is_up2date(self):
