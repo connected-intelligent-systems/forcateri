@@ -150,7 +150,7 @@ class TimeSeries:
             df_group = df[df[group_col] == group_id]
             ts_instance  = cls.from_dataframe(df_group,time_col, value_cols,freq,ts_type)
             ts_dict[group_id] = ts_instance
-            ts_list.append(ts_instance)
+            ts_list.append(ts_instance.data)
             ts_dict[i] = group_id
         return ts_list,ts_dict
     

@@ -23,7 +23,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
 
     def get_data(self):
         super().get_data()
-
+        return self.ts
     def _fetch_from_cache(self):
         """
         Fetch data from a local CSV file, process it by resampling and grouping, and store it as a TimeSeries instance.
