@@ -64,54 +64,62 @@ class DataProvider:
     def get_val_set(self):
         """
         Returns validation set based on the splits parameter.
+        Handles both index-based and timestamp-based splits, including MultiIndex.
         """
         start, end = self.splits
-        val_target = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.target]
-        val_known = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.known]
-        val_observed = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.observed]
+
+        if isinstance(start, (pd.Timestamp, datetime)) and isinstance(end, (pd.Timestamp, datetime)):
+            val_target = [ts.loc[(ts.index.get_level_values('time_stamp') >= start) & 
+                                 (ts.index.get_level_values('time_stamp') < end)] for ts in self.target]
+            val_known = [ts.loc[(ts.index.get_level_values('time_stamp') >= start) & 
+                                (ts.index.get_level_values('time_stamp') < end)] for ts in self.known]
+            val_observed = [ts.loc[(ts.index.get_level_values('time_stamp') >= start) & 
+                                   (ts.index.get_level_values('time_stamp') < end)] for ts in self.observed]
+        else:
+            val_target = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.target]
+            val_known = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.known]
+            val_observed = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.observed]
+
         val_static = self.static  # Static data remains the same across splits
 
-        return {
-            "target": val_target,
-            "known": val_known,
-            "observed": val_observed,
-            "static": val_static,
-        }
+        return (val_target, val_known, val_observed, val_static)
     def get_train_set(self):
         """
         Returns train set based on the splits parameter.
+        Handles both index-based and timestamp-based splits, including MultiIndex.
         """
-    
         start, _ = self.splits
-        train_target = [ts[:int(len(ts) * start)] for ts in self.target]
-        train_known = [ts[:int(len(ts) * start)] for ts in self.known]
-        train_observed = [ts[:int(len(ts) * start)] for ts in self.observed]
+
+        if isinstance(start, (pd.Timestamp, datetime)):
+            train_target = [ts.loc[ts.index.get_level_values('time_stamp') < start] for ts in self.target]
+            train_known = [ts.loc[ts.index.get_level_values('time_stamp') < start] for ts in self.known]
+            train_observed = [ts.loc[ts.index.get_level_values('time_stamp') < start] for ts in self.observed]
+        else:
+            train_target = [ts[:int(len(ts) * start)] for ts in self.target]
+            train_known = [ts[:int(len(ts) * start)] for ts in self.known]
+            train_observed = [ts[:int(len(ts) * start)] for ts in self.observed]
+
         train_static = self.static  # Static data remains the same across splits
 
-        return {
-            "target": train_target,
-            "known": train_known,
-            "observed": train_observed,
-            "static": train_static,
-        }
+        return (train_target, train_known, train_observed, train_static)
     def get_test_set(self):
         """
         Returns test set based on the splits parameter.
+        Handles both index-based and timestamp-based splits, including MultiIndex.
         """
         _, end = self.splits
-        test_target = [ts[int(len(ts) * end):] for ts in self.target]
-        test_known = [ts[int(len(ts) * end):] for ts in self.known]
-        test_observed = [ts[int(len(ts) * end):] for ts in self.observed]
+
+        if isinstance(end, (pd.Timestamp, datetime)):
+            test_target = [ts.loc[ts.index.get_level_values('time_stamp') >= end] for ts in self.target]
+            test_known = [ts.loc[ts.index.get_level_values('time_stamp') >= end] for ts in self.known]
+            test_observed = [ts.loc[ts.index.get_level_values('time_stamp') >= end] for ts in self.observed]
+        else:
+            test_target = [ts[int(len(ts) * end):] for ts in self.target]
+            test_known = [ts[int(len(ts) * end):] for ts in self.known]
+            test_observed = [ts[int(len(ts) * end):] for ts in self.observed]
+
         test_static = self.static  # Static data remains the same across splits
 
-        return {
-            "target": test_target,
-            "known": test_known,
-            "observed": test_observed,
-            "static": test_static,
-        }
+        return (test_target, test_known, test_observed, test_static)
     
 
-    #Need to split the series into train, val and test sets. Such that all model adapter are trained with the same scenario.
-    #The logic of splitting inside DataProvider.
-    #Division into target, known, observed here as well.
