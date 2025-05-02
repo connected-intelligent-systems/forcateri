@@ -45,81 +45,75 @@ class DataProvider:
         """
         for data_source in self.data_sources:
             data_list = data_source.get_data()
-            for data in data_list:
-                for role, columns in self.roles.items():
-                    columns = [columns] if isinstance(columns, str) else columns  
-                    if role == SeriesRole.TARGET:
-                        self.target.append(data[columns])
-                    elif role == SeriesRole.KNOWN:
-                        self.known.append(data[columns])
-                    elif role == SeriesRole.OBSERVED:
-                        self.observed.append(data[columns])
-                    elif role == SeriesRole.STATIC:
-                        self.static.append(data[columns])
-                    else:
-                        raise ValueError(f"Unknown role: {role}")
-                   
+            for ts_obj in data_list:
+                #data = ts_obj.separate_ts(target = "q_hca", observed = "room_temp")
+                self.target.append(ts_obj.slice(columns = self.roles[SeriesRole.TARGET]))
+                self.known.append(ts_obj.slice(columns = self.roles[SeriesRole.KNOWN]))
+                self.observed.append(ts_obj.slice(columns = self.roles[SeriesRole.OBSERVED]))
 
+
+    #KNWON, OBSERVED, TARGET            
+
+
+    def _get_split_set(self, split_type: str):
+      """
+      Generic method to retrieve a dataset (train, validation, or test) based on splits.
+
+      Args:
+        split_type (str): The type of split to retrieve. Can be 'train', 'val', or 'test'.
+
+      Returns:
+        list: A list of tuples, where each tuple contains:
+          - target: A target time series for the specified split.
+          - known: A known time series for the specified split.
+          - observed: An observed time series for the specified split.
+          - static: The static data, unchanged across splits.
+      """
+      start, end = self.splits
+
+      if split_type == "train":
+        def condition(ts):
+          if isinstance(start, (pd.Timestamp, datetime)):
+            return ts.index.get_level_values('time_stamp') < start
+          elif isinstance(start, int):
+            return slice(None, start)
+          else:
+            return slice(None, int(len(ts) * start))
+      elif split_type == "val":
+        def condition(ts):
+          if isinstance(start, (pd.Timestamp, datetime)):
+            return (ts.index.get_level_values('time_stamp') >= start) & (ts.index.get_level_values('time_stamp') < end)
+          elif isinstance(start, int) and isinstance(end, int):
+            return slice(start, end)
+          else:
+            return slice(int(len(ts) * start), int(len(ts) * end))
+      elif split_type == "test":
+        def condition(ts):
+          if isinstance(end, (pd.Timestamp, datetime)):
+            return ts.index.get_level_values('time_stamp') >= end
+          elif isinstance(end, int):
+            return slice(end, None)
+          else:
+            return slice(int(len(ts) * end), None)
+      else:
+        raise ValueError("Invalid split_type. Must be 'train', 'val', or 'test'.")
+
+      result = []
+      for target_ts, known_ts, observed_ts in zip(self.target, self.known, self.observed):
+        target_split = target_ts.loc[condition(target_ts)] if isinstance(condition(target_ts), pd.Series) else target_ts[condition(target_ts)]
+        known_split = known_ts.loc[condition(known_ts)] if isinstance(condition(known_ts), pd.Series) else known_ts[condition(known_ts)]
+        observed_split = observed_ts.loc[condition(observed_ts)] if isinstance(condition(observed_ts), pd.Series) else observed_ts[condition(observed_ts)]
+        result.append((target_split, known_split, observed_split))
+
+      return result
+
+    def get_train_set(self):
+      return self._get_split_set("train")
 
     def get_val_set(self):
-        """
-        Returns validation set based on the splits parameter.
-        Handles both index-based and timestamp-based splits, including MultiIndex.
-        """
-        start, end = self.splits
+      return self._get_split_set("val")
 
-        if isinstance(start, (pd.Timestamp, datetime)) and isinstance(end, (pd.Timestamp, datetime)):
-            val_target = [ts.loc[(ts.index.get_level_values('time_stamp') >= start) & 
-                                 (ts.index.get_level_values('time_stamp') < end)] for ts in self.target]
-            val_known = [ts.loc[(ts.index.get_level_values('time_stamp') >= start) & 
-                                (ts.index.get_level_values('time_stamp') < end)] for ts in self.known]
-            val_observed = [ts.loc[(ts.index.get_level_values('time_stamp') >= start) & 
-                                   (ts.index.get_level_values('time_stamp') < end)] for ts in self.observed]
-        else:
-            val_target = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.target]
-            val_known = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.known]
-            val_observed = [ts[int(len(ts) * start):int(len(ts) * end)] for ts in self.observed]
-
-        val_static = self.static  # Static data remains the same across splits
-
-        return (val_target, val_known, val_observed, val_static)
-    def get_train_set(self):
-        """
-        Returns train set based on the splits parameter.
-        Handles both index-based and timestamp-based splits, including MultiIndex.
-        """
-        start, _ = self.splits
-
-        if isinstance(start, (pd.Timestamp, datetime)):
-            train_target = [ts.loc[ts.index.get_level_values('time_stamp') < start] for ts in self.target]
-            train_known = [ts.loc[ts.index.get_level_values('time_stamp') < start] for ts in self.known]
-            train_observed = [ts.loc[ts.index.get_level_values('time_stamp') < start] for ts in self.observed]
-        else:
-            train_target = [ts[:int(len(ts) * start)] for ts in self.target]
-            train_known = [ts[:int(len(ts) * start)] for ts in self.known]
-            train_observed = [ts[:int(len(ts) * start)] for ts in self.observed]
-
-        train_static = self.static  # Static data remains the same across splits
-
-        return (train_target, train_known, train_observed, train_static)
     def get_test_set(self):
-        """
-        Returns test set based on the splits parameter.
-        Handles both index-based and timestamp-based splits, including MultiIndex.
-        """
-        _, end = self.splits
-
-        if isinstance(end, (pd.Timestamp, datetime)):
-            test_target = [ts.loc[ts.index.get_level_values('time_stamp') >= end] for ts in self.target]
-            test_known = [ts.loc[ts.index.get_level_values('time_stamp') >= end] for ts in self.known]
-            test_observed = [ts.loc[ts.index.get_level_values('time_stamp') >= end] for ts in self.observed]
-        else:
-            test_target = [ts[int(len(ts) * end):] for ts in self.target]
-            test_known = [ts[int(len(ts) * end):] for ts in self.known]
-            test_observed = [ts[int(len(ts) * end):] for ts in self.observed]
-
-        test_static = self.static  # Static data remains the same across splits
-
-        return (test_target, test_known, test_observed, test_static)
+      return self._get_split_set("test")
     
 

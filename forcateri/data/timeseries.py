@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from typing import Any, Callable, Dict, List, Optional, Self, Sequence, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, Self
 import logging
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class TimeSeries:
         value_cols: Optional[Union[List[str], str]] = None,
         freq: Optional[Union[str, int]] = 'h',
         ts_type: Optional[str] = 'determ'
-    ) -> "TimeSeries":
+    ) -> Self:
         logger.info("Creating TimeSeries from DataFrame via class method.")
         formatted = cls._build_internal_format(df, time_col, value_cols, freq=freq, ts_type=ts_type)
         return cls(formatted)
@@ -280,5 +280,29 @@ class TimeSeries:
     def split(self, timestamp):
         pass 
         #TODO
+
+    def slice(self, columns: Optional[Union[str, List[str]]] = None):
+        """
+        Extracts a subset of the data based on the specified columns.
+
+        Parameters:
+            columns (Optional[Union[str, List[str]]]): The column name or list of column names to slice from the data.
+            - If a single column name (str) is provided, it will return a DataFrame with that column.
+            - If a list of column names is provided, it will return a DataFrame with those columns.
+
+        Returns:
+            DataFrame: A subset of the data containing the specified columns.
+
+        Raises:
+            KeyError: If the specified column(s) do not exist in the data.
+            TypeError: If the `columns` parameter is not a string or a list of strings.
+        """
+        if not isinstance(columns, (str, list)):
+            raise TypeError("The `columns` parameter must be a string or a list of strings.")
+        try:
+            return self.data[columns] if isinstance(columns, list) else self.data[[columns]]
+        except KeyError as e:
+            raise KeyError(f"The specified column(s) {columns} do not exist in the data.") from e
+        
     def __repr__(self):
         return f"TimeSeries(data={self.data})"
