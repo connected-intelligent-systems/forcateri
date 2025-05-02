@@ -6,95 +6,83 @@ import logging
 logger = logging.getLogger(__name__)
 
 class TimeSeries:
-    def __init__(self, data:pd.DataFrame):
-        if not isinstance(data,pd.DataFrame):
-            logger.error("Initialization failed: data is not a pandas DataFrame.")
-            raise TypeError("Expected a pandas DataFrame instance")
-        self.data = data
-        logger.info("TimeSeries instance created successfully.")
+    def __init__(self, data: pd.DataFrame, time_col: Optional[str] = None, value_cols: Optional[Union[List[str], str]] = None, **kwargs):
+        if not isinstance(data, pd.DataFrame):
+            raise TypeError("Expected a pandas DataFrame")
+
+        # If already in internal format (e.g. MultiIndex on both axes), just store it
+        if self._is_internal_format(data):
+            self.data = data.copy()
+            logger.info("TimeSeries initialized from internal-format DataFrame.")
+        else:
+            logger.info("Raw DataFrame provided, converting to TimeSeries format.")
+            self.data = self._build_internal_format(data, time_col, value_cols, **kwargs)
 
     @classmethod
-    def from_dataframe(                                                 
+    def from_dataframe(
         cls,
-        df:pd.DataFrame, 
-        time_col:Optional[str] = None, 
+        df: pd.DataFrame,
+        time_col: Optional[str] = 'time_stamp',
         value_cols: Optional[Union[List[str], str]] = None,
         freq: Optional[Union[str, int]] = 'h',
-        ts_type:Optional[str] ='determ'
-    ) -> Self:
-        """
-        Build a TimeSeries instance based on time series type from a selection of columns of a DataFrame.
-        One column (or the DataFrame index) has to represent the time,
-        and a list of columns `value_cols` has to represent the values for this time series.
+        ts_type: Optional[str] = 'determ'
+    ) -> "TimeSeries":
+        logger.info("Creating TimeSeries from DataFrame via class method.")
+        formatted = cls._build_internal_format(df, time_col, value_cols, freq=freq, ts_type=ts_type)
+        return cls(formatted)
 
-        Parameters
-        ----------
-        df 
-          The DataFrame from which to initialize the instance.
-        time_col : Optional[str], default None
-            The name of the column in the DataFrame that contains time information.
-            If provided, this column must exist in the DataFrame.
-        value_cols : Optional[Union[List[str], str]], default None
-            The name(s) of the column(s) in the DataFrame that contain the values.
-            Can be a single column name or a list of column names.
-        freq : Optional[Union[str, int]], default None
-            The frequency of the time series data.
-        ts_type : Optional[str], default 'determ'
-             The type of the time series, use 'quantile' - for quantile forecasts, 'determ' - for deterministic series and 'sampled' - for sampled series
+    @staticmethod
+    def _is_internal_format(df: pd.DataFrame) -> bool:
+        return isinstance(df.index, pd.MultiIndex) and isinstance(df.columns, pd.MultiIndex)
 
-        Returns
-        -------
-        TimeSeries
-            A univariate or multivariate deterministic TimeSeries constructed from the inputs.
+    @staticmethod
+    def _build_internal_format(
+        df: pd.DataFrame,
+        time_col: Optional[str],
+        value_cols: Optional[Union[List[str], str]],
+        freq: Optional[Union[str, int]] = 'h',
+        ts_type: Optional[str] = 'determ'
+    ) -> pd.DataFrame:
+        if not isinstance(time_col, str):
+            raise TypeError("time_col must be a string.")
+        if time_col not in df.columns:
+            raise ValueError(f"Column {time_col} not found in DataFrame.")
+        df = df.copy()
+        df[time_col] = pd.to_datetime(df[time_col])
 
-        Raises
-        ------
-        ValueError
-            If `time_col` is provided but not found in the DataFrame.
-        """
-        if time_col:
-            if time_col not in df.columns:
-                logger.error("Initialization failed: time_col not found in the DataFrame.")
-                raise ValueError(f"Column {time_col} not found in the DataFrame.")
-            
-            t0_index = pd.date_range(start=df[time_col].min(), end=df[time_col].max(), freq=freq)
-            features = value_cols
-            col_dim_names = ["feature", "representation"]
-            row_dim_names =["offset", "time_stamp"]
-            if ts_type == 'determ':
-                determ_cols = ["value"]
-                point_0_index = [pd.Timedelta(0)]
-                point_0_row_index = pd.MultiIndex.from_product([point_0_index, t0_index], names=row_dim_names)
-                determ_col_index = pd.MultiIndex.from_product([features, determ_cols], names=col_dim_names)
-                df = df[features]
-                determ_ts = pd.DataFrame(df.values,index=point_0_row_index,columns=determ_col_index)
-                return cls(determ_ts)
-            elif ts_type == 'sampled':
-                sampled_cols = [f"s_{i}" for i in range(16)]
-                point_1_index = [pd.Timedelta(1, unit="h")] 
-                point_1_row_index = pd.MultiIndex.from_product([point_1_index, t0_index], names=row_dim_names)
-                sampled_col_index = pd.MultiIndex.from_product([features, sampled_cols], names=col_dim_names)
-                sampled_ts = pd.DataFrame(df.loc[:,df.columns!=time_col].values,index=point_1_row_index, columns=sampled_col_index)
-                return cls(sampled_ts)
-            elif ts_type == 'quantile':
-                #The functionality to be checked
-                quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
-                range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
-                range_row_index = pd.MultiIndex.from_product([range_index, t0_index], names=row_dim_names)
-                quant_col_index = pd.MultiIndex.from_product([features, quant_cols], names=col_dim_names)
-                quant_ts = pd.DataFrame(df.loc[:,df.columns!=time_col].values,index=range_row_index,columns=quant_col_index)
-                return cls(quant_ts)
-            else:
-                logger.error("incorrect ts_type was provided")
-                raise ValueError("Invalid type of timeseries was provided")
-                
+        t0_index = pd.date_range(start=df[time_col].min(), end=df[time_col].max(), freq=freq)
+        if value_cols is None:
+            value_cols = df.columns[df.columns != time_col]
+        elif isinstance(value_cols, str):
+            value_cols = [value_cols]
+        features = value_cols
+
+        row_dim_names = ["offset", "time_stamp"]
+        col_dim_names = ["feature", "representation"]
+
+        if ts_type == 'determ':
+            point_0_index = [pd.Timedelta(0)]
+            point_0_row_index = pd.MultiIndex.from_product([point_0_index, t0_index], names=row_dim_names)
+            determ_col_index = pd.MultiIndex.from_product([features, ["value"]], names=col_dim_names)
+            df = df[features]
+            return pd.DataFrame(df.values, index=point_0_row_index, columns=determ_col_index)
+
+        elif ts_type == 'sampled':
+            sampled_cols = [f"s_{i}" for i in range(16)]
+            point_1_row_index = pd.MultiIndex.from_product([pd.to_timedelta([1], unit="h"), t0_index], names=row_dim_names)
+            sampled_col_index = pd.MultiIndex.from_product([features, sampled_cols], names=col_dim_names)
+            return pd.DataFrame(df[features].values, index=point_1_row_index, columns=sampled_col_index)
+
+        elif ts_type == 'quantile':
+            quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
+            range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
+            range_row_index = pd.MultiIndex.from_product([range_index, t0_index], names=row_dim_names)
+            quant_col_index = pd.MultiIndex.from_product([features, quant_cols], names=col_dim_names)
+            return pd.DataFrame(df[features].values, index=range_row_index, columns=quant_col_index)
+
         else:
-            logger.error("Initialization failed: time_col is not provided.")
-            raise ValueError(f"Invalid type of time_col: it needs to be of type str.") 
-            
-            
-        return None
-    
+            raise ValueError("Invalid ts_type provided. Use 'determ', 'sampled', or 'quantile'.")
+        
     @classmethod
     def from_group_df(cls,
         df:pd.DataFrame, 
@@ -143,6 +131,8 @@ class TimeSeries:
         if group_col not in df.columns:
             logger.error("Initialization failed: group_col not found in the DataFrame.")
             raise ValueError(f"Column {group_col} not found in the DataFrame.")
+        # if value_cols is None:
+        #         value_cols = df.columns[df.columns != time_col]
         unique_group = df[group_col].unique()
         ts_dict = {}
         ts_list = []
@@ -150,10 +140,10 @@ class TimeSeries:
             df_group = df[df[group_col] == group_id]
             ts_instance  = cls.from_dataframe(df_group,time_col, value_cols,freq,ts_type)
             ts_dict[group_id] = ts_instance
-            ts_list.append(ts_instance.data)
+            ts_list.append(ts_instance)
             ts_dict[i] = group_id
         return ts_list,ts_dict
-    
+
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
         Generate Monte Carlo samples based on quantiles for each column.
@@ -285,3 +275,10 @@ class TimeSeries:
         except KeyError:
             logger.error(f"{t0} not found in forecast data.")
             raise ValueError(f"{t0} offset is not found in the forecast data")
+        
+
+    def split(self, timestamp):
+        pass 
+        #TODO
+    def __repr__(self):
+        return f"TimeSeries(data={self.data})"
