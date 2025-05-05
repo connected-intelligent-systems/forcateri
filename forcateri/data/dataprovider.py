@@ -37,6 +37,7 @@ class DataProvider:
         self.known=[]
         self.observed=[]
         self.static=[]
+        self.roles_reversed = dict(zip(roles.values(), roles.keys()))
         self._separate_ts()
 
     def _separate_ts(self):
@@ -46,10 +47,10 @@ class DataProvider:
         for data_source in self.data_sources:
             data_list = data_source.get_data()
             for ts_obj in data_list:
-                #data = ts_obj.separate_ts(target = "q_hca", observed = "room_temp")
-                self.target.append(ts_obj.slice(columns = self.roles[SeriesRole.TARGET]))
-                self.known.append(ts_obj.slice(columns = self.roles[SeriesRole.KNOWN]))
-                self.observed.append(ts_obj.slice(columns = self.roles[SeriesRole.OBSERVED]))
+                
+                self.target.append(ts_obj.slice(columns = self.roles_reversed[SeriesRole.TARGET]))
+                self.known.append(ts_obj.slice(columns = self.roles_reversed[SeriesRole.KNOWN]))
+                self.observed.append(ts_obj.slice(columns = self.roles_reversed[SeriesRole.OBSERVED]))
 
 
     #KNWON, OBSERVED, TARGET            
@@ -72,6 +73,7 @@ class DataProvider:
       start, end = self.splits
 
       if split_type == "train":
+
         def condition(ts):
           if isinstance(start, (pd.Timestamp, datetime)):
             return ts.index.get_level_values('time_stamp') < start
@@ -79,7 +81,9 @@ class DataProvider:
             return slice(None, start)
           else:
             return slice(None, int(len(ts) * start))
+          
       elif split_type == "val":
+
         def condition(ts):
           if isinstance(start, (pd.Timestamp, datetime)):
             return (ts.index.get_level_values('time_stamp') >= start) & (ts.index.get_level_values('time_stamp') < end)
@@ -88,6 +92,7 @@ class DataProvider:
           else:
             return slice(int(len(ts) * start), int(len(ts) * end))
       elif split_type == "test":
+
         def condition(ts):
           if isinstance(end, (pd.Timestamp, datetime)):
             return ts.index.get_level_values('time_stamp') >= end
