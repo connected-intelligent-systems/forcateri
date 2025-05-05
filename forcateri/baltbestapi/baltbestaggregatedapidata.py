@@ -54,6 +54,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         
         df = pd.read_csv(self.local_copy)
         df[self.time_col] = pd.to_datetime(df[self.time_col])
+        print(self.time_col)
         df = (
             df.set_index(self.time_col)
             .groupby(self.group_col)
