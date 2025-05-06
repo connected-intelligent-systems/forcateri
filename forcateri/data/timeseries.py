@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import logging
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -133,7 +133,7 @@ class TimeSeries:
         ts_type: Optional[str] = "determ",
     ) -> List[pd.DataFrame]:
         """
-        Build TimeSeries instances for each group in the DataFrame.
+        Build `TimeSeries` instances for each group in the DataFrame.
 
         This method groups the DataFrame by the specified `group_col` and applies the logic
         from `from_dataframe` to each group. Each group is expected to contain a time column (or index)
@@ -145,7 +145,7 @@ class TimeSeries:
             The DataFrame from which to initialize the instances.
         group_col : str
             The column name used for grouping the data. Each unique value in this column will
-            result in a separate TimeSeries instance.
+            result in a separate `TimeSeries` instance.
         time_col : Optional[str], default None
             The name of the column in the DataFrame that contains time information.
             If provided, this column must exist in the DataFrame.
@@ -161,7 +161,7 @@ class TimeSeries:
         Returns
         -------
         List[TimeSeries]
-            A list of TimeSeries instances, one for each unique group in the DataFrame.
+            A list of `TimeSeries` instances, one for each unique group in the DataFrame.
 
         Raises
         ------
@@ -221,7 +221,7 @@ class TimeSeries:
         # )
         # return sampled_data
         # TODO from quantiles to samples, This method is not really applicable
-        pass
+        raise NotImplementedError()
 
     def to_quantiles(self, quantiles: List[float] = [0.1, 0.5, 0.9]) -> pd.DataFrame:
         """
@@ -252,7 +252,7 @@ class TimeSeries:
         #     raise ValueError("Quantile levels must be between 0 and 1.")
         # quantile_values = self.data.quantile(quantiles)
         # return quantile_values
-        pass
+        raise NotImplementedError()
 
     def by_time(self, horizon: Optional[Union[int, pd.Timestamp]] = None):
         """
@@ -286,7 +286,7 @@ class TimeSeries:
             return self.data.swaplevel(axis=0).loc(horizon)
         elif isinstance(horizon, int):
             # TODO the logic to handle int horizon
-            pass
+            raise NotImplementedError()
         else:
             logger.error("Incorrect format")
             raise ValueError("Please provide the pd.timestamp as horizon")
@@ -320,7 +320,7 @@ class TimeSeries:
             raise ValueError(f"{t0} offset is not found in the forecast data")
 
     def split(self, timestamp):
-        pass
+        raise NotImplementedError()
         # TODO
 
     def slice(self, columns: Optional[Union[str, List[str]]] = None):
@@ -336,12 +336,15 @@ class TimeSeries:
 
         Returns
         -------
-            DataFrame: A subset of the data containing the specified columns.
+        pd.DataFrame
+            A subseries containing the specified columns.
 
         Raises
         ------
-            KeyError: If the specified column(s) do not exist in the data.
-            TypeError: If the `columns` parameter is not a string or a list of strings.
+            KeyError
+                If the specified column(s) do not exist in the data.
+            TypeError
+                If the `columns` parameter is not a string or a list of strings.
         """
         if not isinstance(columns, (str, list)):
             raise TypeError(
@@ -361,20 +364,22 @@ class TimeSeries:
     def get_feature_slice(self, index: List[str], copy: bool = False) -> TimeSeries:
         """
         Extracts a subset of the data based on the specified columns.
-        Representations (level 1 of the column index) are carried over to the new TimeSeries.
+        Representations (level 1 of the column index) are carried over to the new `TimeSeries`.
 
         Parameters
         ----------
-            features List[str]: The names of the features to keep in the returned TimeSeries
+            features List[str]: The names of the features to keep in the returned `TimeSeries`
             copy bool, optional: Whether to copy the underlying data. Defaults to False.
 
         Returns
         -------
-            TimeSeries: A subset of the data containing containing a selection by features.
+        TimeSeries
+            A subseries containing a selection by features.
 
         Raises
         ------
-            TypeError: If index is not a List of strings
+        TypeError
+            If index is not a List of strings
         """
         if (not isinstance(index, List)) or (
             not all([isinstance(i, str) for i in index])
@@ -387,7 +392,7 @@ class TimeSeries:
     def get_time_slice(self, index, copy: bool = False):
         """
         Extracts a subset of the data based on the specified time point or interval.
-        Offsets (level 0 of the row index) are carried over to the new TimeSeries.
+        Offsets (level 0 of the row index) are carried over to the new `TimeSeries`.
 
         Parameters
         ----------
@@ -402,12 +407,15 @@ class TimeSeries:
 
         Returns
         -------
-            TimeSeries: A subset of the data containing containing a selection by time.
+        TimeSeries
+            A subseries containing a selection by time.
 
         Raises
         ------
-            TypeError: If index has none of the above types
-            NotImplementedError: When the step property of a slice is not None.
+        TypeError
+            If index has none of the above types
+        NotImplementedError
+            When the step property of a slice is not None.
         """
 
         # conversion of various formats into timestamps
@@ -459,7 +467,8 @@ class TimeSeries:
 
         Returns
         -------
-            int: The number of time steps in the series.
+        int
+            The number of time steps in the series.
         """
         return len(self.data.index.levels[1])
 
@@ -467,8 +476,8 @@ class TimeSeries:
         """
         Allows collection style access via a variety of keys, where single keys or slices
         split along the time axis and lists of strings split along the feature axis.
-        Offsets and representations are carried over to the new TimeSeries.
-        The newly created TimeSeries operates on the same underlying data.
+        Offsets and representations are carried over to the new `TimeSeries`.
+        The newly created `TimeSeries` operates on the same underlying data.
 
         Parameters
         ----------
@@ -480,13 +489,26 @@ class TimeSeries:
                 - type List[str] is interpreted as subset of features to select for and is forwarded to get_features
         Returns
         -------
-            TimeSeries: A subset of the data containing containing
-            a selection by time or by features.
+        TimeSeries
+            A subseries containing a selection by time or by features.
 
         Raises
         ------
-            TypeError: If index has none of the above types
-            NotImplementedError: When the step property of a slice is not None.
+        TypeError
+            If index has none of the above types
+        NotImplementedError
+            When the step property of a slice is not None.
+
+        Examples
+        --------
+        >>> from datetime import datetime, timezone
+        >>> ts = TimeSeries(some_data)
+        >>>
+        >>> print(ts[3])
+        >>> print(ts[:3])
+        >>> print(ts[3:6])
+        >>> print(ts[0.1: -4])
+        >>> print(ts[datetime(2000, 1, 1, tzinfo=timezone.utc):])
         """
 
         if isinstance(index, List):
