@@ -358,6 +358,97 @@ class TimeSeries:
                 f"The specified column(s) {columns} do not exist in the data."
             ) from e
 
+    def get_feature_slice(self, index: List[str], copy: bool = False) -> TimeSeries:
+        """
+        Extracts a subset of the data based on the specified columns.
+        Representations (level 1 of the column index) are carried over to the new TimeSeries.
+
+        Parameters
+        ----------
+            features List[str]: The names of the features to keep in the returned TimeSeries
+            copy bool, optional: Whether to copy the underlying data. Defaults to False.
+
+        Returns
+        -------
+            TimeSeries: A subset of the data containing containing a selection by features.
+
+        Raises
+        ------
+            TypeError: If index is not a List of strings
+        """
+        if (not isinstance(index, List)) or (
+            not all([isinstance(i, str) for i in index])
+        ):
+            raise TypeError("features must be a list of strings")
+
+        new_data = self.data[index]
+        return TimeSeries(data=new_data.copy() if copy else new_data)
+
+    def get_time_slice(self, index, copy: bool = False):
+        """
+        Extracts a subset of the data based on the specified time point or interval.
+        Offsets (level 0 of the row index) are carried over to the new TimeSeries.
+
+        Parameters
+        ----------
+            index: a single key or a slice indicating what part of the time series to access.
+                - type int is interpreted as absolute number time steps.
+                - type float is interpreted as relative offset based on the total number of time steps.
+                - type datetime or pd.Timestamp is interpreted as point in time.
+                - type slice slices the underlying data interpreting start and stop as one of the above types.
+                    Start and stop do not need to be of the same type.
+                    Step must be None.
+            copy bool, optional: Whether to copy the underlying data. Defaults to False.
+
+        Returns
+        -------
+            TimeSeries: A subset of the data containing containing a selection by time.
+
+        Raises
+        ------
+            TypeError: If index has none of the above types
+            NotImplementedError: When the step property of a slice is not None.
+        """
+
+        # conversion of various formats into timestamps
+        def to_dt(i) -> Optional[Union[pd.Timestamp, slice]]:
+            match i:
+                case None:
+                    return None
+                case slice():
+                    if i.step is not None:
+                        raise NotImplementedError(
+                            "Only continuous slices are supported."
+                        )
+                    else:
+                        return slice(to_dt(i.start), to_dt(i.stop))
+                case pd.Timestamp():
+                    return i
+                case datetime():
+                    return pd.Timestamp(i)
+                case int():
+                    return self.data.index.levels[1][i]
+                case float():
+                    return to_dt(int(np.round(len(self) * i)))
+                case _:
+                    raise TypeError(f"Key {i} has unexpected type {type(i)}.")
+
+        index = to_dt(index)
+
+        # adjust index format so that the data frame structure is preserved upon access
+        if not isinstance(index, slice):
+            index = [index]
+
+        # slice the underlying data
+        new_data = (
+            self.data.swaplevel(axis=0)
+            .sort_index()
+            .loc[index]
+            .swaplevel(axis=0)
+            .sort_index()
+        )
+        return TimeSeries(data=new_data.copy() if copy else new_data)
+
     def __repr__(self):
         return f"TimeSeries(data={self.data})"
 
@@ -372,36 +463,8 @@ class TimeSeries:
         """
         return len(self.data.index.levels[1])
 
-    def get_features(self, features: List[str], copy: bool = False) -> TimeSeries:
-        """
-        Extracts a subset of the data based on the specified columns.
-
-        Parameters
-        ----------
-            features List[str]: The names of the features to keep in the returned TimeSeries
-            copy bool, optional: Whether to copy the underlying data. Defaults to False.
-        Returns
-        -------
-            TimeSeries: A subset of the data containing the specified columns.
-
-        Raises
-        ------
-            TypeError: If features is not a List of strings
-        """
-        if (not isinstance(features, List)) or (
-            not all([isinstance(f, str) for f in features])
-        ):
-            raise TypeError("features must be a list of strings")
-
-        new_data = self.data[features]
-        return TimeSeries(data=new_data.copy() if copy else new_data)
-
     def __getitem__(self, index) -> TimeSeries:
         """
-        TODO Refactor
-        TODO raise out of bound errors
-            (for loops expect that an IndexError will be raised for illegal indexes
-            to allow proper detection of the end of the sequence.)
         Allows collection style access via a variety of keys, where single keys or slices
         split along the time axis and lists of strings split along the feature axis.
         Offsets and representations are carried over to the new TimeSeries.
@@ -423,72 +486,10 @@ class TimeSeries:
         Raises
         ------
             TypeError: If index has none of the above types
-            NotImplementedError: If a more complex slice is given, i.e.,
-                when step is not None or when start and stop have differing types other than None.
+            NotImplementedError: When the step property of a slice is not None.
         """
+
         if isinstance(index, List):
-            return self.get_features(index)
-        elif isinstance(index, slice):
-            if (
-                index.start is not None
-                and index.stop is not None
-                and type(index.start) != type(index.stop)
-            ):
-                raise NotImplementedError("Heterogeneous slices are not supported.")
-            if index.step is not None:
-                raise NotImplementedError("Only continuous slices are supported.")
-            elif isinstance(index.start, int) or isinstance(index.stop, int):
-                dt_start = (
-                    self.data.index.levels[1][index.start]
-                    if index.start is not None
-                    else None
-                )
-                dt_stop = (
-                    self.data.index.levels[1][index.stop]
-                    if index.stop is not None
-                    else None
-                )
-                query = slice(dt_start, dt_stop)
-                return self[query]
-            elif isinstance(index.start, float) or isinstance(index.stop, float):
-                int_start = (
-                    int(np.round(len(self) * index.start))
-                    if index.start is not None
-                    else None
-                )
-                int_stop = (
-                    int(np.round(len(self) * index.stop))
-                    if index.stop is not None
-                    else None
-                )
-                return self[int_start:int_stop]
-            elif isinstance(index.start, (datetime, pd.Timestamp)) or isinstance(
-                index.stop, (datetime, pd.Timestamp)
-            ):
-                new_data = (
-                    self.data.swaplevel(axis=0)
-                    .sort_index()
-                    .loc[index]
-                    .swaplevel(axis=0)
-                    .sort_index()
-                )
-                return TimeSeries(data=new_data)
-            else:
-                raise TypeError(f"Unknown slice type {type(index.start)}")
-        elif isinstance(index, int):
-            dt_index = self.data.index.levels[1][index]
-            return self[dt_index]
-        elif isinstance(index, float):
-            int_index = int(np.round(len(self) * index))
-            return self[int_index]
-        elif (isinstance(index, datetime)) or (isinstance(index, pd.Timestamp)):
-            new_data = (
-                self.data.swaplevel(axis=0)
-                .sort_index()
-                .loc[[index]]
-                .swaplevel(axis=0)
-                .sort_index()
-            )
-            return TimeSeries(data=new_data)
+            return self.get_feature_slice(index)
         else:
-            raise TypeError(f"Unknown index type {type(index)}")
+            return self.get_time_slice(index)
