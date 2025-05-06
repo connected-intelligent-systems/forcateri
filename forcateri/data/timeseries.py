@@ -1,12 +1,23 @@
-import pandas as pd
-import numpy as np
-from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union, Self
+from __future__ import annotations
+
+from datetime import datetime
 import logging
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple, Union
+
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 
+
 class TimeSeries:
-    def __init__(self, data: pd.DataFrame, time_col: Optional[str] = None, value_cols: Optional[Union[List[str], str]] = None, **kwargs):
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        time_col: Optional[str] = None,
+        value_cols: Optional[Union[List[str], str]] = None,
+        **kwargs,
+    ):
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Expected a pandas DataFrame")
 
@@ -16,32 +27,38 @@ class TimeSeries:
             logger.info("TimeSeries initialized from internal-format DataFrame.")
         else:
             logger.info("Raw DataFrame provided, converting to TimeSeries format.")
-            self.data = self._build_internal_format(data, time_col, value_cols, **kwargs)
+            self.data = self._build_internal_format(
+                data, time_col, value_cols, **kwargs
+            )
 
     @classmethod
     def from_dataframe(
         cls,
         df: pd.DataFrame,
-        time_col: Optional[str] = 'time_stamp',
+        time_col: Optional[str] = "time_stamp",
         value_cols: Optional[Union[List[str], str]] = None,
-        freq: Optional[Union[str, int]] = 'h',
-        ts_type: Optional[str] = 'determ'
-    ) -> Self:
+        freq: Optional[Union[str, int]] = "h",
+        ts_type: Optional[str] = "determ",
+    ) -> TimeSeries:
         logger.info("Creating TimeSeries from DataFrame via class method.")
-        formatted = cls._build_internal_format(df, time_col, value_cols, freq=freq, ts_type=ts_type)
+        formatted = cls._build_internal_format(
+            df, time_col, value_cols, freq=freq, ts_type=ts_type
+        )
         return cls(formatted)
 
     @staticmethod
     def _is_internal_format(df: pd.DataFrame) -> bool:
-        return isinstance(df.index, pd.MultiIndex) and isinstance(df.columns, pd.MultiIndex)
+        return isinstance(df.index, pd.MultiIndex) and isinstance(
+            df.columns, pd.MultiIndex
+        )
 
     @staticmethod
     def _build_internal_format(
         df: pd.DataFrame,
         time_col: Optional[str],
         value_cols: Optional[Union[List[str], str]],
-        freq: Optional[Union[str, int]] = 'h',
-        ts_type: Optional[str] = 'determ'
+        freq: Optional[Union[str, int]] = "h",
+        ts_type: Optional[str] = "determ",
     ) -> pd.DataFrame:
         if not isinstance(time_col, str):
             raise TypeError("time_col must be a string.")
@@ -50,7 +67,9 @@ class TimeSeries:
         df = df.copy()
         df[time_col] = pd.to_datetime(df[time_col])
 
-        t0_index = pd.date_range(start=df[time_col].min(), end=df[time_col].max(), freq=freq)
+        t0_index = pd.date_range(
+            start=df[time_col].min(), end=df[time_col].max(), freq=freq
+        )
         if value_cols is None:
             value_cols = df.columns[df.columns != time_col]
         elif isinstance(value_cols, str):
@@ -60,37 +79,58 @@ class TimeSeries:
         row_dim_names = ["offset", "time_stamp"]
         col_dim_names = ["feature", "representation"]
 
-        if ts_type == 'determ':
+        if ts_type == "determ":
             point_0_index = [pd.Timedelta(0)]
-            point_0_row_index = pd.MultiIndex.from_product([point_0_index, t0_index], names=row_dim_names)
-            determ_col_index = pd.MultiIndex.from_product([features, ["value"]], names=col_dim_names)
+            point_0_row_index = pd.MultiIndex.from_product(
+                [point_0_index, t0_index], names=row_dim_names
+            )
+            determ_col_index = pd.MultiIndex.from_product(
+                [features, ["value"]], names=col_dim_names
+            )
             df = df[features]
-            return pd.DataFrame(df.values, index=point_0_row_index, columns=determ_col_index)
+            return pd.DataFrame(
+                df.values, index=point_0_row_index, columns=determ_col_index
+            )
 
-        elif ts_type == 'sampled':
+        elif ts_type == "sampled":
             sampled_cols = [f"s_{i}" for i in range(16)]
-            point_1_row_index = pd.MultiIndex.from_product([pd.to_timedelta([1], unit="h"), t0_index], names=row_dim_names)
-            sampled_col_index = pd.MultiIndex.from_product([features, sampled_cols], names=col_dim_names)
-            return pd.DataFrame(df[features].values, index=point_1_row_index, columns=sampled_col_index)
+            point_1_row_index = pd.MultiIndex.from_product(
+                [pd.to_timedelta([1], unit="h"), t0_index], names=row_dim_names
+            )
+            sampled_col_index = pd.MultiIndex.from_product(
+                [features, sampled_cols], names=col_dim_names
+            )
+            return pd.DataFrame(
+                df[features].values, index=point_1_row_index, columns=sampled_col_index
+            )
 
-        elif ts_type == 'quantile':
+        elif ts_type == "quantile":
             quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
             range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
-            range_row_index = pd.MultiIndex.from_product([range_index, t0_index], names=row_dim_names)
-            quant_col_index = pd.MultiIndex.from_product([features, quant_cols], names=col_dim_names)
-            return pd.DataFrame(df[features].values, index=range_row_index, columns=quant_col_index)
+            range_row_index = pd.MultiIndex.from_product(
+                [range_index, t0_index], names=row_dim_names
+            )
+            quant_col_index = pd.MultiIndex.from_product(
+                [features, quant_cols], names=col_dim_names
+            )
+            return pd.DataFrame(
+                df[features].values, index=range_row_index, columns=quant_col_index
+            )
 
         else:
-            raise ValueError("Invalid ts_type provided. Use 'determ', 'sampled', or 'quantile'.")
-        
+            raise ValueError(
+                "Invalid ts_type provided. Use 'determ', 'sampled', or 'quantile'."
+            )
+
     @classmethod
-    def from_group_df(cls,
-        df:pd.DataFrame, 
-        group_col:str,
-        time_col:Optional[str] = None, 
+    def from_group_df(
+        cls,
+        df: pd.DataFrame,
+        group_col: str,
+        time_col: Optional[str] = None,
         value_cols: Optional[Union[List[str], str]] = None,
-        freq: Optional[Union[str, int]] = 'h',
-        ts_type:Optional[str] ='determ',    
+        freq: Optional[Union[str, int]] = "h",
+        ts_type: Optional[str] = "determ",
     ) -> List[pd.DataFrame]:
         """
         Build TimeSeries instances for each group in the DataFrame.
@@ -136,20 +176,22 @@ class TimeSeries:
         unique_group = df[group_col].unique()
         ts_dict = {}
         ts_list = []
-        for i,group_id in enumerate(unique_group):
+        for i, group_id in enumerate(unique_group):
             df_group = df[df[group_col] == group_id]
-            ts_instance  = cls.from_dataframe(df_group,time_col, value_cols,freq,ts_type)
+            ts_instance = cls.from_dataframe(
+                df_group, time_col, value_cols, freq, ts_type
+            )
             ts_dict[group_id] = ts_instance
             ts_list.append(ts_instance)
             ts_dict[i] = group_id
-        return ts_list,ts_dict
+        return ts_list, ts_dict
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
         Generate Monte Carlo samples based on quantiles for each column.
 
-        This method generates synthetic samples by applying Monte Carlo sampling 
-        to the empirical quantiles of each column in the time series DataFrame. 
+        This method generates synthetic samples by applying Monte Carlo sampling
+        to the empirical quantiles of each column in the time series DataFrame.
         The sampling is done independently for each feature using inverse transform sampling.
 
         Parameters
@@ -160,7 +202,7 @@ class TimeSeries:
         Returns
         -------
         pd.DataFrame
-            A DataFrame containing `n_samples` rows, where each column is sampled 
+            A DataFrame containing `n_samples` rows, where each column is sampled
             based on the empirical quantile function of the corresponding feature.
 
         Raises
@@ -171,17 +213,17 @@ class TimeSeries:
         # if n_samples <= 0:
         #     logger.error("n_samples is not positive integer")
         #     raise ValueError("n_samples must be a positive integer.")
-        
+
         # probs = np.random.uniform(0, 1, (n_samples, self.data.shape[1]))  # Random probabilities
         # sampled_data = pd.DataFrame(
         #     {col: np.quantile(self.data[col], probs[:, i]) for i, col in enumerate(self.data.columns)},
         #     columns=self.data.columns
         # )
         # return sampled_data
-        #TODO from quantiles to samples, This method is not really applicable
+        # TODO from quantiles to samples, This method is not really applicable
         pass
 
-    def to_quantiles(self, quantiles:List[float] = [0.1,0.5,0.9]) -> pd.DataFrame:
+    def to_quantiles(self, quantiles: List[float] = [0.1, 0.5, 0.9]) -> pd.DataFrame:
         """
         Compute empirical quantiles from the time series data.
 
@@ -197,7 +239,7 @@ class TimeSeries:
         Returns
         -------
         pd.DataFrame
-            A DataFrame where each row corresponds to a quantile level and 
+            A DataFrame where each row corresponds to a quantile level and
             each column corresponds to a feature in the time series.
 
         Raises
@@ -208,10 +250,11 @@ class TimeSeries:
 
         # if not all(0 <= q <= 1 for q in quantiles):
         #     raise ValueError("Quantile levels must be between 0 and 1.")
-        # quantile_values = self.data.quantile(quantiles) 
+        # quantile_values = self.data.quantile(quantiles)
         # return quantile_values
         pass
-    def by_time(self,horizon:Optional[Union[int,pd.Timestamp]]=None):
+
+    def by_time(self, horizon: Optional[Union[int, pd.Timestamp]] = None):
         """
         Filter the data by a specific point in time or a time-based offset.
 
@@ -239,15 +282,15 @@ class TimeSeries:
         The `swaplevel(axis=0)` is used for convenient access by timestamp. Ensure that
         after swapping, timestamps are accessible at the top level of the index.
         """
-        if isinstance(horizon,pd.Timestamp):
-            return self.data.swaplevel(axis=0).loc(horizon) 
-        elif isinstance(horizon,int):
-            #TODO the logic to handle int horizon
-            pass 
+        if isinstance(horizon, pd.Timestamp):
+            return self.data.swaplevel(axis=0).loc(horizon)
+        elif isinstance(horizon, int):
+            # TODO the logic to handle int horizon
+            pass
         else:
             logger.error("Incorrect format")
             raise ValueError("Please provide the pd.timestamp as horizon")
-        
+
     def by_horizon(self, t0):
         """
         Return forecasts made at time `t0`, reindexed by their actual timestamps.
@@ -269,20 +312,21 @@ class TimeSeries:
         """
         try:
             forecasts = self.data.loc[t0]
-            forecasts['time_stamp'] = forecasts.index + t0
+            forecasts["time_stamp"] = forecasts.index + t0
             forecasts.set_index("time_stamp", inplace=True, drop=True)
             return forecasts
         except KeyError:
             logger.error(f"{t0} not found in forecast data.")
             raise ValueError(f"{t0} offset is not found in the forecast data")
-        
 
     def split(self, timestamp):
-        pass 
-        #TODO
+        pass
+        # TODO
 
     def slice(self, columns: Optional[Union[str, List[str]]] = None):
         """
+        TODO use get_features instead
+
         Extracts a subset of the data based on the specified columns.
 
         Parameters:
@@ -290,19 +334,161 @@ class TimeSeries:
             - If a single column name (str) is provided, it will return a DataFrame with that column.
             - If a list of column names is provided, it will return a DataFrame with those columns.
 
-        Returns:
+        Returns
+        -------
             DataFrame: A subset of the data containing the specified columns.
 
-        Raises:
+        Raises
+        ------
             KeyError: If the specified column(s) do not exist in the data.
             TypeError: If the `columns` parameter is not a string or a list of strings.
         """
         if not isinstance(columns, (str, list)):
-            raise TypeError("The `columns` parameter must be a string or a list of strings.")
+            raise TypeError(
+                "The `columns` parameter must be a string or a list of strings."
+            )
         try:
-            return self.data[columns] if isinstance(columns, list) else self.data[[columns]]
+            return (
+                self.data[columns]
+                if isinstance(columns, list)
+                else self.data[[columns]]
+            )
         except KeyError as e:
-            raise KeyError(f"The specified column(s) {columns} do not exist in the data.") from e
-        
+            raise KeyError(
+                f"The specified column(s) {columns} do not exist in the data."
+            ) from e
+
     def __repr__(self):
         return f"TimeSeries(data={self.data})"
+
+    def __len__(self) -> int:
+        """
+        Returns the length of the time series in time steps.
+        The number of offsets does not count towards the length.
+
+        Returns
+        -------
+            int: The number of time steps in the series.
+        """
+        return len(self.data.index.levels[1])
+
+    def get_features(self, features: List[str], copy: bool = False) -> TimeSeries:
+        """
+        Extracts a subset of the data based on the specified columns.
+
+        Parameters
+        ----------
+            features List[str]: The names of the features to keep in the returned TimeSeries
+            copy bool, optional: Whether to copy the underlying data. Defaults to False.
+        Returns
+        -------
+            TimeSeries: A subset of the data containing the specified columns.
+
+        Raises
+        ------
+            TypeError: If features is not a List of strings
+        """
+        if (not isinstance(features, List)) or (
+            not all([isinstance(f, str) for f in features])
+        ):
+            raise TypeError("features must be a list of strings")
+
+        new_data = self.data[features]
+        return TimeSeries(data=new_data.copy() if copy else new_data)
+
+    def __getitem__(self, index) -> TimeSeries:
+        """
+        TODO Refactor
+        TODO raise out of bound errors
+            (for loops expect that an IndexError will be raised for illegal indexes
+            to allow proper detection of the end of the sequence.)
+        Allows collection style access via a variety of keys, where single keys or slices
+        split along the time axis and lists of strings split along the feature axis.
+        Offsets and representations are carried over to the new TimeSeries.
+        The newly created TimeSeries operates on the same underlying data.
+
+        Parameters
+        ----------
+            index: a single key or a slice indicating what part of the time series to access
+                - type int is interpreted as absolute number time steps
+                - type float is interpreted as relative offset based on the total number of time steps
+                - type datetime or pd.Timestamp is interpreted as point in time
+                - type slice slices the underlying data interpreting start and stop as one of the above types
+                - type List[str] is interpreted as subset of features to select for and is forwarded to get_features
+        Returns
+        -------
+            TimeSeries: A subset of the data containing containing
+            a selection by time or by features.
+
+        Raises
+        ------
+            TypeError: If index has none of the above types
+            NotImplementedError: If a more complex slice is given, i.e.,
+                when step is not None or when start and stop have differing types other than None.
+        """
+        if isinstance(index, List):
+            return self.get_features(index)
+        elif isinstance(index, slice):
+            if (
+                index.start is not None
+                and index.stop is not None
+                and type(index.start) != type(index.stop)
+            ):
+                raise NotImplementedError("Heterogeneous slices are not supported.")
+            if index.step is not None:
+                raise NotImplementedError("Only continuous slices are supported.")
+            elif isinstance(index.start, int) or isinstance(index.stop, int):
+                dt_start = (
+                    self.data.index.levels[1][index.start]
+                    if index.start is not None
+                    else None
+                )
+                dt_stop = (
+                    self.data.index.levels[1][index.stop]
+                    if index.stop is not None
+                    else None
+                )
+                query = slice(dt_start, dt_stop)
+                return self[query]
+            elif isinstance(index.start, float) or isinstance(index.stop, float):
+                int_start = (
+                    int(np.round(len(self) * index.start))
+                    if index.start is not None
+                    else None
+                )
+                int_stop = (
+                    int(np.round(len(self) * index.stop))
+                    if index.stop is not None
+                    else None
+                )
+                return self[int_start:int_stop]
+            elif isinstance(index.start, (datetime, pd.Timestamp)) or isinstance(
+                index.stop, (datetime, pd.Timestamp)
+            ):
+                new_data = (
+                    self.data.swaplevel(axis=0)
+                    .sort_index()
+                    .loc[index]
+                    .swaplevel(axis=0)
+                    .sort_index()
+                )
+                return TimeSeries(data=new_data)
+            else:
+                raise TypeError(f"Unknown slice type {type(index.start)}")
+        elif isinstance(index, int):
+            dt_index = self.data.index.levels[1][index]
+            return self[dt_index]
+        elif isinstance(index, float):
+            int_index = int(np.round(len(self) * index))
+            return self[int_index]
+        elif (isinstance(index, datetime)) or (isinstance(index, pd.Timestamp)):
+            new_data = (
+                self.data.swaplevel(axis=0)
+                .sort_index()
+                .loc[[index]]
+                .swaplevel(axis=0)
+                .sort_index()
+            )
+            return TimeSeries(data=new_data)
+        else:
+            raise TypeError(f"Unknown index type {type(index)}")
