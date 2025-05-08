@@ -47,14 +47,24 @@ class DataProvider:
         for data_source in self.data_sources:
             data_list = data_source.get_data()
             for ts_obj in data_list:
-                self.target.append(ts_obj.slice(columns = columns_target))
-                self.known.append(ts_obj.slice(columns = columns_known))
-                self.observed.append(ts_obj.slice(columns = columns_observed))
+                self.target.append(ts_obj.get_feature_slice(index = columns_target))
+                self.known.append(ts_obj.get_feature_slice(index = columns_known))
+                self.observed.append(ts_obj.get_feature_slice(index = columns_observed))
 
 
-    #KNWON, OBSERVED, TARGET            
+    def get_split_set(self, split_type: str):
+        
+        start,end = self.splits
+        list_of_tuples = []
 
-    #MOVE THE SPLIT LOGIC TO THE TIMESERIES.   
+        for target_ts, known_ts, observed_ts in zip(self.target, self.known, self.observed):
+          if split_type == "train":
+              list_of_tuples.append((target_ts[:start], known_ts[:start], observed_ts[:start]))
+          elif split_type == "val":
+              list_of_tuples.append((target_ts[start:end], known_ts[start:end], observed_ts[start:end]))
+          elif split_type == "test":
+              list_of_tuples.append((target_ts[end:], known_ts[end:], observed_ts[end:]))
+        return list_of_tuples
 
     # def _get_split_set(self, split_type: str):
     #   """
@@ -113,12 +123,12 @@ class DataProvider:
     #  return result
 
     def get_train_set(self):
-      return self._get_split_set("train")
+      return self._get_split_set()
 
     def get_val_set(self):
-      return self._get_split_set("val")
+      return self._get_split_set()
 
     def get_test_set(self):
-      return self._get_split_set("test")
+      return self._get_split_set()
     
 
