@@ -6,6 +6,7 @@ from typing import List,Optional, Any, Union
 import logging
 import pickle
 from ..model.modelexceptions import ModelNotFittedError
+from ..data.adapterinput import AdapterInput
 
 
 class ModelAdapter(ABC):
@@ -14,18 +15,18 @@ class ModelAdapter(ABC):
         pass
     
     @abstractmethod
-    def fit(self, **kwargs):
+    def fit(self, train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]], **kwargs):
         pass
         
 
     @abstractmethod
-    def predict(self):
+    def predict(self, data:List[AdapterInput]):
         if self.target is None:
             logging.error("Predict called befor the model was fitted")
             raise ModelNotFittedError("The model must be fitted before predicting.")
 
     @abstractmethod
-    def tune(self):
+    def tune(self,train_data:List[AdapterInput], val_data:Optional[List[AdapterInput]], **kwargs):
         pass 
     
     @abstractmethod
@@ -41,10 +42,16 @@ class ModelAdapter(ABC):
 
     @abstractmethod
     def to_model_format(ts:TimeSeries) -> Any:
+        """
+        Applies model-specific transformations to the time series data.
+        """
         pass 
 
     @abstractmethod
     def to_time_series(ts:Any) -> TimeSeries:
+        """
+        Converts the model-specific data into the standardized TimeSeries format e.g., inverse scaling.
+        """
         pass
 
     @classmethod
