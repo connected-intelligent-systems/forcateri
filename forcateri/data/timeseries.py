@@ -323,43 +323,6 @@ class TimeSeries:
         raise NotImplementedError()
         # TODO
 
-    def slice(self, columns: Optional[Union[str, List[str]]] = None):
-        """
-        TODO use get_features instead
-
-        Extracts a subset of the data based on the specified columns.
-
-        Parameters:
-            columns (Optional[Union[str, List[str]]]): The column name or list of column names to slice from the data.
-            - If a single column name (str) is provided, it will return a DataFrame with that column.
-            - If a list of column names is provided, it will return a DataFrame with those columns.
-
-        Returns
-        -------
-        pd.DataFrame
-            A subseries containing the specified columns.
-
-        Raises
-        ------
-            KeyError
-                If the specified column(s) do not exist in the data.
-            TypeError
-                If the `columns` parameter is not a string or a list of strings.
-        """
-        if not isinstance(columns, (str, list)):
-            raise TypeError(
-                "The `columns` parameter must be a string or a list of strings."
-            )
-        try:
-            return (
-                self.data[columns]
-                if isinstance(columns, list)
-                else self.data[[columns]]
-            )
-        except KeyError as e:
-            raise KeyError(
-                f"The specified column(s) {columns} do not exist in the data."
-            ) from e
 
     def get_feature_slice(self, index: List[str], copy: bool = False) -> TimeSeries:
         """

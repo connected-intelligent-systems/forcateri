@@ -4,6 +4,8 @@ from .timeseries import TimeSeries
 import pandas as pd
 from datetime import datetime
 from .seriesrole import SeriesRole
+from .adapterinput import AdapterInput
+
 
 Cutoff = Tuple[
     Union[int, float, str, datetime, pd.Timestamp],
@@ -26,6 +28,21 @@ class DataProvider:
     ):
         """
         Initializes the DataProvider class.
+
+        Args:
+            data_sources (List[DataSource]): A list of data sources to be used by the DataProvider.
+            roles (Dict[str, SeriesRole]): A dictionary mapping series names to their respective roles.
+            splits (Union[Cutoff, List[Cutoff]], optional): The split points for dividing the data. 
+                Defaults to (1.0 / 3.0, 2.0 / 3.0).
+
+        Attributes:
+            roles (Dict[str, SeriesRole]): Stores the roles of the series.
+            splits (Union[Cutoff, List[Cutoff]]): Stores the split points for data division.
+            data_sources (List[DataSource]): Stores the provided data sources.
+            target (list): A list to store target series.
+            known (list): A list to store known series.
+            observed (list): A list to store observed series.
+            static (Dict[str, float]): A dictionary to store static features.
         """
         self.roles = roles
         self.splits = splits
@@ -33,14 +50,33 @@ class DataProvider:
         self.target=[]
         self.known=[]
         self.observed=[]
-        self.static=[]
+        self.static=Dict[str, float]
         #self.roles_reversed = dict(zip(roles.values(), roles.keys()))
         self._separate_ts()
 
     def _separate_ts(self):
+        """""
+        Separates the time series data into target, known, and observed categories 
+        based on their assigned roles, and appends the corresponding slices to 
+        their respective lists.
+
+        This method uses the `roles` attribute to determine the role of each column 
+        in the time series data (e.g., TARGET, KNOWN, OBSERVED). It then iterates 
+        through the data sources, retrieves the data, and extracts the relevant 
+        feature slices for each role.
+
+        Attributes:
+            roles (dict): A dictionary mapping column names to their respective roles 
+                          (e.g., SeriesRole.TARGET, SeriesRole.KNOWN, SeriesRole.OBSERVED).
+            data_sources (list): A list of data sources containing time series data.
+            target (list): A list to store the extracted target feature slices.
+            known (list): A list to store the extracted known feature slices.
+            observed (list): A list to store the extracted observed feature slices.
+
+        Raises:
+            AttributeError: If `roles` or `data_sources` is not properly defined.
         """
-        Separates the time series into target, known, observed and static based on roles.
-        """
+
         columns_observed = [col for col, role in self.roles.items() if role == SeriesRole.OBSERVED]
         columns_known = [col for col, role in self.roles.items() if role == SeriesRole.KNOWN]   
         columns_target = [col for col, role in self.roles.items() if role == SeriesRole.TARGET]
@@ -52,83 +88,78 @@ class DataProvider:
                 self.observed.append(ts_obj.get_feature_slice(index = columns_observed))
 
 
-    def get_split_set(self, split_type: str):
-        
-        start,end = self.splits
+    def _get_split_set(self, split_type: str) -> List[AdapterInput]:
+        """
+        Retrieves a dataset split (train, validation, or test) based on the split type.
+
+        Args:
+            split_type (str): The type of dataset split to retrieve. 
+                              It can be "train", "val", or "test".
+
+        Returns:
+            List[AdapterInput]: A list of AdapterInput objects representing the requested dataset split.
+        """
+        start, end = self.splits
         list_of_tuples = []
 
         for target_ts, known_ts, observed_ts in zip(self.target, self.known, self.observed):
-          if split_type == "train":
-              list_of_tuples.append((target_ts[:start], known_ts[:start], observed_ts[:start]))
-          elif split_type == "val":
-              list_of_tuples.append((target_ts[start:end], known_ts[start:end], observed_ts[start:end]))
-          elif split_type == "test":
-              list_of_tuples.append((target_ts[end:], known_ts[end:], observed_ts[end:]))
+            if split_type == "train":
+                list_of_tuples.append(
+                    AdapterInput(
+                        target=target_ts[:start],
+                        known=known_ts[:start],
+                        observed=observed_ts[:start],
+                        static=self.static,
+                    )
+                )
+            elif split_type == "val":
+                list_of_tuples.append(
+                    AdapterInput(
+                        target=target_ts[start:end],
+                        known=known_ts[start:end],
+                        observed=observed_ts[start:end],
+                        static=self.static,
+                    )
+                )
+            elif split_type == "test":
+                list_of_tuples.append(
+                    AdapterInput(
+                        target=target_ts[end:],
+                        known=known_ts[end:],
+                        observed=observed_ts[end:],
+                        static=self.static,
+                    )
+                )
         return list_of_tuples
+    
 
-    # def _get_split_set(self, split_type: str):
-    #   """
-    #   Generic method to retrieve a dataset (train, validation, or test) based on splits.
 
-    #   Args:
-    #     split_type (str): The type of split to retrieve. Can be 'train', 'val', or 'test'.
 
-    #   Returns:
-    #     list: A list of tuples, where each tuple contains:
-    #       - target: A target time series for the specified split.
-    #       - known: A known time series for the specified split.
-    #       - observed: An observed time series for the specified split.
-    #       - static: The static data, unchanged across splits.
-    #   """
-    #   start, end = self.splits
+    def get_train_set(self)-> List[AdapterInput]:
+        """
+        Retrieves the training dataset.
 
-    #   if split_type == "train":
+        Returns:
+            List[AdapterInput]: A list of AdapterInput objects representing the training dataset.
+        """
+        return self._get_split_set("train")
 
-    #     def condition(ts):
-    #       if isinstance(start, (pd.Timestamp, datetime)):
-    #         return ts.index.get_level_values('time_stamp') < start
-    #       elif isinstance(start, int):
-    #         return slice(None, start)
-    #       else:
-    #         return slice(None, int(len(ts) * start))
-          
-    #   elif split_type == "val":
+    def get_val_set(self)-> List[AdapterInput]:
+        """
+        Retrieves the validation dataset.
 
-    #     def condition(ts):
-    #       if isinstance(start, (pd.Timestamp, datetime)):
-    #         return (ts.index.get_level_values('time_stamp') >= start) & (ts.index.get_level_values('time_stamp') < end)
-    #       elif isinstance(start, int) and isinstance(end, int):
-    #         return slice(start, end)
-    #       else:
-    #         return slice(int(len(ts) * start), int(len(ts) * end))
-    #   elif split_type == "test":
+        Returns:
+            List[AdapterInput]: A list of AdapterInput objects representing the validation dataset.
+        """
+        return self._get_split_set("val")
 
-    #     def condition(ts):
-    #       if isinstance(end, (pd.Timestamp, datetime)):
-    #         return ts.index.get_level_values('time_stamp') >= end
-    #       elif isinstance(end, int):
-    #         return slice(end, None)
-    #       else:
-    #         return slice(int(len(ts) * end), None)
-    #   else:
-    #     raise ValueError("Invalid split_type. Must be 'train', 'val', or 'test'.")
+    def get_test_set(self)-> List[AdapterInput]:
+        """
+        Retrieves the test dataset.
 
-    #   result = []
-    #   for target_ts, known_ts, observed_ts in zip(self.target, self.known, self.observed):
-    #     target_split = target_ts.loc[condition(target_ts)] if isinstance(condition(target_ts), pd.Series) else target_ts[condition(target_ts)]
-    #     known_split = known_ts.loc[condition(known_ts)] if isinstance(condition(known_ts), pd.Series) else known_ts[condition(known_ts)]
-    #     observed_split = observed_ts.loc[condition(observed_ts)] if isinstance(condition(observed_ts), pd.Series) else observed_ts[condition(observed_ts)]
-    #     result.append((target_split, known_split, observed_split))
-
-    #  return result
-
-    def get_train_set(self):
-      return self._get_split_set()
-
-    def get_val_set(self):
-      return self._get_split_set()
-
-    def get_test_set(self):
-      return self._get_split_set()
+        Returns:
+            List[AdapterInput]: A list of AdapterInput objects representing the test dataset.
+        """
+        return self._get_split_set("test")
     
 
