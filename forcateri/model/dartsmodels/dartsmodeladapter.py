@@ -10,8 +10,9 @@ from darts.models.forecasting.forecasting_model import ForecastingModel
 from darts.dataprocessing.transformers import Scaler
 from darts import TimeSeries as DartsTimeSeries
 from ...data.adapterinput import AdapterInput
+from abc import abstractmethod, ABC
 
-class DartsModelAdapter(ModelAdapter):
+class DartsModelAdapter(ModelAdapter, ABC):
     def __init__(self, *args,**kwargs):
         super().__init__(*args,**kwargs)
         
@@ -90,9 +91,12 @@ class DartsModelAdapter(ModelAdapter):
         #Need to think of the way to implement this method.
         return super().to_time_series()
     
-    def predict(self):
+    @abstractmethod
+    def predict(self, data:List[AdapterInput]):
         raise NotImplementedError("Subclasses must implement this method.")
-    def tune(self):
+    
+    @abstractmethod
+    def tune(self, data:List[AdapterInput]):
         raise NotImplementedError("Subclasses must implement this method.")
     
     def load(self, path: Union[Path, str]) -> None:
