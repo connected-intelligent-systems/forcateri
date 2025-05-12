@@ -16,26 +16,24 @@ class ModelAdapter(ABC):
     
     @abstractmethod
     def fit(self, train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]], **kwargs):
-        pass
+        raise NotImplementedError("Method not overridden in concrete adapter implementation")
         
 
     @abstractmethod
     def predict(self, data:List[AdapterInput]):
-        if self.target is None:
-            logging.error("Predict called befor the model was fitted")
-            raise ModelNotFittedError("The model must be fitted before predicting.")
+        raise NotImplementedError("Method not overridden in concrete adapter implementation")
 
     @abstractmethod
     def tune(self,train_data:List[AdapterInput], val_data:Optional[List[AdapterInput]], **kwargs):
-        pass 
+        raise NotImplementedError("Method not overridden in concrete adapter implementation") 
     
     @abstractmethod
     def load(self, path: Union[Path, str]) -> None:
-        pass
+        raise NotImplementedError("Method not overridden in concrete adapter implementation")
 
     @abstractmethod
     def save(self,path: Union[Path, str]) -> None:
-        pass
+        raise NotImplementedError("Method not overridden in concrete adapter implementation")
 
         
 
@@ -45,14 +43,14 @@ class ModelAdapter(ABC):
         """
         Applies model-specific transformations to the time series data.
         """
-        pass 
+        raise NotImplementedError("Method not overridden in concrete adapter implementation") 
 
     @abstractmethod
     def to_time_series(ts:Any) -> TimeSeries:
         """
         Converts the model-specific data into the standardized TimeSeries format e.g., inverse scaling.
         """
-        pass
+        raise NotImplementedError("Method not overridden in concrete adapter implementation")
 
     @classmethod
     def _default_save_path(cls) -> str:
