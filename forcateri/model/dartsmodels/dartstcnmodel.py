@@ -55,5 +55,8 @@ class DartsTCNModel(DartsModelAdapter):
    
     def predict(self,**kwargs):
         raise NotImplementedError("Predict method is not implemented yet.") 
+    
+    def tune(self,train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]],**kwargs):
+        raise NotImplementedError("Tune method is not implemented yet.")
 
     
