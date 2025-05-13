@@ -48,9 +48,13 @@ class TimeSeries:
 
     @staticmethod
     def _is_internal_format(df: pd.DataFrame) -> bool:
-        return isinstance(df.index, pd.MultiIndex) and isinstance(
+        if not isinstance(df.index, pd.MultiIndex) and isinstance(
             df.columns, pd.MultiIndex
-        )
+        ):
+            return False
+        expected_index_names = ['offset', 'time_stamp']
+        expected_column_names = ['feature', 'representation']
+        return df.index.names == expected_index_names and df.columns.names == expected_column_names
 
     @staticmethod
     def _build_internal_format(
