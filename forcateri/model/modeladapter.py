@@ -45,6 +45,13 @@ class ModelAdapter(ABC):
         """
         raise NotImplementedError("Method not overridden in concrete adapter implementation") 
 
+    def convert_input(self, data:List[AdapterInput]) -> Any:
+        """
+        Converts the input data into the standardized format.
+        """
+        raise NotImplementedError("Method not overridden in concrete adapter implementation")
+    
+
     @abstractmethod
     def to_time_series(ts:Any) -> TimeSeries:
         """

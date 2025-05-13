@@ -71,7 +71,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             return df_reset
     
   
-    def process_single_time_series(self,t: TimeSeries) -> DartsTimeSeries:
+    def to_model_format(self,t: TimeSeries) -> DartsTimeSeries:
             data = DartsModelAdapter.flatten_timeseries_df(t.data)
             data['time_stamp'] = pd.to_datetime(data['time_stamp']).dt.tz_localize(None)
             value_cols = [col for col in data.columns if col != 'time_stamp']
@@ -79,11 +79,11 @@ class DartsModelAdapter(ModelAdapter, ABC):
     
 
     
-    def to_model_format(self,data:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
+    def convert_input(self,data:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
 
-        target = [self.process_single_time_series(t.target) for t in data]
-        known = [self.process_single_time_series(t.known) for t in data]
-        observed = [self.process_single_time_series(t.observed) for t in data]
+        target = [self.to_model_format(t.target) for t in data]
+        known = [self.to_model_format(t.known) for t in data]
+        observed = [self.to_model_format(t.observed) for t in data]
         static = [t.static for t in data]
         
         return target, known, observed , static     
