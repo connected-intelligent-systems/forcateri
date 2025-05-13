@@ -44,7 +44,8 @@ class ModelAdapter(ABC):
         Applies model-specific transformations to the time series data.
         """
         raise NotImplementedError("Method not overridden in concrete adapter implementation") 
-
+    
+    @abstractmethod
     def convert_input(self, data:List[AdapterInput]) -> Any:
         """
         Converts the input data into the standardized format.

@@ -13,15 +13,33 @@ from ...data.adapterinput import AdapterInput
 from abc import abstractmethod, ABC
 
 class DartsModelAdapter(ModelAdapter, ABC):
+    
     def __init__(self, freq:str = '60min',*args,**kwargs):
         self.freq = freq
         super().__init__(*args,**kwargs)
-        
-    def fit(self,train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]]) -> None:
-        
-        target, known, observed, static = self.to_model_format(train_data)
+        self.model = None
 
-        self.fit_args = {'target':target}
+    def fit(self,train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]]) -> None:
+        """
+        Fits the model using the provided training and validation data.
+        This method prepares the input data by converting it into the required format
+        and passes it to the model's `fit` method. It supports handling target series,
+        future covariates, past covariates, and static covariates, depending on the
+        model's capabilities.
+        Args:
+            train_data (List[AdapterInput]): The training data containing target series
+                and optional covariates (future, past, and static).
+            val_data (Optional[List[AdapterInput]]): The validation data containing target
+                series and optional covariates (future, past, and static). If not provided,
+                validation is skipped.
+        Raises:
+            ValueError: If the input data is not in the expected format or if the model
+                does not support a required covariate type.
+        """
+        
+        target, known, observed, static = self.convert_input(train_data)
+
+        fit_args = {'series':target}
         covariate_map = {
             'future_covariates': (self.model.supports_future_covariates, known),
             'past_covariates': (self.model.supports_past_covariates, observed),
@@ -30,11 +48,11 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         for key, (supports, value) in covariate_map.items():
             if supports and value is not None:
-                self.fit_args[key] = value
+                fit_args[key] = value
 
         if val_data:
-            val_target, val_known, val_observed, val_static = self.to_model_format(val_data)
-            self.fit_args['val_series'] = val_target
+            val_target, val_known, val_observed, val_static = self.convert_input(val_data)
+            fit_args['val_series'] = val_target
 
             val_covariate_map = {
                 'val_future_covariates': (self.model.supports_future_covariates, val_known),
@@ -44,7 +62,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
             for key, (supports, value) in val_covariate_map.items():
                 if supports and value is not None:
-                    self.fit_args[key] = value
+                    fit_args[key] = value
+        self.model.fit(**fit_args)
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -72,6 +91,30 @@ class DartsModelAdapter(ModelAdapter, ABC):
     
   
     def to_model_format(self,t: TimeSeries) -> DartsTimeSeries:
+            """
+            Converts a TimeSeries object into a DartsTimeSeries object.
+
+            This method processes the input TimeSeries object by flattening its data,
+            removing timezone information from the 'time_stamp' column, and identifying
+            the value columns. It then creates and returns a DartsTimeSeries object
+            using the processed data.
+
+            Args:
+                t (TimeSeries): The input TimeSeries object to be converted.
+
+            Returns:
+                DartsTimeSeries: The resulting DartsTimeSeries object.
+
+            Raises:
+                ValueError: If the input data is not in the expected format or if
+                            required columns are missing.
+
+            Notes:
+                - The 'time_stamp' column in the input data is expected to contain
+                  datetime values.
+                - The method assumes that all columns except 'time_stamp' are value
+                  columns.
+            """
             data = DartsModelAdapter.flatten_timeseries_df(t.data)
             data['time_stamp'] = pd.to_datetime(data['time_stamp']).dt.tz_localize(None)
             value_cols = [col for col in data.columns if col != 'time_stamp']
@@ -80,6 +123,17 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
     
     def convert_input(self,data:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
+        """
+        Converts a list of AdapterInput objects into a tuple of lists formatted for the Darts model.
+        Args:
+            data (List[AdapterInput]): A list of AdapterInput objects containing the input data.
+        Returns:
+            Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
+                - A list of DartsTimeSeries objects representing the target time series.
+                - A list of DartsTimeSeries objects representing the known time series.
+                - A list of DartsTimeSeries objects representing the observed time series.
+                - An optional pandas DataFrame containing static data, if available.
+        """
 
         target = [self.to_model_format(t.target) for t in data]
         known = [self.to_model_format(t.known) for t in data]
