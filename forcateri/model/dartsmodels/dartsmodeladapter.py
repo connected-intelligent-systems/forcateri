@@ -26,7 +26,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         and passes it to the model's `fit` method. It supports handling target series,
         future covariates, past covariates, and static covariates, depending on the
         model's capabilities.
-        Args:
+        Parameters:
             train_data (List[AdapterInput]): The training data containing target series
                 and optional covariates (future, past, and static).
             val_data (Optional[List[AdapterInput]]): The validation data containing target
@@ -99,7 +99,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             the value columns. It then creates and returns a DartsTimeSeries object
             using the processed data.
 
-            Args:
+            Parameters:
                 t (TimeSeries): The input TimeSeries object to be converted.
 
             Returns:
@@ -125,7 +125,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
     def convert_input(self,data:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
         """
         Converts a list of AdapterInput objects into a tuple of lists formatted for the Darts model.
-        Args:
+        Parameters:
             data (List[AdapterInput]): A list of AdapterInput objects containing the input data.
         Returns:
             Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:

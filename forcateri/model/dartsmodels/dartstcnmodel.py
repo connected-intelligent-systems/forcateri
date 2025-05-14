@@ -68,7 +68,7 @@ class DartsTCNModel(DartsModelAdapter):
         """
         Fits the model using the provided training and validation data.
 
-        Args:
+        Parameters:
             train_data (List[AdapterInput]): The training data to be used for fitting the model.
             val_data (Optional[List[AdapterInput]]): The validation data to be used for evaluating the model during training. 
                 This parameter is optional and can be None.
@@ -94,7 +94,7 @@ class DartsTCNModel(DartsModelAdapter):
         Converts the input data into the required format for the model, applying scaling transformations
         to the target and observed time series.
 
-        Args:
+        Parameters:
             data (List[AdapterInput]): A list of AdapterInput objects containing the input data.
 
         Returns:
