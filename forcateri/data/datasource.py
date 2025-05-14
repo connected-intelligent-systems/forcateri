@@ -10,7 +10,7 @@ class DataSource(ABC):
     """
     @abstractmethod
     def __init__(self,**kwargs):
-        self.last_updated:Optional[datetime] = None
+        pass
         
     @abstractmethod
     def get_data(self) -> List[TimeSeries]:
