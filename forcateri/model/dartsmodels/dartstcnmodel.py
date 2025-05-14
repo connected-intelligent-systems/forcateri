@@ -89,7 +89,7 @@ class DartsTCNModel(DartsModelAdapter):
             logging.error("Failed to fit a model, check the model params")
             raise ModelAdapterError(f"Failed to fit model: {e}") 
    
-    def convert_input(self,data:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
+    def convert_input(self,input:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
         """
         Converts the input data into the required format for the model, applying scaling transformations
         to the target and observed time series.
@@ -105,12 +105,12 @@ class DartsTCNModel(DartsModelAdapter):
                 - static: An optional pandas DataFrame containing static covariates, if available.
         """
 
-        target, known, observed , static  = super().convert_input(data)
+        target, known, observed , static  = super().convert_input(input)
         target = self.scaler_target.fit_transform(target)
         observed = self.scaler_cov.fit_transform(observed)
         return target, known, observed , static  
     
-    def predict(self,**kwargs):
+    def predict(self,data: List[AdapterInput],**kwargs):
         raise NotImplementedError("Predict method is not implemented yet.") 
     
     def tune(self,train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]],**kwargs):

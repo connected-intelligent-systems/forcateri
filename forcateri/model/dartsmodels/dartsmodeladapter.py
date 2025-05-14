@@ -122,7 +122,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
     
 
     
-    def convert_input(self,data:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
+    def convert_input(self,input:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
         """
         Converts a list of AdapterInput objects into a tuple of lists formatted for the Darts model.
         Parameters:
@@ -135,10 +135,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 - An optional pandas DataFrame containing static data, if available.
         """
 
-        target = [self.to_model_format(t.target) for t in data]
-        known = [self.to_model_format(t.known) for t in data]
-        observed = [self.to_model_format(t.observed) for t in data]
-        static = [t.static for t in data]
+        target = [self.to_model_format(t.target) for t in input]
+        known = [self.to_model_format(t.known) for t in input]
+        observed = [self.to_model_format(t.observed) for t in input]
+        static = [t.static for t in input]
         
         return target, known, observed , static     
     
@@ -152,7 +152,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         raise NotImplementedError("Subclasses must implement this method.")
     
     @abstractmethod
-    def tune(self, data:List[AdapterInput]):
+    def tune(self, train_data:List[AdapterInput], val_data:Optional[List[AdapterInput]], **kwargs):
         raise NotImplementedError("Subclasses must implement this method.")
     
     def load(self, path: Union[Path, str]) -> None:
