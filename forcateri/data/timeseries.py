@@ -48,12 +48,20 @@ class TimeSeries:
 
     @staticmethod
     def _is_internal_format(df: pd.DataFrame) -> bool:
-        if not isinstance(df.index, pd.MultiIndex) and isinstance(
+        if not (isinstance(df.index, pd.MultiIndex) and isinstance(
             df.columns, pd.MultiIndex
-        ):
+        )):
             return False
         expected_index_names = ['offset', 'time_stamp']
         expected_column_names = ['feature', 'representation']
+        if set(expected_column_names) == set(df.columns.names) and expected_column_names != df.columns.names:
+            df.columns = df.columns.reorder_levels([df.columns.names.index(name) for name in expected_column_names]) 
+            logger.info("Reordered columns to match the expected order.")
+
+        if set(expected_index_names) == set(df.index.names) and expected_index_names != df.index.names:
+            df.index = df.index.reorder_levels([df.index.names.index(name) for name in expected_index_names])
+            logger.info("Reordered index to match the expected order.")
+            
         return df.index.names == expected_index_names and df.columns.names == expected_column_names
 
     @staticmethod
