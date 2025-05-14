@@ -1,64 +1,88 @@
 import datetime
-from abc import ABC, ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 from pathlib import Path
 from ..data.timeseries import TimeSeries
-from typing import List,Optional, Any, Union
-import logging
-import pickle
-from ..model.modelexceptions import ModelNotFittedError
+from typing import List, Optional, Any, Union
 from ..data.adapterinput import AdapterInput
+from forcateri.data import adapterinput
 
 
 class ModelAdapter(ABC):
     @abstractmethod
-    def __init__(self, *args,**kwargs):
+    def __init__(self, *args, **kwargs):
         pass
-    
-    @abstractmethod
-    def fit(self, train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]], **kwargs):
-        raise NotImplementedError("Method not overridden in concrete adapter implementation")
-        
 
     @abstractmethod
-    def predict(self, data:List[AdapterInput]):
-        raise NotImplementedError("Method not overridden in concrete adapter implementation")
+    def fit(
+        self,
+        train_data: List[AdapterInput],
+        val_data: Optional[List[AdapterInput]],
+        **kwargs,
+    ):
+        raise NotImplementedError(
+            "Method not overridden in concrete adapter implementation"
+        )
 
     @abstractmethod
-    def tune(self,train_data:List[AdapterInput], val_data:Optional[List[AdapterInput]], **kwargs):
-        raise NotImplementedError("Method not overridden in concrete adapter implementation") 
-    
+    def predict(self, data: List[AdapterInput]):
+        raise NotImplementedError(
+            "Method not overridden in concrete adapter implementation"
+        )
+
+    @abstractmethod
+    def tune(
+        self,
+        train_data: List[AdapterInput],
+        val_data: Optional[List[AdapterInput]],
+        **kwargs,
+    ):
+        raise NotImplementedError(
+            "Method not overridden in concrete adapter implementation"
+        )
+
     @abstractmethod
     def load(self, path: Union[Path, str]) -> None:
-        raise NotImplementedError("Method not overridden in concrete adapter implementation")
+        raise NotImplementedError(
+            "Method not overridden in concrete adapter implementation"
+        )
 
     @abstractmethod
-    def save(self,path: Union[Path, str]) -> None:
-        raise NotImplementedError("Method not overridden in concrete adapter implementation")
-
-        
-
+    def save(self, path: Union[Path, str]) -> None:
+        raise NotImplementedError(
+            "Method not overridden in concrete adapter implementation"
+        )
 
     @abstractmethod
-    def to_model_format(ts:TimeSeries) -> Any:
+    def to_model_format(self, ts: TimeSeries) -> Any:
         """
         Applies model-specific transformations to the time series data.
         """
-        raise NotImplementedError("Method not overridden in concrete adapter implementation") 
-    
-    @abstractmethod
-    def convert_input(self, data:List[AdapterInput]) -> Any:
+        raise NotImplementedError(
+            "Method not overridden in concrete adapter implementation"
+        )
+
+    def convert_input(self, input: List[AdapterInput]) -> Any:
         """
         Converts the input data into the standardized format.
         """
-        raise NotImplementedError("Method not overridden in concrete adapter implementation")
-    
+        return [
+            AdapterInput(
+                target=self.to_model_format(i.target),
+                known=self.to_model_format(i.known),
+                observed=self.to_model_format(i.observed),
+                static=i.static,
+            )
+            for i in input
+        ]
 
     @abstractmethod
-    def to_time_series(ts:Any) -> TimeSeries:
+    def to_time_series(ts: Any) -> TimeSeries:
         """
         Converts the model-specific data into the standardized TimeSeries format e.g., inverse scaling.
         """
-        raise NotImplementedError("Method not overridden in concrete adapter implementation")
+        raise NotImplementedError(
+            "Method not overridden in concrete adapter implementation"
+        )
 
     @classmethod
     def _default_save_path(cls) -> str:
