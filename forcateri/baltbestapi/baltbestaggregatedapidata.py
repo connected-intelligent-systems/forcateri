@@ -62,7 +62,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
             .asfreq()
             .drop(columns=[self.group_col])
             .reset_index())
-        self.ts, self.ts_dict = TimeSeries.from_group_df(df=df,
+        self.ts, self.ts_dict = self._from_group_df(df=df,
                                                group_col = self.group_col,
                                                time_col=self.time_col,
                                                value_cols=self.value_cols,
@@ -83,43 +83,66 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
                 result.append(arg)
         return result
 
-    # def _separate_ts(self, target: str, known: Union[str, list[str]], observed: Union[str, list[str]], static: Union[str, list[str]] = None):
-    #     """
-    #     Separate the TimeSeries instance into target, known, observed, and static components.
+    def _from_group_df(self, df: pd.DataFrame,
+                            group_col: str,
+                            time_col: Optional[str] = None,
+                            value_cols: Optional[Union[List[str], str]] = None,
+                            freq: Optional[Union[str, int]] = "h",
+                            ts_type: Optional[str] = "determ",
+                        ) -> List[pd.DataFrame]:
+        """
+        Build `TimeSeries` instances for each group in the DataFrame.
 
-    #     The method processes the `ts` attribute, which is expected to be a TimeSeries object,
-    #     and assigns its components to the instance's attributes: `target`, `known`, `observed`, and `static`.
+        This method groups the DataFrame by the specified `group_col` and applies the logic
+        from `from_dataframe` to each group. Each group is expected to contain a time column (or index)
+        and one or more value columns representing the time series data.
 
-    #     Parameters
-    #     ----------
-    #     target : str
-    #         The column name for the target variable.
-    #     known : Union[str, list[str]]
-    #         The column name(s) for the known variables.
-    #     observed : Union[str, list[str]]
-    #         The column name(s) for the observed variables.
-    #     static : Union[str, list[str]], optional
-    #         The column name(s) for the static variables, by default None.
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The DataFrame from which to initialize the instances.
+        group_col : str
+            The column name used for grouping the data. Each unique value in this column will
+            result in a separate `TimeSeries` instance.
+        time_col : Optional[str], default None
+            The name of the column in the DataFrame that contains time information.
+            If provided, this column must exist in the DataFrame.
+        value_cols : Optional[Union[List[str], str]], default None
+            The name(s) of the column(s) in the DataFrame that contain the values.
+            Can be a single column name or a list of column names.
+        freq : Optional[Union[str, int]], default 'h'
+            The frequency of the time series data.
+        ts_type : Optional[str], default 'determ'
+            The type of the time series to create. Use 'quantile' for quantile forecasts,
+            'determ' for deterministic series, and 'sampled' for sampled series.
 
-    #     Returns
-    #     -------
-    #     None
-    #         This method modifies the instance's attributes to store the separated components of the TimeSeries.
-    #     """
-        
-    #     if self.ts is None:
-    #         raise ValueError("Fetch the data first")
-        
-    #     for ts_obj in self.ts:
-    #         data = ts_obj.data
-    #         if target is not None:
-    #             self.target.append(data[[target]])
-    #         if known is not None:
-    #             self.known.append(data[[known]] if isinstance(known, str) else data[known])
-    #         if observed is not None:
-    #             self.observed.append(data[[observed]] if isinstance(observed, str) else data[observed])
-    #         if static is not None:
-    #             self.static.append(data[[static]] if isinstance(static, str) else data[static])
+        Returns
+        -------
+        List[TimeSeries]
+            A list of `TimeSeries` instances, one for each unique group in the DataFrame.
+
+        Raises
+        ------
+        ValueError
+            If `group_col` is not found in the DataFrame.
+        """
+        if group_col not in df.columns:
+            #logger.error("Initialization failed: group_col not found in the DataFrame.")
+            raise ValueError(f"Column {group_col} not found in the DataFrame.")
+        # if value_cols is None:
+        #         value_cols = df.columns[df.columns != time_col]
+        unique_group = df[group_col].unique()
+        ts_dict = {}
+        ts_list = []
+        for i, group_id in enumerate(unique_group):
+            df_group = df[df[group_col] == group_id]
+            ts_instance = TimeSeries.from_dataframe(
+                df_group, time_col, value_cols, freq, ts_type
+            )
+            ts_dict[group_id] = ts_instance
+            ts_list.append(ts_instance)
+            ts_dict[i] = group_id
+        return ts_list, ts_dict
         
 
     def is_up2date(self):
