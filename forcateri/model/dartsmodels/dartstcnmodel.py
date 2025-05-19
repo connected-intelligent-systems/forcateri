@@ -54,8 +54,8 @@ class DartsTCNModel(DartsModelAdapter):
             num_layers=kwargs.get('num_layers', 3),
             dropout=kwargs.get('dropout', 0.1),
             weight_norm=kwargs.get('weight_norm', True),
-            n_epochs=kwargs.get('n_epochs', 100),
-            batch_size=kwargs.get('batch_size', 32),
+            n_epochs=kwargs.get('n_epochs', 1),
+            batch_size=kwargs.get('batch_size', 8),
             optimizer_kwargs=kwargs.get('optimizer_kwargs', {'lr': 1e-3}),
             random_state=kwargs.get('random_state', None),
             likelihood=kwargs.get('likelihood', QuantileRegression([0.1, 0.5, 0.9])),
@@ -110,8 +110,14 @@ class DartsTCNModel(DartsModelAdapter):
         observed = self.scaler_cov.fit_transform(observed)
         return target, known, observed , static  
     
-    def predict(self,data: List[AdapterInput],**kwargs):
-        raise NotImplementedError("Predict method is not implemented yet.") 
+    def predict(self, data: List[AdapterInput], n: Optional[int] = 1, **kwargs):
+        """
+        Predict using the model and provided data.
+        """
+        predictions = super().predict(data=data,n=n,**kwargs)
+        # If the parent class does not accept 'n', remove it from the call
+        return predictions
+        
     
     def tune(self,train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]],**kwargs):
         raise NotImplementedError("Tune method is not implemented yet.")

@@ -19,57 +19,58 @@ class DartsModelAdapter(ModelAdapter, ABC):
         super().__init__(*args,**kwargs)
         self.model = None
 
-    def fit(self,train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]]) -> None:
+    def _get_covariate_args(self, known, observed, static):
         """
-        Fits the model using the provided training and validation data.
-        This method prepares the input data by converting it into the required format
-        and passes it to the model's `fit` method. It supports handling target series,
-        future covariates, past covariates, and static covariates, depending on the
-        model's capabilities.
-        Parameters:
-            train_data (List[AdapterInput]): The training data containing target series
-                and optional covariates (future, past, and static).
-            val_data (Optional[List[AdapterInput]]): The validation data containing target
-                series and optional covariates (future, past, and static). If not provided,
-                validation is skipped.
-        Raises:
-            ValueError: If the input data is not in the expected format or if the model
-                does not support a required covariate type.
+        Helper method to build covariate arguments for model fitting and prediction.
         """
-        
-        target, known, observed, static = self.convert_input(train_data)
-
-        fit_args = {'series':target}
         covariate_map = {
-            'future_covariates': (self.model.supports_future_covariates, known),
-            'past_covariates': (self.model.supports_past_covariates, observed),
-            'static_covariates': (self.model.supports_static_covariates, static),
+            'future_covariates': (getattr(self.model, 'supports_future_covariates', False), known),
+            'past_covariates': (getattr(self.model, 'supports_past_covariates', False), observed),
+            'static_covariates': (getattr(self.model, 'supports_static_covariates', False), static),
         }
-
+        args = {}
         for key, (supports, value) in covariate_map.items():
             if supports and value is not None:
-                fit_args[key] = value
+                args[key] = value
+        return args
+
+    def fit(self, train_data: List[AdapterInput], val_data: Optional[List[AdapterInput]]) -> None:
+        """
+        Fits the model using the provided training and validation data.
+        """
+        target, known, observed, static = self.convert_input(train_data)
+        fit_args = {'series': target}
+        fit_args.update(self._get_covariate_args(known, observed, static))
 
         if val_data:
             val_target, val_known, val_observed, val_static = self.convert_input(val_data)
             fit_args['val_series'] = val_target
+            val_covariate_args = self._get_covariate_args(val_known, val_observed, val_static)
+            # Prefix validation covariate keys with 'val_'
+            for key, value in val_covariate_args.items():
+                fit_args[f'val_{key}'] = value
 
-            val_covariate_map = {
-                'val_future_covariates': (self.model.supports_future_covariates, val_known),
-                'val_past_covariates': (self.model.supports_past_covariates, val_observed),
-                'val_static_covariates': (self.model.supports_static_covariates, val_static),
-            }
-
-            for key, (supports, value) in val_covariate_map.items():
-                if supports and value is not None:
-                    fit_args[key] = value
         self.model.fit(**fit_args)
+
+    def predict(self, data: List[AdapterInput], n: Optional[int] = 1, **kwargs) -> List[DartsTimeSeries]:
+        """
+        Predict using the model and provided data.
+        """
+        target, known, observed, static = self.convert_input(data)
+        predict_args = {}
+        predict_args.update(self._get_covariate_args(known, observed, static))
+        if n is not None:
+            predict_args['n'] = n
+        prediction = self.model.predict(series=target, **predict_args, **kwargs)
+        prediction_ts_format = DartsModelAdapter.to_time_series(prediction)
+        return prediction_ts_format
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
-            # Reset index to make 'time_stamp' a column
+            # Sort index lexicographically to avoid PerformanceWarning
+            df = df.sort_index(level=list(df.index.names), sort_remaining=True)
             df_reset = df.reset_index()
-
+            
             # Drop the 'offset' column if it's not needed
             if 'offset' in df_reset.columns:
                 df_reset = df_reset.drop(columns='offset')
@@ -144,12 +145,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
     
         
     def to_time_series(ts:DartsTimeSeries):
-        #Need to think of the way to implement this method.
-        return super().to_time_series()
+        return ts
     
-    @abstractmethod
-    def predict(self, data:List[AdapterInput]):
-        raise NotImplementedError("Subclasses must implement this method.")
+
     
     @abstractmethod
     def tune(self, train_data:List[AdapterInput], val_data:Optional[List[AdapterInput]], **kwargs):

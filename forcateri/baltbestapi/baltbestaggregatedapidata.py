@@ -18,7 +18,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         self.known:Union[str,List[str]] = kwargs.get('known', None)
         self.observed:Union[str,List[str]] = kwargs.get('observed', None)
         self.static:Union[str,List[str]] = kwargs.get('static', None)
-        self.value_colst:List[str] = self._get_value_cols(self.target, self.known, self.observed, self.static)
+        self.value_cols:List[str] = self._get_value_cols(self.target, self.known, self.observed, self.static)
         self.ts_dict = {}
 
     def get_data(self):
@@ -54,7 +54,6 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         
         df = pd.read_csv(self.local_copy)
         df[self.time_col] = pd.to_datetime(df[self.time_col])
-        print(self.time_col)
         df = (
             df.set_index(self.time_col)
             .groupby(self.group_col)
@@ -139,7 +138,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
             ts_instance = TimeSeries.from_dataframe(
                 df_group, time_col, value_cols, freq, ts_type
             )
-            ts_dict[group_id] = ts_instance
+            #ts_dict[group_id] = ts_instance
             ts_list.append(ts_instance)
             ts_dict[i] = group_id
         return ts_list, ts_dict
