@@ -120,7 +120,6 @@ class TimeSeries:
         elif isinstance(value_cols, str):
             value_cols = [value_cols]
         features = value_cols
-
         row_dim_names = ["offset", "time_stamp"]
         col_dim_names = ["feature", "representation"]
 
