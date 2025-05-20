@@ -53,11 +53,7 @@ class TimeSeries:
         )):
             return False
         expected_index_names = ['offset', 'time_stamp']
-        expected_column_names = ['feature', 'representation']
-        # expected_index_names_set = set(expected_index_names)
-        # expected_column_names_set = set(expected_column_names)
-        # index_names_set = set(df.index.names)
-        # column_names_set = set(df.columns.names)
+        expected_column_names = ['features', 'representation']
         if set(expected_column_names) == set(df.columns.names) and expected_column_names != df.columns.names:
             df.columns = df.columns.reorder_levels([df.columns.names.index(name) for name in expected_column_names]) 
             logger.info("Reordered columns to match the expected order.")
@@ -66,24 +62,7 @@ class TimeSeries:
             df.index = df.index.reorder_levels([df.index.names.index(name) for name in expected_index_names])
             logger.info("Reordered index to match the expected order.")
 
-        # if index_names_set < expected_index_names_set and index_names_set in expected_index_names_set:
-        #     missing_index_levels = list(expected_index_names_set - index_names_set)
-        #     for level in missing_index_levels:
-        #         df[level] = None
-        #     df.set_index(missing_index_levels, append=True, inplace=True)
-        #     df.index = df.index.reorder_levels(expected_index_names)
-        #     logger.info(f"Appended missing index levels: {missing_index_levels}.")
 
-        # if column_names_set < expected_column_names_set and column_names_set in expected_column_names_set:
-        #     missing_column_levels = list(expected_column_names_set - column_names_set)
-        #     print(missing_column_levels)
-        #     for level in missing_column_levels:
-        #         df[level] = None
-        #     df.columns = pd.MultiIndex.from_tuples(
-        #         [tuple(list(col) + [None] * len(missing_column_levels)) for col in df.columns],
-        #         names=expected_column_names
-        #     )
-        #     logger.info(f"Appended missing column levels: {missing_column_levels}.")
         return df.index.names == expected_index_names and df.columns.names == expected_column_names
 
     @staticmethod
@@ -121,7 +100,7 @@ class TimeSeries:
             value_cols = [value_cols]
         features = value_cols
         row_dim_names = ["offset", "time_stamp"]
-        col_dim_names = ["feature", "representation"]
+        col_dim_names = ["features", "representation"]
 
         if ts_type == "determ":
             point_0_index = [pd.Timedelta(0)]
