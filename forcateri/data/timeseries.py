@@ -14,15 +14,14 @@ class TimeSeries:
     def __init__(
         self,
         data: pd.DataFrame,
-        time_col: Optional[str] = None,
-        value_cols: Optional[Union[List[str], str]] = None,
-        **kwargs,
+        representation='determ',
     ):
+        self.representation = representation
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Expected a pandas DataFrame")
 
         # If already in internal format (e.g. MultiIndex on both axes), just store it
-        if self._is_internal_format(data):
+        if TimeSeries.is_matching_format(data):
             self.data = data.copy()
             logger.info("TimeSeries initialized from internal-format DataFrame.")
         else:
@@ -33,25 +32,56 @@ class TimeSeries:
 
 
     @staticmethod
-    def _is_internal_format(df: pd.DataFrame) -> bool:
+    def is_matching_format(df: pd.DataFrame) -> bool:
+        '''
+        Checks the structure of the row and the column index and returns true if a data frame
+        has the expected format to serve as a TimeSeries data representation.
+        No changes to the data or TimeSeries are made here.
+        '''
         if not (isinstance(df.index, pd.MultiIndex) and isinstance(
             df.columns, pd.MultiIndex
         )):
             return False
         expected_index_names = ['offset', 'time_stamp']
         expected_column_names = ['features', 'representation']
-        if set(expected_column_names) == set(df.columns.names) and expected_column_names != df.columns.names:
-            df.columns = df.columns.reorder_levels([df.columns.names.index(name) for name in expected_column_names]) 
-            logger.info("Reordered columns to match the expected order.")
-
-        if set(expected_index_names) == set(df.index.names) and expected_index_names != df.index.names:
-            df.index = df.index.reorder_levels([df.index.names.index(name) for name in expected_index_names])
-            logger.info("Reordered index to match the expected order.")
-
 
         return df.index.names == expected_index_names and df.columns.names == expected_column_names
 
+    @staticmethod
+    def is_compatible_format(df:pd.DataFrame) -> bool:
+        '''
+        Checks the structure of the row and the column index and returns true if all the missing 
+        and or mislabeled information can be inferred.
+        No changes to the data or TimeSeries are made here.
+        '''
+        if isinstance(df.index,pd.DatetimeIndex):
+            return True
+        expected_index_names = {'offset', 'time_stamp'}
+        expected_column_names = {'features', 'representation'}
+        index_names_set = set(df.index.names)
+        if isinstance(df.columns,pd.MultiIndex):
+            column_names_set = set(df.columns.names)
+            # Check that all expected names are present (order doesn't matter)
+            if index_names_set == expected_index_names and column_names_set == expected_column_names:
+                return True
+        
+        return False
+    
+    @staticmethod
+    def align_format(df:pd.DataFrame,inplace:bool=False):
+        if not inplace:
+            df = df.copy()
 
+        expected_index_names = ['offset', 'time_stamp']
+        expected_column_names = ['features', 'representation']
+        if set(expected_column_names) == set(df.columns.names) and expected_column_names != df.columns.names:
+            df.columns = df.columns.reorder_levels([df.columns.names.index(name) for name in expected_column_names])
+        if set(expected_index_names) == set(df.index.names) and expected_index_names != df.index.names:
+            df.index = df.index.reorder_levels([df.index.names.index(name) for name in expected_index_names])
+        if not isinstance(df.index,pd.MultiIndex):
+            df.index = pd.MultiIndex.from_product([[pd.Timedelta(0)],df.index],names=expected_index_names)
+        if not isinstance(df.columns,pd.MultiIndex):
+            df.columns = pd.MultiIndex.from_product([df.columns,["value"]],names=expected_column_names)
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
@@ -186,9 +216,6 @@ class TimeSeries:
             logger.error(f"{t0} not found in forecast data.")
             raise ValueError(f"{t0} offset is not found in the forecast data")
 
-    def split(self, timestamp):
-        raise NotImplementedError()
-        # TODO
 
 
     def get_feature_slice(self, index: List[str], copy: bool = False) -> TimeSeries:
