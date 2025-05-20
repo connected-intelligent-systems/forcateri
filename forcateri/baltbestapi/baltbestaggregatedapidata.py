@@ -5,6 +5,8 @@ import pandas as pd
 from datetime import datetime
 import logging
 
+logger = logging.getLogger(__name__)
+
 class BaltBestAggregatedAPIData(BaltBestAPIData):
     
     def __init__(self,**kwargs):
@@ -81,7 +83,21 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
             else:
                 result.append(arg)
         return result
-
+    
+    @staticmethod
+    def from_dataframe(
+        df: pd.DataFrame,
+        time_col: Optional[str] = "time_stamp",
+        value_cols: Optional[Union[List[str], str]] = None,
+        freq: Optional[Union[str, int]] = "h",
+        ts_type: Optional[str] = "determ",
+    ) -> TimeSeries:
+        logger.info("Creating TimeSeries from DataFrame via class method.")
+        formatted = BaltBestAggregatedAPIData._build_internal_format(
+            df, time_col, value_cols, freq=freq, ts_type=ts_type
+        )
+        return TimeSeries(formatted)
+    
     def _from_group_df(self, df: pd.DataFrame,
                             group_col: str,
                             time_col: Optional[str] = None,
@@ -135,14 +151,93 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         ts_list = []
         for i, group_id in enumerate(unique_group):
             df_group = df[df[group_col] == group_id]
-            ts_instance = TimeSeries.from_dataframe(
+            ts_instance = BaltBestAggregatedAPIData.from_dataframe(
                 df_group, time_col, value_cols, freq, ts_type
             )
             #ts_dict[group_id] = ts_instance
             ts_list.append(ts_instance)
             ts_dict[i] = group_id
         return ts_list, ts_dict
+
+    @staticmethod
+    def _build_internal_format(
+        df: pd.DataFrame,
+        time_col: Optional[str],
+        value_cols: Optional[Union[List[str], str]],
+        freq: Optional[Union[str, int]] = "h",
+        ts_type: Optional[str] = "determ",
+    ) -> pd.DataFrame:
+        df = df.copy()
+        if isinstance(df.index, pd.MultiIndex):
+            if time_col in df.index.names:
+                time_stamp_values = df.index.get_level_values(time_col)
+                df = df.reset_index(level=[name for name in df.index.names if name != time_col], drop=True)
+                df[time_col] = time_stamp_values  
+            else:
+                df = df.reset_index(drop=True)
+        else:
+            df = df.reset_index()
         
+        df[time_col] = pd.to_datetime(df[time_col])
+        if not isinstance(time_col, str):
+            raise TypeError("time_col must be a string.")
+        if time_col not in df.columns:
+            raise ValueError(f"Column {time_col} not found in DataFrame.")
+        
+
+        t0_index = pd.date_range(
+            start=df[time_col].min(), end=df[time_col].max(), freq=freq
+        )
+        if value_cols is None:
+            value_cols = df.columns[df.columns != time_col]
+        elif isinstance(value_cols, str):
+            value_cols = [value_cols]
+        features = value_cols
+        row_dim_names = ["offset", "time_stamp"]
+        col_dim_names = ["features", "representation"]
+
+        if ts_type == "determ":
+            point_0_index = [pd.Timedelta(0)]
+            point_0_row_index = pd.MultiIndex.from_product(
+                [point_0_index, t0_index], names=row_dim_names
+            )
+            determ_col_index = pd.MultiIndex.from_product(
+                [features, ["value"]], names=col_dim_names
+            )
+            df = df[features]
+            return pd.DataFrame(
+                df.values, index=point_0_row_index, columns=determ_col_index
+            )
+
+        elif ts_type == "sampled":
+            sampled_cols = [f"s_{i}" for i in range(16)]
+            point_1_row_index = pd.MultiIndex.from_product(
+                [pd.to_timedelta([1], unit="h"), t0_index], names=row_dim_names
+            )
+            sampled_col_index = pd.MultiIndex.from_product(
+                [features, sampled_cols], names=col_dim_names
+            )
+            return pd.DataFrame(
+                df[features].values, index=point_1_row_index, columns=sampled_col_index
+            )
+
+        elif ts_type == "quantile":
+            quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
+            range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
+            range_row_index = pd.MultiIndex.from_product(
+                [range_index, t0_index], names=row_dim_names
+            )
+            quant_col_index = pd.MultiIndex.from_product(
+                [features, quant_cols], names=col_dim_names
+            )
+            return pd.DataFrame(
+                df[features].values, index=range_row_index, columns=quant_col_index
+            )
+
+        else:
+            raise ValueError(
+                "Invalid ts_type provided. Use 'determ', 'sampled', or 'quantile'."
+            )      
 
     def is_up2date(self):
         #TODO update the logic later

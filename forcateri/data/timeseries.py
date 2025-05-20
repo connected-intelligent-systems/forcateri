@@ -27,24 +27,10 @@ class TimeSeries:
             logger.info("TimeSeries initialized from internal-format DataFrame.")
         else:
             logger.info("Raw DataFrame provided, converting to TimeSeries format.")
-            self.data = self._build_internal_format(
-                data, time_col, value_cols, **kwargs
-            )
+            # self.data = self._build_internal_format(
+            #     data, time_col, value_cols, **kwargs
+            # )
 
-    @classmethod
-    def from_dataframe(
-        cls,
-        df: pd.DataFrame,
-        time_col: Optional[str] = "time_stamp",
-        value_cols: Optional[Union[List[str], str]] = None,
-        freq: Optional[Union[str, int]] = "h",
-        ts_type: Optional[str] = "determ",
-    ) -> TimeSeries:
-        logger.info("Creating TimeSeries from DataFrame via class method.")
-        formatted = cls._build_internal_format(
-            df, time_col, value_cols, freq=freq, ts_type=ts_type
-        )
-        return cls(formatted)
 
     @staticmethod
     def _is_internal_format(df: pd.DataFrame) -> bool:
@@ -65,85 +51,7 @@ class TimeSeries:
 
         return df.index.names == expected_index_names and df.columns.names == expected_column_names
 
-    @staticmethod
-    def _build_internal_format(
-        df: pd.DataFrame,
-        time_col: Optional[str],
-        value_cols: Optional[Union[List[str], str]],
-        freq: Optional[Union[str, int]] = "h",
-        ts_type: Optional[str] = "determ",
-    ) -> pd.DataFrame:
-        df = df.copy()
-        if isinstance(df.index, pd.MultiIndex):
-            if time_col in df.index.names:
-                time_stamp_values = df.index.get_level_values(time_col)
-                df = df.reset_index(level=[name for name in df.index.names if name != time_col], drop=True)
-                df[time_col] = time_stamp_values  
-            else:
-                df = df.reset_index(drop=True)
-        else:
-            df = df.reset_index()
-        
-        df[time_col] = pd.to_datetime(df[time_col])
-        if not isinstance(time_col, str):
-            raise TypeError("time_col must be a string.")
-        if time_col not in df.columns:
-            raise ValueError(f"Column {time_col} not found in DataFrame.")
-        
 
-        t0_index = pd.date_range(
-            start=df[time_col].min(), end=df[time_col].max(), freq=freq
-        )
-        if value_cols is None:
-            value_cols = df.columns[df.columns != time_col]
-        elif isinstance(value_cols, str):
-            value_cols = [value_cols]
-        features = value_cols
-        row_dim_names = ["offset", "time_stamp"]
-        col_dim_names = ["features", "representation"]
-
-        if ts_type == "determ":
-            point_0_index = [pd.Timedelta(0)]
-            point_0_row_index = pd.MultiIndex.from_product(
-                [point_0_index, t0_index], names=row_dim_names
-            )
-            determ_col_index = pd.MultiIndex.from_product(
-                [features, ["value"]], names=col_dim_names
-            )
-            df = df[features]
-            return pd.DataFrame(
-                df.values, index=point_0_row_index, columns=determ_col_index
-            )
-
-        elif ts_type == "sampled":
-            sampled_cols = [f"s_{i}" for i in range(16)]
-            point_1_row_index = pd.MultiIndex.from_product(
-                [pd.to_timedelta([1], unit="h"), t0_index], names=row_dim_names
-            )
-            sampled_col_index = pd.MultiIndex.from_product(
-                [features, sampled_cols], names=col_dim_names
-            )
-            return pd.DataFrame(
-                df[features].values, index=point_1_row_index, columns=sampled_col_index
-            )
-
-        elif ts_type == "quantile":
-            quant_cols = ["q_0.1", "q_0.5", "q_0.9"]
-            range_index = pd.to_timedelta(np.arange(1, 25), unit="h")
-            range_row_index = pd.MultiIndex.from_product(
-                [range_index, t0_index], names=row_dim_names
-            )
-            quant_col_index = pd.MultiIndex.from_product(
-                [features, quant_cols], names=col_dim_names
-            )
-            return pd.DataFrame(
-                df[features].values, index=range_row_index, columns=quant_col_index
-            )
-
-        else:
-            raise ValueError(
-                "Invalid ts_type provided. Use 'determ', 'sampled', or 'quantile'."
-            )
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
