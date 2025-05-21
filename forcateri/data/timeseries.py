@@ -8,13 +8,14 @@ import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
-
+QUANTILES = [0.1, 0.5, 0.9]  # Default quantile levels for probabilistic forecasting
 
 class TimeSeries:
     def __init__(
         self,
         data: pd.DataFrame,
         representation='determ',
+        quantiles: Optional[List[float]] = QUANTILES,
     ):
         self.representation = representation
         if not isinstance(data, pd.DataFrame):
@@ -24,6 +25,11 @@ class TimeSeries:
         if TimeSeries.is_matching_format(data):
             self.data = data.copy()
             logger.info("TimeSeries initialized from internal-format DataFrame.")
+        elif TimeSeries.is_compatible_format(data):
+            # If the DataFrame is compatible but not in the expected format, align it
+            self.data = data.copy()
+            self.align_format(self.data)
+            logger.info("TimeSeries initialized from compatible-format DataFrame.")
         else:
             logger.info("Raw DataFrame provided, converting to TimeSeries format.")
             # self.data = self._build_internal_format(
@@ -67,21 +73,40 @@ class TimeSeries:
         
         return False
     
-    @staticmethod
-    def align_format(df:pd.DataFrame,inplace:bool=False):
-        if not inplace:
-            df = df.copy()
-
+    
+    def align_format(self,df:pd.DataFrame):
+        
         expected_index_names = ['offset', 'time_stamp']
         expected_column_names = ['feature', 'representation']
         if set(expected_column_names) == set(df.columns.names) and expected_column_names != df.columns.names:
             df.columns = df.columns.reorder_levels([df.columns.names.index(name) for name in expected_column_names])
         if set(expected_index_names) == set(df.index.names) and expected_index_names != df.index.names:
             df.index = df.index.reorder_levels([df.index.names.index(name) for name in expected_index_names])
-        if not isinstance(df.index,pd.MultiIndex):
-            df.index = pd.MultiIndex.from_product([[pd.Timedelta(0)],df.index],names=expected_index_names)
-        if not isinstance(df.columns,pd.MultiIndex):
-            df.columns = pd.MultiIndex.from_product([df.columns,["value"]],names=expected_column_names)
+        if self.representation  == 'value':
+            if not isinstance(df.index,pd.MultiIndex):
+                df.index = pd.MultiIndex.from_product([[pd.Timedelta(0)],df.index],names=expected_index_names)
+            if not isinstance(df.columns,pd.MultiIndex):
+                df.columns = pd.MultiIndex.from_product([df.columns,["value"]],names=expected_column_names)
+        elif self.representation == 'quantile':
+            if not isinstance(df.index,pd.MultiIndex):
+                df.index = pd.MultiIndex.from_product([[pd.Timedelta(0)],df.index],names=expected_index_names)
+            if not isinstance(df.columns,pd.MultiIndex): 
+                df.columns = pd.MultiIndex.from_product([df.columns,["quantile"]],names=expected_column_names)
+            else:
+                #Rename the outer column levels to needed format
+                df.columns.names = expected_column_names
+                # Dynamic relabeling of inner column level to match quantiles
+                inner_levels = sorted(set(level[1] for level in df.columns))
+                if len(inner_levels) == len(self.QUANTILES):
+                    mapping = dict(zip(inner_levels, self.QUANTILES))
+                    df.columns = pd.MultiIndex.from_tuples(
+                        [(outer, mapping[inner]) for outer, inner in df.columns],
+                        names=df.columns.names
+                    )
+                else:
+                    raise ValueError("Cannot map inner column levels to quantiles: mismatched length.")
+        elif self.representation == 'sample':
+            raise NotImplementedError("Sample representation not implemented yet.")
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
@@ -327,7 +352,7 @@ class TimeSeries:
         int
             The number of time steps in the series.
         """
-        return len(self.data.index.levels[1])
+        return len(self.data.index.levels[1]) #getlevelvalues
 
     def __getitem__(self, index) -> TimeSeries:
         """
