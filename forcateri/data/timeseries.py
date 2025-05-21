@@ -43,7 +43,7 @@ class TimeSeries:
         )):
             return False
         expected_index_names = ['offset', 'time_stamp']
-        expected_column_names = ['features', 'representation']
+        expected_column_names = ['feature', 'representation']
 
         return df.index.names == expected_index_names and df.columns.names == expected_column_names
 
@@ -57,7 +57,7 @@ class TimeSeries:
         if isinstance(df.index,pd.DatetimeIndex):
             return True
         expected_index_names = {'offset', 'time_stamp'}
-        expected_column_names = {'features', 'representation'}
+        expected_column_names = {'feature', 'representation'}
         index_names_set = set(df.index.names)
         if isinstance(df.columns,pd.MultiIndex):
             column_names_set = set(df.columns.names)
@@ -73,7 +73,7 @@ class TimeSeries:
             df = df.copy()
 
         expected_index_names = ['offset', 'time_stamp']
-        expected_column_names = ['features', 'representation']
+        expected_column_names = ['feature', 'representation']
         if set(expected_column_names) == set(df.columns.names) and expected_column_names != df.columns.names:
             df.columns = df.columns.reorder_levels([df.columns.names.index(name) for name in expected_column_names])
         if set(expected_index_names) == set(df.index.names) and expected_index_names != df.index.names:
@@ -225,13 +225,13 @@ class TimeSeries:
 
         Parameters
         ----------
-            features List[str]: The names of the features to keep in the returned `TimeSeries`
+            feature List[str]: The names of the feature to keep in the returned `TimeSeries`
             copy bool, optional: Whether to copy the underlying data. Defaults to False.
 
         Returns
         -------
         TimeSeries
-            A subseries containing a selection by features.
+            A subseries containing a selection by feature.
 
         Raises
         ------
@@ -241,7 +241,7 @@ class TimeSeries:
         if (not isinstance(index, List)) or (
             not all([isinstance(i, str) for i in index])
         ):
-            raise TypeError("features must be a list of strings")
+            raise TypeError("feature must be a list of strings")
 
         new_data = self.data[index]
         return TimeSeries(data=new_data.copy() if copy else new_data)
@@ -343,11 +343,11 @@ class TimeSeries:
                 - type float is interpreted as relative offset based on the total number of time steps
                 - type datetime or pd.Timestamp is interpreted as point in time
                 - type slice slices the underlying data interpreting start and stop as one of the above types
-                - type List[str] is interpreted as subset of features to select for and is forwarded to get_features
+                - type List[str] is interpreted as subset of feature to select for and is forwarded to get_feature
         Returns
         -------
         TimeSeries
-            A subseries containing a selection by time or by features.
+            A subseries containing a selection by time or by feature.
 
         Raises
         ------
