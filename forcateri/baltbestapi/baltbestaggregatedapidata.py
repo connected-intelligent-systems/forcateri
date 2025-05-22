@@ -3,6 +3,7 @@ from forcateri.baltbestapi.baltbestapidata import BaltBestAPIData
 from ..data.timeseries import TimeSeries
 import pandas as pd
 from datetime import datetime
+import numpy as np
 import logging
 
 logger = logging.getLogger(__name__)
@@ -96,6 +97,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         formatted = BaltBestAggregatedAPIData._build_internal_format(
             df, time_col, value_cols, freq=freq, ts_type=ts_type
         )
+        
         return TimeSeries(formatted)
     
     def _from_group_df(self, df: pd.DataFrame,
@@ -194,7 +196,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
             value_cols = [value_cols]
         features = value_cols
         row_dim_names = ["offset", "time_stamp"]
-        col_dim_names = ["features", "representation"]
+        col_dim_names = ["feature", "representation"]
 
         if ts_type == "determ":
             point_0_index = [pd.Timedelta(0)]
