@@ -91,14 +91,14 @@ class TimeSeries:
             if not isinstance(df.index,pd.MultiIndex):
                 df.index = pd.MultiIndex.from_product([[pd.Timedelta(0)],df.index],names=expected_index_names)
             if not isinstance(df.columns,pd.MultiIndex): 
-                df.columns = pd.MultiIndex.from_product([df.columns,["quantile"]],names=expected_column_names)
+                df.columns = pd.MultiIndex.from_product([df.columns,QUANTILES],names=expected_column_names)
             else:
                 #Rename the outer column levels to needed format
                 df.columns.names = expected_column_names
                 # Dynamic relabeling of inner column level to match quantiles
                 inner_levels = sorted(set(level[1] for level in df.columns))
-                if len(inner_levels) == len(self.QUANTILES):
-                    mapping = dict(zip(inner_levels, self.QUANTILES))
+                if len(inner_levels) == len(QUANTILES):
+                    mapping = dict(zip(inner_levels, QUANTILES))
                     df.columns = pd.MultiIndex.from_tuples(
                         [(outer, mapping[inner]) for outer, inner in df.columns],
                         names=df.columns.names
@@ -317,7 +317,7 @@ class TimeSeries:
                 case datetime():
                     return pd.Timestamp(i)
                 case int():
-                    return self.data.index.levels[1][i]
+                    return self.data.index.get_level_values(1)[i]
                 case float():
                     return to_dt(int(np.round(len(self) * i)))
                 case _:
@@ -352,7 +352,7 @@ class TimeSeries:
         int
             The number of time steps in the series.
         """
-        return len(self.data.index.levels[1]) #getlevelvalues
+        return len(self.data.index.get_level_values(1))
 
     def __getitem__(self, index) -> TimeSeries:
         """
