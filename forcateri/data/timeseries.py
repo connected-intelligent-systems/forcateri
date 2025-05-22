@@ -24,7 +24,8 @@ class TimeSeries:
         if representation is None:
             representation = TimeSeries.DETERM_REP
         self.representation = representation
-        
+        if representation == TimeSeries.QUANTILE_REP:
+            self.quantiles = quantiles
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Expected a pandas DataFrame")
 
@@ -96,14 +97,14 @@ class TimeSeries:
             if not isinstance(df.index,pd.MultiIndex):
                 df.index = pd.MultiIndex.from_product([[pd.Timedelta(0)],df.index],names=expected_index_names)
             if not isinstance(df.columns,pd.MultiIndex): 
-                df.columns = pd.MultiIndex.from_product([df.columns,QUANTILES],names=expected_column_names)
+                df.columns = pd.MultiIndex.from_product([df.columns,self.quantiles],names=expected_column_names)
             else:
                 #Rename the outer column levels to needed format
                 df.columns.names = expected_column_names
                 # Dynamic relabeling of inner column level to match quantiles
                 inner_levels = sorted(set(level[1] for level in df.columns))
-                if len(inner_levels) == len(QUANTILES):
-                    mapping = dict(zip(inner_levels, QUANTILES))
+                if len(inner_levels) == len(self.quantiles):
+                    mapping = dict(zip(inner_levels, self.quantiles))
                     df.columns = pd.MultiIndex.from_tuples(
                         [(outer, mapping[inner]) for outer, inner in df.columns],
                         names=df.columns.names
