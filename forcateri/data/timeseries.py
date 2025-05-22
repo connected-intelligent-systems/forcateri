@@ -8,16 +8,23 @@ import numpy as np
 import pandas as pd
 
 logger = logging.getLogger(__name__)
-QUANTILES = [0.1, 0.5, 0.9]  # Default quantile levels for probabilistic forecasting
+
 
 class TimeSeries:
+    
+    DETERM_REP = "determ"
+    QUANTILE_REP = "quantile"
+    SAMPLE_REP = "sample"
     def __init__(
         self,
         data: pd.DataFrame,
-        representation='determ',
-        quantiles: Optional[List[float]] = QUANTILES,
+        representation=None,
+        quantiles: Optional[List[float]] = None,
     ):
+        if representation is None:
+            representation = TimeSeries.DETERM_REP
         self.representation = representation
+        
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Expected a pandas DataFrame")
 
@@ -31,10 +38,8 @@ class TimeSeries:
             self.align_format(self.data)
             logger.info("TimeSeries initialized from compatible-format DataFrame.")
         else:
-            logger.info("Raw DataFrame provided, converting to TimeSeries format.")
-            # self.data = self._build_internal_format(
-            #     data, time_col, value_cols, **kwargs
-            # )
+            logger.info("Raw DataFrame provided")
+            raise ValueError("Cannot build ts from the DataFrame")
 
 
     @staticmethod
