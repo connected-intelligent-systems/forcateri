@@ -1,5 +1,7 @@
-from .timeseries import TimeSeries
 from typing import Dict, NamedTuple
+
+from .timeseries import TimeSeries
+
 
 class AdapterInput(NamedTuple):
     target: TimeSeries

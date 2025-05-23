@@ -1,32 +1,41 @@
-from typing import List,Optional, Any, Union, Tuple
-from forcateri.baltbestapi.baltbestapidata import BaltBestAPIData
-from ..data.timeseries import TimeSeries
-import pandas as pd
-from datetime import datetime
-import numpy as np
 import logging
+from datetime import datetime
+from typing import Any, List, Optional, Tuple, Union
+
+import numpy as np
+import pandas as pd
+
+from forcateri.baltbestapi.baltbestapidata import BaltBestAPIData
+
+from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
 
+
 class BaltBestAggregatedAPIData(BaltBestAPIData):
-    
-    def __init__(self,**kwargs):
-        super().__init__(name=kwargs['name'], url=kwargs['url'],local_copy = kwargs['local_copy'])
+
+    def __init__(self, **kwargs):
+        super().__init__(
+            name=kwargs["name"], url=kwargs["url"], local_copy=kwargs["local_copy"]
+        )
         self.ts = []
-        self.target:str = kwargs.get('target', None)
-        self.group_col:str = kwargs.get('group_col', None)
-        self.time_col:str = kwargs.get('time_col', None)
-        #self.value_cols:List[str] = kwargs.get('value_cols', None)
-        self.freq:str = kwargs.get('freq', '60min')
-        self.known:Union[str,List[str]] = kwargs.get('known', None)
-        self.observed:Union[str,List[str]] = kwargs.get('observed', None)
-        self.static:Union[str,List[str]] = kwargs.get('static', None)
-        self.value_cols:List[str] = self._get_value_cols(self.target, self.known, self.observed, self.static)
+        self.target: str = kwargs.get("target", None)
+        self.group_col: str = kwargs.get("group_col", None)
+        self.time_col: str = kwargs.get("time_col", None)
+        # self.value_cols:List[str] = kwargs.get('value_cols', None)
+        self.freq: str = kwargs.get("freq", "60min")
+        self.known: Union[str, List[str]] = kwargs.get("known", None)
+        self.observed: Union[str, List[str]] = kwargs.get("observed", None)
+        self.static: Union[str, List[str]] = kwargs.get("static", None)
+        self.value_cols: List[str] = self._get_value_cols(
+            self.target, self.known, self.observed, self.static
+        )
         self.ts_dict = {}
 
     def get_data(self):
         super().get_data()
         return self.ts
+
     def _fetch_from_cache(self):
         """
         Fetch data from a local CSV file, process it by resampling and grouping, and store it as a TimeSeries instance.
@@ -54,22 +63,24 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         ValueError
             If the time column is not present in the DataFrame.
         """
-        
+
         df = pd.read_csv(self.local_copy)
         df[self.time_col] = pd.to_datetime(df[self.time_col])
         df = (
             df.set_index(self.time_col)
             .groupby(self.group_col)
-            .resample('60min')
+            .resample("60min")
             .asfreq()
             .drop(columns=[self.group_col])
-            .reset_index())
-        self.ts, self.ts_dict = self._from_group_df(df=df,
-                                               group_col = self.group_col,
-                                               time_col=self.time_col,
-                                               value_cols=self.value_cols,
-                                               freq = self.freq
-                                               )
+            .reset_index()
+        )
+        self.ts, self.ts_dict = self._from_group_df(
+            df=df,
+            group_col=self.group_col,
+            time_col=self.time_col,
+            value_cols=self.value_cols,
+            freq=self.freq,
+        )
 
     def _get_value_cols(self, *args: Union[str, List[str], None]) -> List[str]:
         """
@@ -84,7 +95,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
             else:
                 result.append(arg)
         return result
-    
+
     @staticmethod
     def from_dataframe(
         df: pd.DataFrame,
@@ -97,16 +108,18 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         formatted = BaltBestAggregatedAPIData._build_internal_format(
             df, time_col, value_cols, freq=freq, ts_type=ts_type
         )
-        
+
         return TimeSeries(formatted)
-    
-    def _from_group_df(self, df: pd.DataFrame,
-                            group_col: str,
-                            time_col: Optional[str] = None,
-                            value_cols: Optional[Union[List[str], str]] = None,
-                            freq: Optional[Union[str, int]] = "h",
-                            ts_type: Optional[str] = "determ",
-                        ) -> List[pd.DataFrame]:
+
+    def _from_group_df(
+        self,
+        df: pd.DataFrame,
+        group_col: str,
+        time_col: Optional[str] = None,
+        value_cols: Optional[Union[List[str], str]] = None,
+        freq: Optional[Union[str, int]] = "h",
+        ts_type: Optional[str] = "determ",
+    ) -> List[pd.DataFrame]:
         """
         Build `TimeSeries` instances for each group in the DataFrame.
 
@@ -144,7 +157,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
             If `group_col` is not found in the DataFrame.
         """
         if group_col not in df.columns:
-            #logger.error("Initialization failed: group_col not found in the DataFrame.")
+            # logger.error("Initialization failed: group_col not found in the DataFrame.")
             raise ValueError(f"Column {group_col} not found in the DataFrame.")
         # if value_cols is None:
         #         value_cols = df.columns[df.columns != time_col]
@@ -156,7 +169,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
             ts_instance = BaltBestAggregatedAPIData.from_dataframe(
                 df_group, time_col, value_cols, freq, ts_type
             )
-            #ts_dict[group_id] = ts_instance
+            # ts_dict[group_id] = ts_instance
             ts_list.append(ts_instance)
             ts_dict[i] = group_id
         return ts_list, ts_dict
@@ -173,19 +186,21 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         if isinstance(df.index, pd.MultiIndex):
             if time_col in df.index.names:
                 time_stamp_values = df.index.get_level_values(time_col)
-                df = df.reset_index(level=[name for name in df.index.names if name != time_col], drop=True)
-                df[time_col] = time_stamp_values  
+                df = df.reset_index(
+                    level=[name for name in df.index.names if name != time_col],
+                    drop=True,
+                )
+                df[time_col] = time_stamp_values
             else:
                 df = df.reset_index(drop=True)
         else:
             df = df.reset_index()
-        
+
         df[time_col] = pd.to_datetime(df[time_col])
         if not isinstance(time_col, str):
             raise TypeError("time_col must be a string.")
         if time_col not in df.columns:
             raise ValueError(f"Column {time_col} not found in DataFrame.")
-        
 
         t0_index = pd.date_range(
             start=df[time_col].min(), end=df[time_col].max(), freq=freq
@@ -239,17 +254,16 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         else:
             raise ValueError(
                 "Invalid ts_type provided. Use 'determ', 'sampled', or 'quantile'."
-            )      
+            )
 
     def is_up2date(self):
-        #TODO update the logic later
+        # TODO update the logic later
         self.last_updated = datetime.now()
         return True
-    
+
     def update_local_copy(self):
-        #TODO update the logic later
+        # TODO update the logic later
         pass
-        
+
     def _fetch_data_from_api(self):
         raise NotImplementedError("Subclasses must implement this method.")
-

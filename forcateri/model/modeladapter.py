@@ -1,10 +1,12 @@
 import datetime
 from abc import ABC, abstractmethod
 from pathlib import Path
-from ..data.timeseries import TimeSeries
-from typing import List, Optional, Any, Union
-from ..data.adapterinput import AdapterInput
+from typing import Any, List, Optional, Union
+
 from forcateri.data import adapterinput
+
+from ..data.adapterinput import AdapterInput
+from ..data.timeseries import TimeSeries
 
 
 class ModelAdapter(ABC):

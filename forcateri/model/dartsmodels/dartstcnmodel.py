@@ -1,17 +1,19 @@
-from .dartsmodeladapter import DartsModelAdapter
-from darts.dataprocessing.transformers import Scaler
+import logging
+from typing import List, Optional, Tuple
+
+import pandas as pd
 from darts import TimeSeries as DartsTimeSeries
 from darts.dataprocessing.transformers import Scaler
 from darts.models import TCNModel
-import logging
-from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
 from darts.utils.likelihood_models import QuantileRegression
+
 from ...data.adapterinput import AdapterInput
-from typing import List,Optional, Tuple
-import pandas as pd
+from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
+from .dartsmodeladapter import DartsModelAdapter
+
 
 class DartsTCNModel(DartsModelAdapter):
-    def __init__(self, *args,**kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Initializes the Darts TCNModel with specified parameters and scalers.
         Parameters
@@ -32,7 +34,7 @@ class DartsTCNModel(DartsModelAdapter):
             - batch_size (int): Batch size for training. Default is 32.
             - optimizer_kwargs (dict): Additional arguments for the optimizer. Default is {'lr': 1e-3}.
             - random_state (int, optional): Random seed for reproducibility. Default is None.
-            - likelihood (Likelihood, optional): Likelihood model for probabilistic forecasting. 
+            - likelihood (Likelihood, optional): Likelihood model for probabilistic forecasting.
               Default is QuantileRegression([0.1, 0.5, 0.9]).
         Attributes
         ----------
@@ -43,34 +45,41 @@ class DartsTCNModel(DartsModelAdapter):
         scaler_cov : Scaler
             Scaler for the covariates.
         """
-        
-        super().__init__(*args,**kwargs)
+
+        super().__init__(*args, **kwargs)
         self.model = TCNModel(
-            input_chunk_length=kwargs.get('input_chunk_length', 7),
-            output_chunk_length=kwargs.get('output_chunk_length', 5),
-            kernel_size=kwargs.get('kernel_size', 3),
-            num_filters=kwargs.get('num_filters', 32),
-            dilation_base=kwargs.get('dilation_base', 2),
-            num_layers=kwargs.get('num_layers', 3),
-            dropout=kwargs.get('dropout', 0.1),
-            weight_norm=kwargs.get('weight_norm', True),
-            n_epochs=kwargs.get('n_epochs', 1),
-            batch_size=kwargs.get('batch_size', 8),
-            optimizer_kwargs=kwargs.get('optimizer_kwargs', {'lr': 1e-3}),
-            random_state=kwargs.get('random_state', None),
-            likelihood=kwargs.get('likelihood', QuantileRegression([0.1, 0.5, 0.9])),
+            input_chunk_length=kwargs.get("input_chunk_length", 7),
+            output_chunk_length=kwargs.get("output_chunk_length", 5),
+            kernel_size=kwargs.get("kernel_size", 3),
+            num_filters=kwargs.get("num_filters", 32),
+            dilation_base=kwargs.get("dilation_base", 2),
+            num_layers=kwargs.get("num_layers", 3),
+            dropout=kwargs.get("dropout", 0.1),
+            weight_norm=kwargs.get("weight_norm", True),
+            n_epochs=kwargs.get("n_epochs", 1),
+            batch_size=kwargs.get("batch_size", 8),
+            optimizer_kwargs=kwargs.get("optimizer_kwargs", {"lr": 1e-3}),
+            random_state=kwargs.get("random_state", None),
+            likelihood=kwargs.get(
+                "likelihood", QuantileRegression(quantiles=[0.1, 0.5, 0.9])
+            ),
         )
 
         self.scaler_target = Scaler()
         self.scaler_cov = Scaler()
-    
-    def fit(self,train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]],**kwargs):
+
+    def fit(
+        self,
+        train_data: List[AdapterInput],
+        val_data: Optional[List[AdapterInput]],
+        **kwargs,
+    ):
         """
         Fits the model using the provided training and validation data.
 
         Parameters:
             train_data (List[AdapterInput]): The training data to be used for fitting the model.
-            val_data (Optional[List[AdapterInput]]): The validation data to be used for evaluating the model during training. 
+            val_data (Optional[List[AdapterInput]]): The validation data to be used for evaluating the model during training.
                 This parameter is optional and can be None.
             **kwargs: Additional keyword arguments to be passed to the parent class's fit method.
 
@@ -81,15 +90,19 @@ class DartsTCNModel(DartsModelAdapter):
             An error message is logged if the model fitting process fails.
         """
 
-
         try:
-            super().fit(train_data=train_data,val_data=val_data,**kwargs)
+            super().fit(train_data=train_data, val_data=val_data, **kwargs)
 
         except ModelAdapterError as e:
             logging.error("Failed to fit a model, check the model params")
-            raise ModelAdapterError(f"Failed to fit model: {e}") 
-   
-    def convert_input(self,input:List[AdapterInput]) -> Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
+            raise ModelAdapterError(f"Failed to fit model: {e}")
+
+    def convert_input(self, input: List[AdapterInput]) -> Tuple[
+        List[DartsTimeSeries],
+        List[DartsTimeSeries],
+        List[DartsTimeSeries],
+        Optional[pd.DataFrame],
+    ]:
         """
         Converts the input data into the required format for the model, applying scaling transformations
         to the target and observed time series.
@@ -105,21 +118,23 @@ class DartsTCNModel(DartsModelAdapter):
                 - static: An optional pandas DataFrame containing static covariates, if available.
         """
 
-        target, known, observed , static  = super().convert_input(input)
+        target, known, observed, static = super().convert_input(input)
         target = self.scaler_target.fit_transform(target)
         observed = self.scaler_cov.fit_transform(observed)
-        return target, known, observed , static  
-    
+        return target, known, observed, static
+
     def predict(self, data: List[AdapterInput], n: Optional[int] = 1, **kwargs):
         """
         Predict using the model and provided data.
         """
-        predictions = super().predict(data=data,n=n,**kwargs)
+        predictions = super().predict(data=data, n=n, **kwargs)
         # If the parent class does not accept 'n', remove it from the call
         return predictions
-        
-    
-    def tune(self,train_data:List[AdapterInput],val_data:Optional[List[AdapterInput]],**kwargs):
-        raise NotImplementedError("Tune method is not implemented yet.")
 
-    
+    def tune(
+        self,
+        train_data: List[AdapterInput],
+        val_data: Optional[List[AdapterInput]],
+        **kwargs,
+    ):
+        raise NotImplementedError("Tune method is not implemented yet.")
