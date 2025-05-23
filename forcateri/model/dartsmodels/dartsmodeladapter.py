@@ -85,7 +85,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         prediction = self.model.predict(series=target, **predict_args, **kwargs)
         self.last_time_stamps = [t.target.data.index[-1][1] for t in data]
         self.isquantile = kwargs.get("predict_likelihood_parameters")
-        #prediction_ts_format = self.to_time_series(prediction)
+        # prediction_ts_format = self.to_time_series(prediction)
         return prediction
 
     @staticmethod
@@ -178,20 +178,28 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 for id, darts_ts in enumerate(ts):
                     t0 = self.last_time_stamps[id]
                     darts_df = darts_ts.to_dataframe()
-                    ts_obj = TimeSeries(darts_df, representation='quantile', quantiles=self.quantiles)
+                    ts_obj = TimeSeries(
+                        darts_df, representation="quantile", quantiles=self.quantiles
+                    )
                     offset = ts_obj.data.index.get_level_values("time_stamp") - t0
                     new_index = pd.MultiIndex.from_arrays(
-                        [offset, ts_obj.data.index.get_level_values("time_stamp")], names=["offset", "time_stamp"]) 
+                        [offset, ts_obj.data.index.get_level_values("time_stamp")],
+                        names=["offset", "time_stamp"],
+                    )
                     ts_obj.data.index = new_index
                     timeseries.append(ts_obj)
                 return timeseries
             else:
                 t0 = self.last_time_stamps[0]
                 darts_df = ts.to_dataframe()
-                ts_obj = TimeSeries(darts_df, representation='quantile', quantiles=self.quantiles)
+                ts_obj = TimeSeries(
+                    darts_df, representation="quantile", quantiles=self.quantiles
+                )
                 offset = ts_obj.data.index.get_level_values("time_stamp") - t0
                 new_index = pd.MultiIndex.from_arrays(
-                    [offset, ts_obj.data.index.get_level_values("time_stamp")], names=["offset", "time_stamp"]) 
+                    [offset, ts_obj.data.index.get_level_values("time_stamp")],
+                    names=["offset", "time_stamp"],
+                )
                 ts_obj.data.index = new_index
                 return ts_obj
 
