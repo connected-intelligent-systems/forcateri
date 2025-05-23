@@ -47,6 +47,7 @@ class DartsTCNModel(DartsModelAdapter):
         """
 
         super().__init__(*args, **kwargs)
+        self.quantiles = kwargs.get("quantiles", None)
         self.model = TCNModel(
             input_chunk_length=kwargs.get("input_chunk_length", 7),
             output_chunk_length=kwargs.get("output_chunk_length", 5),
@@ -61,7 +62,7 @@ class DartsTCNModel(DartsModelAdapter):
             optimizer_kwargs=kwargs.get("optimizer_kwargs", {"lr": 1e-3}),
             random_state=kwargs.get("random_state", None),
             likelihood=kwargs.get(
-                "likelihood", QuantileRegression(quantiles=[0.1, 0.5, 0.9])
+                "likelihood", QuantileRegression(quantiles=self.quantiles)
             ),
         )
 

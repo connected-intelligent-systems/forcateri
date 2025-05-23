@@ -21,6 +21,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.freq = freq
         super().__init__(*args, **kwargs)
         self.model = None
+        self.quantiles = kwargs.get("quantiles", None)
 
     def _get_covariate_args(self, known, observed, static):
         """
@@ -82,9 +83,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
         if n is not None:
             predict_args["n"] = n
         prediction = self.model.predict(series=target, **predict_args, **kwargs)
-
-        prediction_ts_format = DartsModelAdapter.to_time_series(prediction)
-        return prediction_ts_format
+        self.last_time_stamps = [t.target.data.index[-1][1] for t in data]
+        self.isquantile = kwargs.get("predict_likelihood_parameters")
+        #prediction_ts_format = self.to_time_series(prediction)
+        return prediction
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -166,7 +168,33 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         return target, known, observed, static
 
-    def to_time_series(ts: DartsTimeSeries):
+    def to_time_series(
+        self, ts: Union[DartsTimeSeries, List[DartsTimeSeries]]
+    ) -> Union[TimeSeries, List[TimeSeries]]:
+
+        if self.isquantile:
+            if type(ts) == list:
+                timeseries = []
+                for id, darts_ts in enumerate(ts):
+                    t0 = self.last_time_stamps[id]
+                    darts_df = darts_ts.to_dataframe()
+                    ts_obj = TimeSeries(darts_df, representation='quantile', quantiles=self.quantiles)
+                    offset = ts_obj.data.index.get_level_values("time_stamp") - t0
+                    new_index = pd.MultiIndex.from_arrays(
+                        [offset, ts_obj.data.index.get_level_values("time_stamp")], names=["offset", "time_stamp"]) 
+                    ts_obj.data.index = new_index
+                    timeseries.append(ts_obj)
+                return timeseries
+            else:
+                t0 = self.last_time_stamps[0]
+                darts_df = ts.to_dataframe()
+                ts_obj = TimeSeries(darts_df, representation='quantile', quantiles=self.quantiles)
+                offset = ts_obj.data.index.get_level_values("time_stamp") - t0
+                new_index = pd.MultiIndex.from_arrays(
+                    [offset, ts_obj.data.index.get_level_values("time_stamp")], names=["offset", "time_stamp"]) 
+                ts_obj.data.index = new_index
+                return ts_obj
+
         return ts
 
     @abstractmethod
