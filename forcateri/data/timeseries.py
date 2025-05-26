@@ -6,6 +6,7 @@ from typing import List, Optional, Union
 
 import numpy as np
 import pandas as pd
+from .timeseriesexceptions import InvalidDataFrameFormat
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +41,13 @@ class TimeSeries:
             self.align_format(self.data)
             logger.info("TimeSeries initialized from compatible-format DataFrame.")
         else:
-            logger.info("Raw DataFrame provided")
-            raise ValueError("Cannot build ts from the DataFrame")
+            logger.info(f"Raw DataFrame with {representation} cannot be aligned")
+            raise InvalidDataFrameFormat(
+                f"Cannot build TimeSeries from the provided DataFrame: "
+                f"DataFrame is not in a matching or compatible format for representation '{representation}'. "
+                f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
+                f"Or at least df with datetime index."
+            )
 
     @staticmethod
     def is_matching_format(df: pd.DataFrame) -> bool:
@@ -114,6 +120,12 @@ class TimeSeries:
                     [df.columns, ["value"]], names=expected_column_names
                 )
         elif self.representation == "quantile":
+            if self.quantiles is None:
+                logger.error(
+                    "Quantiles must be specified for quantile representation.")
+                raise ValueError(
+                    "Quantiles must be specified for quantile representation."
+                )
             if not isinstance(df.index, pd.MultiIndex):
                 df.index = pd.MultiIndex.from_product(
                     [[pd.Timedelta(0)], df.index], names=expected_index_names
