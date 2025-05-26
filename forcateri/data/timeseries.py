@@ -27,7 +27,14 @@ class TimeSeries:
             representation = TimeSeries.DETERM_REP
         self.representation = representation
         if representation == TimeSeries.QUANTILE_REP:
+            assert all(isinstance(x,float) for x in quantiles), (
+                "Quantiles must be a list of floats."
+            )
             self.quantiles = quantiles
+        elif representation == TimeSeries.SAMPLE_REP:
+            raise NotImplementedError(
+                "Sample representation is not implemented yet."
+            )
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Expected a pandas DataFrame")
 
