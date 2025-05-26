@@ -27,14 +27,12 @@ class TimeSeries:
             representation = TimeSeries.DETERM_REP
         self.representation = representation
         if representation == TimeSeries.QUANTILE_REP:
-            assert all(isinstance(x,float) for x in quantiles), (
-                "Quantiles must be a list of floats."
-            )
+            assert all(
+                isinstance(x, float) for x in quantiles
+            ), "Quantiles must be a list of floats."
             self.quantiles = quantiles
         elif representation == TimeSeries.SAMPLE_REP:
-            raise NotImplementedError(
-                "Sample representation is not implemented yet."
-            )
+            raise NotImplementedError("Sample representation is not implemented yet.")
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Expected a pandas DataFrame")
 
@@ -70,10 +68,11 @@ class TimeSeries:
             return False
         expected_index_names = ["offset", "time_stamp"]
         expected_column_names = ["feature", "representation"]
-
+        has_datetime = isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
         return (
             df.index.names == expected_index_names
             and df.columns.names == expected_column_names
+            and has_datetime
         )
 
     @staticmethod
@@ -83,14 +82,28 @@ class TimeSeries:
         and or mislabeled information can be inferred.
         No changes to the data or TimeSeries are made here.
         """
-        if isinstance(df.index, pd.DatetimeIndex):
-            return True
         expected_index_names = {"offset", "time_stamp"}
         expected_column_names = {"feature", "representation"}
         index_names_set = set(df.index.names)
+        # Simple datetime index is always compatible
+        if isinstance(df.index, pd.DatetimeIndex):
+            return True
+        # Check MultiIndex with datetime values
+        if isinstance(df.index, pd.MultiIndex):
+            logger.info("Check index structure")
+            has_datetime = isinstance(
+                df.index.get_level_values(0), pd.DatetimeIndex
+            ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
+            if index_names_set == expected_index_names and has_datetime:
+                logger.info("Index is MultiIndex with datetime values.")
+                return True
+
+        # Check full MultiIndex structure
         if isinstance(df.columns, pd.MultiIndex):
+            logger.info(
+                "Check columns MultiIndex structure. One caveat is that df.index is not DateTimeIndex, casting to datetime is done in align_format()."
+            )
             column_names_set = set(df.columns.names)
-            # Check that all expected names are present (order doesn't matter)
             if (
                 index_names_set == expected_index_names
                 and column_names_set == expected_column_names
@@ -106,7 +119,8 @@ class TimeSeries:
         if (
             set(expected_column_names) == set(df.columns.names)
             and expected_column_names != df.columns.names
-        ):
+        ):  
+            logger.info("Reordering column names to match expected format.")
             df.columns = df.columns.reorder_levels(
                 [df.columns.names.index(name) for name in expected_column_names]
             )
@@ -114,10 +128,26 @@ class TimeSeries:
             set(expected_index_names) == set(df.index.names)
             and expected_index_names != df.index.names
         ):
+            logger.info("Reordering index names to match expected format.")
             df.index = df.index.reorder_levels(
                 [df.index.names.index(name) for name in expected_index_names]
             )
-        if self.representation == "value":
+        #Casting the index to datetime format if it is a MultiIndex with 'time_stamp'
+        if isinstance(df.index,pd.MultiIndex) and 'time_stamp' in df.index.names:
+            logger.info("Casting the index to datetime format") 
+            try:
+                df.index = pd.MultiIndex.from_arrays(
+                    [
+                        df.index.get_level_values("offset"),
+                        pd.to_datetime(df.index.get_level_values("time_stamp"))
+                    ],
+                    names=expected_index_names
+                )
+            except Exception as e:
+                logger.error(f"Failed to convert 'time_stamp' to datetime: {e}")
+                raise ValueError(f"Cannot convert index level 'time_stamp' to datetime: {e}")
+
+        if self.representation == "determ":
             if not isinstance(df.index, pd.MultiIndex):
                 df.index = pd.MultiIndex.from_product(
                     [[pd.Timedelta(0)], df.index], names=expected_index_names
@@ -128,8 +158,7 @@ class TimeSeries:
                 )
         elif self.representation == "quantile":
             if self.quantiles is None:
-                logger.error(
-                    "Quantiles must be specified for quantile representation.")
+                logger.error("Quantiles must be specified for quantile representation.")
                 raise ValueError(
                     "Quantiles must be specified for quantile representation."
                 )
