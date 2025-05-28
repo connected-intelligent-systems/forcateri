@@ -6,7 +6,7 @@ from typing import List, Optional, Union, Tuple
 
 import numpy as np
 import pandas as pd
-from .timeseriesexceptions import InvalidDataFrameFormat,InvalidRepresentationFormat
+from .timeseriesexceptions import InvalidDataFrameFormat, InvalidRepresentationFormat
 
 logger = logging.getLogger(__name__)
 
@@ -40,10 +40,10 @@ class TimeSeries:
             raise TypeError("Expected a pandas DataFrame")
 
         # If already in internal format (e.g. MultiIndex on both axes), just store it
-        if TimeSeries.is_matching_format(data,self.representation):
+        if TimeSeries.is_matching_format(data, self.representation):
             self.data = data.copy()
             logger.info("TimeSeries initialized from internal-format DataFrame.")
-        elif TimeSeries.is_compatible_format(data,self.representation):
+        elif TimeSeries.is_compatible_format(data, self.representation):
             # If the DataFrame is compatible but not in the expected format, align it
             self.data = data.copy()
             self.align_format(self.data)
@@ -77,6 +77,7 @@ class TimeSeries:
                 df.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0])
             )
             if not feature_level_is_unique:
+                logger.error("Features are having multiple value cols")
                 raise InvalidRepresentationFormat(
                     "Feature level in the DataFrame is not unique. "
                     "This is required for deterministic representation."
@@ -90,6 +91,7 @@ class TimeSeries:
                 == 1
             )
             if not matching_quantile_levels:
+                logger.error("Quantile levels are not matching across features")
                 raise InvalidRepresentationFormat(
                     "Quantile levels in the DataFrame are different for each feature. "
                     "This is required for quantile representation."
