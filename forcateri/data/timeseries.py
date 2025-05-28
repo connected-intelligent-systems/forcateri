@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Tuple
 
 import numpy as np
 import pandas as pd
-from .timeseriesexceptions import InvalidDataFrameFormat
+from .timeseriesexceptions import InvalidDataFrameFormat,InvalidRepresentationFormat
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +16,8 @@ class TimeSeries:
     DETERM_REP = "determ"
     QUANTILE_REP = "quantile"
     SAMPLE_REP = "sample"
+    ROW_INDEX_NAMES: Tuple[str, str] = ("offset", "time_stamp")
+    COL_INDEX_NAMES: Tuple[str, str] = ("feature", "representation")
 
     def __init__(
         self,
@@ -27,16 +29,10 @@ class TimeSeries:
             representation = TimeSeries.DETERM_REP
         self.representation = representation
         if representation == TimeSeries.QUANTILE_REP:
-            if not all(
-                isinstance(x, float) for x in quantiles
-            ):
-                raise TypeError(
-                    "Quantiles must be a list of floats."
-                )
+            if not all(isinstance(x, float) for x in quantiles):
+                raise TypeError("Quantiles must be a list of floats.")
             if not all(0 <= x <= 1 for x in quantiles):
-                raise ValueError(
-                    "Quantiles must be between 0 and 1."
-                )
+                raise ValueError("Quantiles must be between 0 and 1.")
             self.quantiles = quantiles
         elif representation == TimeSeries.SAMPLE_REP:
             raise NotImplementedError("Sample representation is not implemented yet.")
@@ -44,10 +40,10 @@ class TimeSeries:
             raise TypeError("Expected a pandas DataFrame")
 
         # If already in internal format (e.g. MultiIndex on both axes), just store it
-        if TimeSeries.is_matching_format(data):
+        if TimeSeries.is_matching_format(data,self.representation):
             self.data = data.copy()
             logger.info("TimeSeries initialized from internal-format DataFrame.")
-        elif TimeSeries.is_compatible_format(data):
+        elif TimeSeries.is_compatible_format(data,self.representation):
             # If the DataFrame is compatible but not in the expected format, align it
             self.data = data.copy()
             self.align_format(self.data)
@@ -62,7 +58,7 @@ class TimeSeries:
             )
 
     @staticmethod
-    def is_matching_format(df: pd.DataFrame) -> bool:
+    def is_matching_format(df: pd.DataFrame, representation) -> bool:
         """
         Checks the structure of the row and the column index and returns true if a data frame
         has the expected format to serve as a TimeSeries data representation.
@@ -73,24 +69,48 @@ class TimeSeries:
             and isinstance(df.columns, pd.MultiIndex)
         ):
             return False
-        expected_index_names = ["offset", "time_stamp"]
-        expected_column_names = ["feature", "representation"]
         has_datetime = isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
+        if representation == TimeSeries.DETERM_REP:
+            feature_level_is_unique = df.columns.get_level_values(
+                TimeSeries.COL_INDEX_NAMES[0]
+            ).nunique() == len(
+                df.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0])
+            )
+            if not feature_level_is_unique:
+                raise InvalidRepresentationFormat(
+                    "Feature level in the DataFrame is not unique. "
+                    "This is required for deterministic representation."
+                )
+
+        elif representation == TimeSeries.QUANTILE_REP:
+            matching_quantile_levels = (
+                df.columns.to_frame(index=False)
+                .groupby(TimeSeries.COL_INDEX_NAMES[0])[TimeSeries.COL_INDEX_NAMES[1]]
+                .nunique()
+                == 1
+            )
+            if not matching_quantile_levels:
+                raise InvalidRepresentationFormat(
+                    "Quantile levels in the DataFrame are different for each feature. "
+                    "This is required for quantile representation."
+                )
+
+        elif representation == TimeSeries.SAMPLE_REP:
+            raise NotImplementedError("Sample representation is not implemented yet.")
         return (
-            df.index.names == expected_index_names
-            and df.columns.names == expected_column_names
+            df.index.names == TimeSeries.ROW_INDEX_NAMES
+            and df.columns.names == TimeSeries.COL_INDEX_NAMES
             and has_datetime
         )
 
     @staticmethod
-    def is_compatible_format(df: pd.DataFrame) -> bool:
+    def is_compatible_format(df: pd.DataFrame, representation) -> bool:
         """
         Checks the structure of the row and the column index and returns true if all the missing
         and or mislabeled information can be inferred.
         No changes to the data or TimeSeries are made here.
         """
-        expected_index_names = {"offset", "time_stamp"}
-        expected_column_names = {"feature", "representation"}
+
         index_names_set = set(df.index.names)
         # Simple datetime index is always compatible
         if isinstance(df.index, pd.DatetimeIndex):
@@ -101,7 +121,7 @@ class TimeSeries:
             has_datetime = isinstance(
                 df.index.get_level_values(0), pd.DatetimeIndex
             ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
-            if index_names_set == expected_index_names and has_datetime:
+            if index_names_set == set(TimeSeries.ROW_INDEX_NAMES) and has_datetime:
                 logger.info("Index is MultiIndex with datetime values.")
                 return True
 
@@ -111,57 +131,56 @@ class TimeSeries:
                 "Check columns MultiIndex structure. One caveat is that df.index is not DateTimeIndex, casting to datetime is done in align_format()."
             )
             column_names_set = set(df.columns.names)
-            if (
-                index_names_set == expected_index_names
-                and column_names_set == expected_column_names
-            ):
+            if index_names_set == set(
+                TimeSeries.ROW_INDEX_NAMES
+            ) and column_names_set == set(TimeSeries.COL_INDEX_NAMES):
                 return True
 
         return False
 
     def align_format(self, df: pd.DataFrame):
 
-        expected_index_names = ["offset", "time_stamp"]
-        expected_column_names = ["feature", "representation"]
         if (
-            set(expected_column_names) == set(df.columns.names)
-            and expected_column_names != df.columns.names
-        ):  
+            set(TimeSeries.COL_INDEX_NAMES) == set(df.columns.names)
+            and TimeSeries.COL_INDEX_NAMES != df.columns.names
+        ):
             logger.info("Reordering column names to match expected format.")
             df.columns = df.columns.reorder_levels(
-                [df.columns.names.index(name) for name in expected_column_names]
+                [df.columns.names.index(name) for name in TimeSeries.COL_INDEX_NAMES]
             )
         if (
-            set(expected_index_names) == set(df.index.names)
-            and expected_index_names != df.index.names
+            set(TimeSeries.ROW_INDEX_NAMES) == set(df.index.names)
+            and TimeSeries.ROW_INDEX_NAMES != df.index.names
         ):
             logger.info("Reordering index names to match expected format.")
             df.index = df.index.reorder_levels(
-                [df.index.names.index(name) for name in expected_index_names]
+                [df.index.names.index(name) for name in TimeSeries.ROW_INDEX_NAMES]
             )
-        #Casting the index to datetime format if it is a MultiIndex with 'time_stamp'
-        if isinstance(df.index,pd.MultiIndex) and 'time_stamp' in df.index.names:
-            logger.info("Casting the index to datetime format") 
+        # Casting the index to datetime format if it is a MultiIndex with 'time_stamp'
+        if isinstance(df.index, pd.MultiIndex) and "time_stamp" in df.index.names:
+            logger.info("Casting the index to datetime format")
             try:
                 df.index = pd.MultiIndex.from_arrays(
                     [
                         df.index.get_level_values("offset"),
-                        pd.to_datetime(df.index.get_level_values("time_stamp"))
+                        pd.to_datetime(df.index.get_level_values("time_stamp")),
                     ],
-                    names=expected_index_names
+                    names=TimeSeries.ROW_INDEX_NAMES,
                 )
             except Exception as e:
                 logger.error(f"Failed to convert 'time_stamp' to datetime: {e}")
-                raise ValueError(f"Cannot convert index level 'time_stamp' to datetime: {e}")
+                raise ValueError(
+                    f"Cannot convert index level 'time_stamp' to datetime: {e}"
+                )
 
         if self.representation == "determ":
             if not isinstance(df.index, pd.MultiIndex):
                 df.index = pd.MultiIndex.from_product(
-                    [[pd.Timedelta(0)], df.index], names=expected_index_names
+                    [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
                 )
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
-                    [df.columns, ["value"]], names=expected_column_names
+                    [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
                 )
         elif self.representation == "quantile":
             if self.quantiles is None:
@@ -171,15 +190,15 @@ class TimeSeries:
                 )
             if not isinstance(df.index, pd.MultiIndex):
                 df.index = pd.MultiIndex.from_product(
-                    [[pd.Timedelta(0)], df.index], names=expected_index_names
+                    [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
                 )
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
-                    [["target"], self.quantiles], names=expected_column_names
+                    [["target"], self.quantiles], names=TimeSeries.COL_INDEX_NAMES
                 )
             else:
                 # Rename the outer column levels to needed format
-                df.columns.names = expected_column_names
+                df.columns.names = TimeSeries.COL_INDEX_NAMES
                 # Dynamic relabeling of inner column level to match quantiles
                 inner_levels = sorted(set(level[1] for level in df.columns))
                 if len(inner_levels) == len(self.quantiles):
