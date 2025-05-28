@@ -27,9 +27,16 @@ class TimeSeries:
             representation = TimeSeries.DETERM_REP
         self.representation = representation
         if representation == TimeSeries.QUANTILE_REP:
-            assert all(
+            if not all(
                 isinstance(x, float) for x in quantiles
-            ), "Quantiles must be a list of floats."
+            ):
+                raise TypeError(
+                    "Quantiles must be a list of floats."
+                )
+            if not all(0 <= x <= 1 for x in quantiles):
+                raise ValueError(
+                    "Quantiles must be between 0 and 1."
+                )
             self.quantiles = quantiles
         elif representation == TimeSeries.SAMPLE_REP:
             raise NotImplementedError("Sample representation is not implemented yet.")
