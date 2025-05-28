@@ -792,7 +792,7 @@
         <dia:point val="-42.5915,-3.9111"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="-42.6415,-3.9611;-35.0311,-1.9863"/>
+        <dia:rectangle val="-42.6415,-3.9611;-35.7681,-0.116013"/>
       </dia:attribute>
       <dia:attribute name="meta">
         <dia:composite type="dict"/>
@@ -800,8 +800,8 @@
       <dia:attribute name="orth_points">
         <dia:point val="-42.5915,-3.9111"/>
         <dia:point val="-40.786,-3.9111"/>
-        <dia:point val="-40.786,-2.4363"/>
-        <dia:point val="-35.4811,-2.4363"/>
+        <dia:point val="-40.786,-0.566013"/>
+        <dia:point val="-36.2181,-0.566013"/>
       </dia:attribute>
       <dia:attribute name="orth_orient">
         <dia:enum val="0"/>
@@ -837,7 +837,7 @@
       </dia:attribute>
       <dia:connections>
         <dia:connection handle="0" to="O13" connection="18"/>
-        <dia:connection handle="1" to="O59" connection="42"/>
+        <dia:connection handle="1" to="O59" connection="46"/>
       </dia:connections>
     </dia:object>
     <dia:object type="UML - Generalization" version="1" id="O8">
@@ -945,7 +945,7 @@
         <dia:point val="11.214,-16.7361"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="-2.99164,-16.7861;11.264,-1.9863"/>
+        <dia:rectangle val="-1.80332,-16.7861;11.264,-0.116013"/>
       </dia:attribute>
       <dia:attribute name="meta">
         <dia:composite type="dict"/>
@@ -953,8 +953,8 @@
       <dia:attribute name="orth_points">
         <dia:point val="11.214,-16.7361"/>
         <dia:point val="3.21402,-16.7361"/>
-        <dia:point val="3.21402,-2.4363"/>
-        <dia:point val="-2.54164,-2.4363"/>
+        <dia:point val="3.21402,-0.566013"/>
+        <dia:point val="-1.35332,-0.566013"/>
       </dia:attribute>
       <dia:attribute name="orth_orient">
         <dia:enum val="0"/>
@@ -990,7 +990,7 @@
       </dia:attribute>
       <dia:connections>
         <dia:connection handle="0" to="O12" connection="22"/>
-        <dia:connection handle="1" to="O59" connection="42"/>
+        <dia:connection handle="1" to="O59" connection="46"/>
       </dia:connections>
     </dia:object>
     <dia:object type="UML - Generalization" version="1" id="O11">
@@ -2461,14 +2461,14 @@ rep.report_all()#</dia:string>
     </dia:object>
     <dia:object type="Standard - Line" version="0" id="O19">
       <dia:attribute name="obj_pos">
-        <dia:point val="-19.011,18.6638"/>
+        <dia:point val="-18.7456,21.3336"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="-19.061,18.6138;-18.961,21.2793"/>
+        <dia:rectangle val="-18.7957,21.2835;-18.6935,22.526"/>
       </dia:attribute>
       <dia:attribute name="conn_endpoints">
-        <dia:point val="-19.011,18.6638"/>
-        <dia:point val="-19.011,21.2293"/>
+        <dia:point val="-18.7456,21.3336"/>
+        <dia:point val="-18.7436,22.4759"/>
       </dia:attribute>
       <dia:attribute name="numcp">
         <dia:int val="1"/>
@@ -2480,7 +2480,7 @@ rep.report_all()#</dia:string>
         <dia:real val="0.20000000000000015"/>
       </dia:attribute>
       <dia:connections>
-        <dia:connection handle="0" to="O59" connection="42"/>
+        <dia:connection handle="0" to="O59" connection="46"/>
         <dia:connection handle="1" to="O60" connection="8"/>
       </dia:connections>
     </dia:object>
@@ -3323,7 +3323,7 @@ rep.report_all()#</dia:string>
         <dia:point val="-45.2276,10.3639"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="-45.2776,-2.8863;-35.0311,10.4139"/>
+        <dia:rectangle val="-45.2776,-1.01601;-35.7681,10.4139"/>
       </dia:attribute>
       <dia:attribute name="meta">
         <dia:composite type="dict"/>
@@ -3331,8 +3331,8 @@ rep.report_all()#</dia:string>
       <dia:attribute name="orth_points">
         <dia:point val="-45.2276,10.3639"/>
         <dia:point val="-40.786,10.3639"/>
-        <dia:point val="-40.786,-2.4363"/>
-        <dia:point val="-35.4811,-2.4363"/>
+        <dia:point val="-40.786,-0.566013"/>
+        <dia:point val="-36.2181,-0.566013"/>
       </dia:attribute>
       <dia:attribute name="orth_orient">
         <dia:enum val="0"/>
@@ -3368,7 +3368,7 @@ rep.report_all()#</dia:string>
       </dia:attribute>
       <dia:connections>
         <dia:connection handle="0" to="O15" connection="10"/>
-        <dia:connection handle="1" to="O59" connection="42"/>
+        <dia:connection handle="1" to="O59" connection="46"/>
       </dia:connections>
     </dia:object>
     <dia:object type="UML - Generalization" version="1" id="O32">
@@ -5458,7 +5458,7 @@ The enclosing file should also offer some instances for import representing the 
         <dia:point val="12.41,23.3669"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="-2.99164,-2.8863;12.46,23.4169"/>
+        <dia:rectangle val="-1.80332,-1.01601;12.46,23.4169"/>
       </dia:attribute>
       <dia:attribute name="meta">
         <dia:composite type="dict"/>
@@ -5466,8 +5466,8 @@ The enclosing file should also offer some instances for import representing the 
       <dia:attribute name="orth_points">
         <dia:point val="12.41,23.3669"/>
         <dia:point val="3.21402,23.3669"/>
-        <dia:point val="3.21402,-2.4363"/>
-        <dia:point val="-2.54164,-2.4363"/>
+        <dia:point val="3.21402,-0.566013"/>
+        <dia:point val="-1.35332,-0.566013"/>
       </dia:attribute>
       <dia:attribute name="orth_orient">
         <dia:enum val="0"/>
@@ -5503,7 +5503,7 @@ The enclosing file should also offer some instances for import representing the 
       </dia:attribute>
       <dia:connections>
         <dia:connection handle="0" to="O43" connection="10"/>
-        <dia:connection handle="1" to="O59" connection="42"/>
+        <dia:connection handle="1" to="O59" connection="46"/>
       </dia:connections>
     </dia:object>
     <dia:object type="UML - Class" version="0" id="O56">
@@ -5966,19 +5966,19 @@ The enclosing file should also offer some instances for import representing the 
     </dia:object>
     <dia:object type="UML - Class" version="0" id="O59">
       <dia:attribute name="obj_pos">
-        <dia:point val="-35.431,-23.4863"/>
+        <dia:point val="-36.168,-22.416"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="-35.481,-23.5363;-2.541,18.6637"/>
+        <dia:rectangle val="-36.218,-22.466;-1.35296,21.334"/>
       </dia:attribute>
       <dia:attribute name="elem_corner">
-        <dia:point val="-35.431,-23.4863"/>
+        <dia:point val="-36.168,-22.416"/>
       </dia:attribute>
       <dia:attribute name="elem_width">
-        <dia:real val="32.839999999999996"/>
+        <dia:real val="34.765000000000001"/>
       </dia:attribute>
       <dia:attribute name="elem_height">
-        <dia:real val="42.100000000000001"/>
+        <dia:real val="43.700000000000003"/>
       </dia:attribute>
       <dia:attribute name="name">
         <dia:string>#TimeSeries#</dia:string>
@@ -6126,6 +6126,52 @@ The enclosing file should also offer some instances for import representing the 
           </dia:attribute>
           <dia:attribute name="value">
             <dia:string>#"sample"#</dia:string>
+          </dia:attribute>
+          <dia:attribute name="comment">
+            <dia:string>##</dia:string>
+          </dia:attribute>
+          <dia:attribute name="visibility">
+            <dia:enum val="0"/>
+          </dia:attribute>
+          <dia:attribute name="abstract">
+            <dia:boolean val="false"/>
+          </dia:attribute>
+          <dia:attribute name="class_scope">
+            <dia:boolean val="true"/>
+          </dia:attribute>
+        </dia:composite>
+        <dia:composite type="umlattribute">
+          <dia:attribute name="name">
+            <dia:string>#ROW_INDEX_NAMES#</dia:string>
+          </dia:attribute>
+          <dia:attribute name="type">
+            <dia:string>#Tuple[str, str]#</dia:string>
+          </dia:attribute>
+          <dia:attribute name="value">
+            <dia:string>#("offset", "time_stamp")#</dia:string>
+          </dia:attribute>
+          <dia:attribute name="comment">
+            <dia:string>##</dia:string>
+          </dia:attribute>
+          <dia:attribute name="visibility">
+            <dia:enum val="0"/>
+          </dia:attribute>
+          <dia:attribute name="abstract">
+            <dia:boolean val="false"/>
+          </dia:attribute>
+          <dia:attribute name="class_scope">
+            <dia:boolean val="true"/>
+          </dia:attribute>
+        </dia:composite>
+        <dia:composite type="umlattribute">
+          <dia:attribute name="name">
+            <dia:string>#COL_INDEX_NAMES#</dia:string>
+          </dia:attribute>
+          <dia:attribute name="type">
+            <dia:string>#Tuple[str, str]#</dia:string>
+          </dia:attribute>
+          <dia:attribute name="value">
+            <dia:string>#("feature", "representation")#</dia:string>
           </dia:attribute>
           <dia:attribute name="comment">
             <dia:string>##</dia:string>
@@ -6703,6 +6749,23 @@ No changes to the data ore TimeSeries are made here.#</dia:string>
                 <dia:enum val="0"/>
               </dia:attribute>
             </dia:composite>
+            <dia:composite type="umlparameter">
+              <dia:attribute name="name">
+                <dia:string>#representation#</dia:string>
+              </dia:attribute>
+              <dia:attribute name="type">
+                <dia:string>#str#</dia:string>
+              </dia:attribute>
+              <dia:attribute name="value">
+                <dia:string>#TimeSeries.DETERM_REP#</dia:string>
+              </dia:attribute>
+              <dia:attribute name="comment">
+                <dia:string>##</dia:string>
+              </dia:attribute>
+              <dia:attribute name="kind">
+                <dia:enum val="0"/>
+              </dia:attribute>
+            </dia:composite>
           </dia:attribute>
         </dia:composite>
         <dia:composite type="umloperation">
@@ -6743,6 +6806,23 @@ No changes to the data ore TimeSeries are made here.#</dia:string>
               </dia:attribute>
               <dia:attribute name="value">
                 <dia:string>##</dia:string>
+              </dia:attribute>
+              <dia:attribute name="comment">
+                <dia:string>##</dia:string>
+              </dia:attribute>
+              <dia:attribute name="kind">
+                <dia:enum val="0"/>
+              </dia:attribute>
+            </dia:composite>
+            <dia:composite type="umlparameter">
+              <dia:attribute name="name">
+                <dia:string>#representation#</dia:string>
+              </dia:attribute>
+              <dia:attribute name="type">
+                <dia:string>#str#</dia:string>
+              </dia:attribute>
+              <dia:attribute name="value">
+                <dia:string>#TimeSeries.DETERM_REP#</dia:string>
               </dia:attribute>
               <dia:attribute name="comment">
                 <dia:string>##</dia:string>
@@ -6810,16 +6890,16 @@ No changes to the data ore TimeSeries are made here.#</dia:string>
     </dia:object>
     <dia:object type="UML - Note" version="0" id="O60">
       <dia:attribute name="obj_pos">
-        <dia:point val="-36.786,21.2273"/>
+        <dia:point val="-36.501,22.476"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="-36.836,21.1773;-1.186,40.5773"/>
+        <dia:rectangle val="-36.551,22.426;-0.901,41.826"/>
       </dia:attribute>
       <dia:attribute name="meta">
         <dia:composite type="dict"/>
       </dia:attribute>
       <dia:attribute name="elem_corner">
-        <dia:point val="-36.786,21.2273"/>
+        <dia:point val="-36.501,22.476"/>
       </dia:attribute>
       <dia:attribute name="elem_width">
         <dia:real val="35.549999999999997"/>
@@ -6861,7 +6941,7 @@ Usage
             <dia:real val="0.80000000000000004"/>
           </dia:attribute>
           <dia:attribute name="pos">
-            <dia:point val="-36.436,22.4714"/>
+            <dia:point val="-36.151,23.72"/>
           </dia:attribute>
           <dia:attribute name="color">
             <dia:color val="#000000ff"/>
