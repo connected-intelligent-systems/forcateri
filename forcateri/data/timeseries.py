@@ -532,8 +532,46 @@ class TimeSeries:
         return TimeSeries(data=new_data, representation=self.representation, quantiles=self.quantiles)
     
 
-    def __sub__(self):
-        pass
+    def __sub__(self, other: TimeSeries) -> TimeSeries:
+        """
+        Subtracts another TimeSeries object from this one.
 
-    def __mul__(self):
-        pass
+        Parameters
+        ----------
+        other : TimeSeries
+            The TimeSeries to subtract from this one.
+
+        Returns
+        -------
+        TimeSeries
+            A new TimeSeries object containing the difference of the data.
+        """
+        if not isinstance(other, TimeSeries):
+            raise TypeError("Can only subtract another TimeSeries object.")
+        
+        if self.data.index.names != other.data.index.names or self.data.columns.names != other.data.columns.names:
+            raise ValueError("TimeSeries objects must have the same index and column names to be subtracted.")
+
+        new_data = self.data.subtract(other.data, fill_value=0)
+        return TimeSeries(data=new_data, representation=self.representation, quantiles=self.quantiles)
+
+    def __mul__(self, scalar:Union[int,float]) -> TimeSeries:
+        """
+        Multiplies the TimeSeries data by a scalar value.
+
+        Parameters
+        ----------
+        scalar : int
+            The scalar value to multiply the TimeSeries data by.
+
+        Returns
+        -------
+        TimeSeries
+            A new TimeSeries object with the data multiplied by the scalar.
+        """
+        if not isinstance(scalar, (int, float)):
+            raise TypeError("Can only multiply by a scalar (int or float).")
+        
+        new_data = self.data * scalar
+        return TimeSeries(data=new_data, representation=self.representation, quantiles=self.quantiles)
+        
