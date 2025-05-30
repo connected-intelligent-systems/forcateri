@@ -88,8 +88,11 @@ class TimeSeries:
                 df.columns.to_frame(index=False)
                 .groupby(TimeSeries.COL_INDEX_NAMES[0])[TimeSeries.COL_INDEX_NAMES[1]]
                 .nunique()
+                .nunique()
                 == 1
             )
+            quantile_level_correct_name = all(isinstance(x, float) for x in df.columns.get_level_values(1))
+
             if not matching_quantile_levels:
                 logger.error("Quantile levels are not matching across features")
                 raise InvalidRepresentationFormat(
@@ -103,6 +106,7 @@ class TimeSeries:
             df.index.names == TimeSeries.ROW_INDEX_NAMES
             and df.columns.names == TimeSeries.COL_INDEX_NAMES
             and has_datetime
+            and quantile_level_correct_name
         )
 
     @staticmethod
@@ -503,3 +507,33 @@ class TimeSeries:
             return self.get_feature_slice(index)
         else:
             return self.get_time_slice(index)
+    
+    def __add__(self, other: TimeSeries) -> TimeSeries:
+        """
+        Adds two TimeSeries objects together.
+
+        Parameters
+        ----------
+        other : TimeSeries
+            The TimeSeries to add to this one.
+
+        Returns
+        -------
+        TimeSeries
+            A new TimeSeries object containing the sum of the data.
+        """
+        if not isinstance(other, TimeSeries):
+            raise TypeError("Can only add another TimeSeries object.")
+        
+        if self.data.index.names != other.data.index.names or self.data.columns.names != other.data.columns.names:
+            raise ValueError("TimeSeries objects must have the same index and column names to be added.")
+
+        new_data = self.data.add(other.data, fill_value=0)
+        return TimeSeries(data=new_data, representation=self.representation, quantiles=self.quantiles)
+    
+
+    def __sub__(self):
+        pass
+
+    def __mul__(self):
+        pass
