@@ -69,7 +69,14 @@ class TimeSeries:
             and isinstance(df.columns, pd.MultiIndex)
         ):
             return False
-        has_datetime = isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
+        # Check index/column names and datetime type
+        if not (
+            df.index.names == TimeSeries.ROW_INDEX_NAMES
+            and df.columns.names == TimeSeries.COL_INDEX_NAMES
+            and isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
+        ):
+            return False
+        # Specific representation checks
         if representation == TimeSeries.DETERM_REP:
             feature_level_is_unique = df.columns.get_level_values(
                 TimeSeries.COL_INDEX_NAMES[0]
@@ -82,6 +89,7 @@ class TimeSeries:
                     "Feature level in the DataFrame is not unique. "
                     "This is required for deterministic representation."
                 )
+            return feature_level_is_unique
 
         elif representation == TimeSeries.QUANTILE_REP:
             matching_quantile_levels = (
@@ -91,7 +99,9 @@ class TimeSeries:
                 .nunique()
                 == 1
             )
-            quantile_level_correct_name = all(isinstance(x, float) for x in df.columns.get_level_values(1))
+            quantile_level_correct_name = all(
+                isinstance(x, float) for x in df.columns.get_level_values(1)
+            )
 
             if not matching_quantile_levels:
                 logger.error("Quantile levels are not matching across features")
@@ -99,15 +109,10 @@ class TimeSeries:
                     "Quantile levels in the DataFrame are different for each feature. "
                     "This is required for quantile representation."
                 )
+            return matching_quantile_levels and quantile_level_correct_name
 
         elif representation == TimeSeries.SAMPLE_REP:
             raise NotImplementedError("Sample representation is not implemented yet.")
-        return (
-            df.index.names == TimeSeries.ROW_INDEX_NAMES
-            and df.columns.names == TimeSeries.COL_INDEX_NAMES
-            and has_datetime
-            and quantile_level_correct_name
-        )
 
     @staticmethod
     def is_compatible_format(df: pd.DataFrame, representation) -> bool:
@@ -507,7 +512,7 @@ class TimeSeries:
             return self.get_feature_slice(index)
         else:
             return self.get_time_slice(index)
-    
+
     def __add__(self, other: TimeSeries) -> TimeSeries:
         """
         Adds two TimeSeries objects together.
@@ -524,13 +529,34 @@ class TimeSeries:
         """
         if not isinstance(other, TimeSeries):
             raise TypeError("Can only add another TimeSeries object.")
-        
-        if self.data.index.names != other.data.index.names or self.data.columns.names != other.data.columns.names:
-            raise ValueError("TimeSeries objects must have the same index and column names to be added.")
+
+        if (
+            self.data.index.names != other.data.index.names
+            or self.data.columns.names != other.data.columns.names
+        ):
+            raise ValueError(
+                "TimeSeries objects must have the same index and column names to be added."
+            )
+        if self.representation != other.representation:
+            if self.representation == TimeSeries.QUANTILE_REP and other.representation == TimeSeries.DETERM_REP:
+                quantile_df = self.data.copy()
+                determ_df = other.data.copy()
+            elif self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.QUANTILE_REP:
+                quantile_df = other.data.copy()
+                determ_df = self.data.copy()
+            for feature in quantile_df.columns.get_level_values(0).unique():
+                feature_quantiles = quantile_df.xs(feature, level=0, axis=1)
+                det_series = determ_df.xs((feature, 'value'), axis=1)
+                for quantile in quantile_df.columns.get_level_values(1).unique():
+                    
+                    quantile_df.loc[:, (feature, quantile)] = feature_quantiles[quantile] + det_series
+            return TimeSeries(data=quantile_df, representation=self.representation, quantiles=self.quantiles)
+            
 
         new_data = self.data.add(other.data, fill_value=0)
-        return TimeSeries(data=new_data, representation=self.representation, quantiles=self.quantiles)
-    
+        return TimeSeries(
+            data=new_data, representation=self.representation, quantiles=self.quantiles
+        )
 
     def __sub__(self, other: TimeSeries) -> TimeSeries:
         """
@@ -548,14 +574,21 @@ class TimeSeries:
         """
         if not isinstance(other, TimeSeries):
             raise TypeError("Can only subtract another TimeSeries object.")
-        
-        if self.data.index.names != other.data.index.names or self.data.columns.names != other.data.columns.names:
-            raise ValueError("TimeSeries objects must have the same index and column names to be subtracted.")
+
+        if (
+            self.data.index.names != other.data.index.names
+            or self.data.columns.names != other.data.columns.names
+        ):
+            raise ValueError(
+                "TimeSeries objects must have the same index and column names to be subtracted."
+            )
 
         new_data = self.data.subtract(other.data, fill_value=0)
-        return TimeSeries(data=new_data, representation=self.representation, quantiles=self.quantiles)
+        return TimeSeries(
+            data=new_data, representation=self.representation, quantiles=self.quantiles
+        )
 
-    def __mul__(self, scalar:Union[int,float]) -> TimeSeries:
+    def __mul__(self, scalar: Union[int, float]) -> TimeSeries:
         """
         Multiplies the TimeSeries data by a scalar value.
 
@@ -571,7 +604,8 @@ class TimeSeries:
         """
         if not isinstance(scalar, (int, float)):
             raise TypeError("Can only multiply by a scalar (int or float).")
-        
+
         new_data = self.data * scalar
-        return TimeSeries(data=new_data, representation=self.representation, quantiles=self.quantiles)
-        
+        return TimeSeries(
+            data=new_data, representation=self.representation, quantiles=self.quantiles
+        )
