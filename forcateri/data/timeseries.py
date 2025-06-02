@@ -35,7 +35,7 @@ class TimeSeries:
                 raise ValueError("Quantiles must be between 0 and 1.")
             self.quantiles = quantiles
         elif representation == TimeSeries.SAMPLE_REP:
-            #raise NotImplementedError("Sample representation is not implemented yet.")
+            # raise NotImplementedError("Sample representation is not implemented yet.")
             pass
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Expected a pandas DataFrame")
@@ -113,8 +113,10 @@ class TimeSeries:
             return matching_quantile_levels and quantile_level_correct_name
 
         elif representation == TimeSeries.SAMPLE_REP:
-            #raise NotImplementedError("Sample representation is not implemented yet.")
-            sample_level_correct_name = all(isinstance(x,int) for x in df.columns.get_level_values(1))
+            # raise NotImplementedError("Sample representation is not implemented yet.")
+            sample_level_correct_name = all(
+                isinstance(x, int) for x in df.columns.get_level_values(1)
+            )
             if not sample_level_correct_name:
                 logger.error("Sample levels are not integers")
                 raise InvalidRepresentationFormat(
@@ -192,18 +194,18 @@ class TimeSeries:
                 raise ValueError(
                     f"Cannot convert index level 'time_stamp' to datetime: {e}"
                 )
-        #Creating multiindex if needed
+        # Creating multiindex if needed
         if not isinstance(df.index, pd.MultiIndex):
-                df.index = pd.MultiIndex.from_product(
-                    [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
-                )
-        if self.representation == "determ":
-            
+            df.index = pd.MultiIndex.from_product(
+                [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
+            )
+        if self.representation == TimeSeries.DETERM_REP:
+
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
                 )
-        elif self.representation == "quantile":
+        elif self.representation == TimeSeries.QUANTILE_REP:
             if self.quantiles is None:
                 logger.error("Quantiles must be specified for quantile representation.")
                 raise ValueError(
@@ -229,16 +231,21 @@ class TimeSeries:
                         names=df.columns.names,
                     )
                 else:
-                    logger.error("Cannot map inner column levels to quantiles: mismatched length.")
+                    logger.error(
+                        "Cannot map inner column levels to quantiles: mismatched length."
+                    )
                     raise ValueError(
                         "Cannot map inner column levels to quantiles: mismatched length."
                     )
-        elif self.representation == "sample":
-            #raise NotImplementedError("Sample representation not implemented yet.")
-            logger.info("Aligning DataFrame for sample representation. At this point it is assumed that all the columns are samples.")
+        elif self.representation == TimeSeries.SAMPLE_REP:
+            # raise NotImplementedError("Sample representation not implemented yet.")
+            logger.info(
+                "Aligning DataFrame for sample representation. At this point it is assumed that all the columns are samples."
+            )
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
-                    [['target'],range(len(df.columns))], names=TimeSeries.COL_INDEX_NAMES
+                    [["target"], range(len(df.columns))],
+                    names=TimeSeries.COL_INDEX_NAMES,
                 )
             else:
                 # Rename the outer column levels to needed format
@@ -252,12 +259,12 @@ class TimeSeries:
                         names=df.columns.names,
                     )
                 else:
-                    logger.error("Cannot map inner column levels to samples: mismatched length.")
+                    logger.error(
+                        "Cannot map inner column levels to samples: mismatched length."
+                    )
                     raise ValueError(
                         "Cannot map inner column levels to samples: mismatched length."
                     )
-
-
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
@@ -571,26 +578,72 @@ class TimeSeries:
             raise ValueError(
                 "TimeSeries objects must have the same index and column names to be added."
             )
-        if self.representation != other.representation:
-            if self.representation == TimeSeries.QUANTILE_REP and other.representation == TimeSeries.DETERM_REP:
-                quantile_df = self.data.copy()
-                determ_df = other.data.copy()
-            elif self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.QUANTILE_REP:
-                quantile_df = other.data.copy()
-                determ_df = self.data.copy()
+        if {self.representation, other.representation} == {
+            TimeSeries.QUANTILE_REP,
+            TimeSeries.DETERM_REP,
+        }:
+            quantile_df = (
+                self.data.copy()
+                if self.representation == TimeSeries.QUANTILE_REP
+                else other.data.copy()
+            )
+            determ_df = (
+                other.data.copy()
+                if self.representation == TimeSeries.QUANTILE_REP
+                else self.data.copy()
+            )
+            quantiles = (
+                self.quantiles
+                if self.representation == TimeSeries.QUANTILE_REP
+                else other.quantiles
+            )
             for feature in quantile_df.columns.get_level_values(0).unique():
                 feature_quantiles = quantile_df.xs(feature, level=0, axis=1)
-                det_series = determ_df.xs((feature, 'value'), axis=1)
+                det_series = determ_df.xs((feature, "value"), axis=1)
                 for quantile in quantile_df.columns.get_level_values(1).unique():
-                    
-                    quantile_df.loc[:, (feature, quantile)] = feature_quantiles[quantile] + det_series
-            return TimeSeries(data=quantile_df, representation=self.representation, quantiles=self.quantiles)
-            
+
+                    quantile_df.loc[:, (feature, quantile)] = (
+                        feature_quantiles[quantile] + det_series
+                    )
+            return TimeSeries(
+                data=quantile_df,
+                representation=self.representation,
+                quantiles=quantiles,
+            )
+        elif {self.representation, other.representation} == {
+            TimeSeries.SAMPLE_REP,
+            TimeSeries.DETERM_REP,
+        }:
+            sample_df = (
+                self.data.copy()
+                if self.representation == TimeSeries.SAMPLE_REP
+                else other.data.copy()
+            )
+            determ_df = (
+                other.data.copy()
+                if self.representation == TimeSeries.SAMPLE_REP
+                else self.data.copy()
+            )
+            for feature in sample_df.columns.get_level_values(0).unique():
+                feature_samples = sample_df.xs(feature, level=0, axis=1)
+                det_series = determ_df.xs((feature, "value"), axis=1)
+                for sample in sample_df.columns.get_level_values(1).unique():
+                    sample_df.loc[:, (feature, sample)] = (
+                        feature_samples[sample] + det_series
+                    )
+            return TimeSeries(
+                data=sample_df,
+                representation=self.representation,
+            )
 
         new_data = self.data.add(other.data, fill_value=0)
-        return TimeSeries(
-            data=new_data, representation=self.representation, quantiles=self.quantiles
-        )
+        ts_kwargs = {
+            "data": new_data,
+            "representation": self.representation,
+        }
+        if self.representation == TimeSeries.QUANTILE_REP:
+            ts_kwargs["quantiles"] = self.quantiles
+        return TimeSeries(**ts_kwargs)
 
     def __sub__(self, other: TimeSeries) -> TimeSeries:
         """
@@ -616,36 +669,71 @@ class TimeSeries:
             raise ValueError(
                 "TimeSeries objects must have the same index and column names to be subtracted."
             )
-        if self.representation == TimeSeries.QUANTILE_REP and other.representation == TimeSeries.DETERM_REP or self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.QUANTILE_REP:
-            if self.representation == TimeSeries.QUANTILE_REP and other.representation == TimeSeries.DETERM_REP:
-                quantile_df = self.data.copy()
-                determ_df = other.data.copy()
-            elif self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.QUANTILE_REP:
-                quantile_df = other.data.copy()
-                determ_df = self.data.copy()
+        if {self.representation, other.representation} == {
+            TimeSeries.QUANTILE_REP,
+            TimeSeries.DETERM_REP,
+        }:
+            quantile_df = (
+                self.data.copy()
+                if self.representation == TimeSeries.QUANTILE_REP
+                else other.data.copy()
+            )
+            determ_df = (
+                other.data.copy()
+                if self.representation == TimeSeries.QUANTILE_REP
+                else self.data.copy()
+            )
+            quantiles = (
+                self.quantiles
+                if self.representation == TimeSeries.QUANTILE_REP
+                else other.quantiles
+            )
+
             for feature in quantile_df.columns.get_level_values(0).unique():
                 feature_quantiles = quantile_df.xs(feature, level=0, axis=1)
-                det_series = determ_df.xs((feature, 'value'), axis=1)
+                det_series = determ_df.xs((feature, "value"), axis=1)
                 for quantile in quantile_df.columns.get_level_values(1).unique():
-                    quantile_df.loc[:, (feature, quantile)] = feature_quantiles[quantile] - det_series
-            return TimeSeries(data=quantile_df, representation=self.representation, quantiles=self.quantiles)
-        elif self.representation == TimeSeries.SAMPLE_REP and other.representation == TimeSeries.DETERM_REP or self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.SAMPLE_REP:
-            if self.representation == TimeSeries.SAMPLE_REP and other.representation == TimeSeries.DETERM_REP:
-                sample_df = self.data.copy()
-                determ_df = other.data.copy()
-            elif self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.SAMPLE_REP:
-                sample_df = other.data.copy()
-                determ_df = self.data.copy()
+                    quantile_df.loc[:, (feature, quantile)] = (
+                        feature_quantiles[quantile] - det_series
+                    )
+            return TimeSeries(
+                data=quantile_df,
+                representation=self.representation,
+                quantiles=quantiles,
+            )
+        elif {self.representation, other.representation} == {
+            TimeSeries.SAMPLE_REP,
+            TimeSeries.DETERM_REP,
+        }:
+            sample_df = (
+                self.data.copy()
+                if self.representation == TimeSeries.SAMPLE_REP
+                else other.data.copy()
+            )
+            determ_df = (
+                other.data.copy()
+                if self.representation == TimeSeries.SAMPLE_REP
+                else self.data.copy()
+            )
             for feature in sample_df.columns.get_level_values(0).unique():
                 feature_samples = sample_df.xs(feature, level=0, axis=1)
-                det_series = determ_df.xs((feature, 'value'), axis=1)
+                det_series = determ_df.xs((feature, "value"), axis=1)
                 for sample in sample_df.columns.get_level_values(1).unique():
-                    sample_df.loc[:, (feature, sample)] = feature_samples[sample] - det_series
-            return TimeSeries(data=sample_df, representation=self.representation, quantiles=self.quantiles)
+                    sample_df.loc[:, (feature, sample)] = (
+                        feature_samples[sample] - det_series
+                    )
+            return TimeSeries(
+                data=sample_df,
+                representation=self.representation,
+            )
         new_data = self.data.subtract(other.data, fill_value=0)
-        return TimeSeries(
-            data=new_data, representation=self.representation, quantiles=self.quantiles
-        )
+        ts_kwargs = {
+            "data": new_data,
+            "representation": self.representation,
+        }
+        if self.representation == TimeSeries.QUANTILE_REP:
+            ts_kwargs["quantiles"] = self.quantiles
+        return TimeSeries(**ts_kwargs)
 
     def __mul__(self, scalar: Union[int, float]) -> TimeSeries:
         """
