@@ -582,7 +582,32 @@ class TimeSeries:
             raise ValueError(
                 "TimeSeries objects must have the same index and column names to be subtracted."
             )
-
+        if self.representation == TimeSeries.QUANTILE_REP and other.representation == TimeSeries.DETERM_REP or self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.QUANTILE_REP:
+            if self.representation == TimeSeries.QUANTILE_REP and other.representation == TimeSeries.DETERM_REP:
+                quantile_df = self.data.copy()
+                determ_df = other.data.copy()
+            elif self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.QUANTILE_REP:
+                quantile_df = other.data.copy()
+                determ_df = self.data.copy()
+            for feature in quantile_df.columns.get_level_values(0).unique():
+                feature_quantiles = quantile_df.xs(feature, level=0, axis=1)
+                det_series = determ_df.xs((feature, 'value'), axis=1)
+                for quantile in quantile_df.columns.get_level_values(1).unique():
+                    quantile_df.loc[:, (feature, quantile)] = feature_quantiles[quantile] - det_series
+            return TimeSeries(data=quantile_df, representation=self.representation, quantiles=self.quantiles)
+        elif self.representation == TimeSeries.SAMPLE_REP and other.representation == TimeSeries.DETERM_REP or self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.SAMPLE_REP:
+            if self.representation == TimeSeries.SAMPLE_REP and other.representation == TimeSeries.DETERM_REP:
+                sample_df = self.data.copy()
+                determ_df = other.data.copy()
+            elif self.representation == TimeSeries.DETERM_REP and other.representation == TimeSeries.SAMPLE_REP:
+                sample_df = other.data.copy()
+                determ_df = self.data.copy()
+            for feature in sample_df.columns.get_level_values(0).unique():
+                feature_samples = sample_df.xs(feature, level=0, axis=1)
+                det_series = determ_df.xs((feature, 'value'), axis=1)
+                for sample in sample_df.columns.get_level_values(1).unique():
+                    sample_df.loc[:, (feature, sample)] = feature_samples[sample] - det_series
+            return TimeSeries(data=sample_df, representation=self.representation, quantiles=self.quantiles)
         new_data = self.data.subtract(other.data, fill_value=0)
         return TimeSeries(
             data=new_data, representation=self.representation, quantiles=self.quantiles
