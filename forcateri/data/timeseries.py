@@ -35,7 +35,8 @@ class TimeSeries:
                 raise ValueError("Quantiles must be between 0 and 1.")
             self.quantiles = quantiles
         elif representation == TimeSeries.SAMPLE_REP:
-            raise NotImplementedError("Sample representation is not implemented yet.")
+            #raise NotImplementedError("Sample representation is not implemented yet.")
+            pass
         if not isinstance(data, pd.DataFrame):
             raise TypeError("Expected a pandas DataFrame")
 
@@ -112,7 +113,15 @@ class TimeSeries:
             return matching_quantile_levels and quantile_level_correct_name
 
         elif representation == TimeSeries.SAMPLE_REP:
-            raise NotImplementedError("Sample representation is not implemented yet.")
+            #raise NotImplementedError("Sample representation is not implemented yet.")
+            sample_level_correct_name = all(isinstance(x,int) for x in df.columns.get_level_values(1))
+            if not sample_level_correct_name:
+                logger.error("Sample levels are not integers")
+                raise InvalidRepresentationFormat(
+                    "Sample levels in the DataFrame must be integers. "
+                    "This is required for sample representation."
+                )
+            return sample_level_correct_name
 
     @staticmethod
     def is_compatible_format(df: pd.DataFrame, representation) -> bool:
@@ -183,12 +192,13 @@ class TimeSeries:
                 raise ValueError(
                     f"Cannot convert index level 'time_stamp' to datetime: {e}"
                 )
-
-        if self.representation == "determ":
-            if not isinstance(df.index, pd.MultiIndex):
+        #Creating multiindex if needed
+        if not isinstance(df.index, pd.MultiIndex):
                 df.index = pd.MultiIndex.from_product(
                     [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
                 )
+        if self.representation == "determ":
+            
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
@@ -199,10 +209,10 @@ class TimeSeries:
                 raise ValueError(
                     "Quantiles must be specified for quantile representation."
                 )
-            if not isinstance(df.index, pd.MultiIndex):
-                df.index = pd.MultiIndex.from_product(
-                    [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
-                )
+            # if not isinstance(df.index, pd.MultiIndex):
+            #     df.index = pd.MultiIndex.from_product(
+            #         [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
+            #     )
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [["target"], self.quantiles], names=TimeSeries.COL_INDEX_NAMES
@@ -219,11 +229,35 @@ class TimeSeries:
                         names=df.columns.names,
                     )
                 else:
+                    logger.error("Cannot map inner column levels to quantiles: mismatched length.")
                     raise ValueError(
                         "Cannot map inner column levels to quantiles: mismatched length."
                     )
         elif self.representation == "sample":
-            raise NotImplementedError("Sample representation not implemented yet.")
+            #raise NotImplementedError("Sample representation not implemented yet.")
+            logger.info("Aligning DataFrame for sample representation. At this point it is assumed that all the columns are samples.")
+            if not isinstance(df.columns, pd.MultiIndex):
+                df.columns = pd.MultiIndex.from_product(
+                    [['target'],range(len(df.columns))], names=TimeSeries.COL_INDEX_NAMES
+                )
+            else:
+                # Rename the outer column levels to needed format
+                df.columns.names = TimeSeries.COL_INDEX_NAMES
+                # Dynamic relabeling of inner column level to match samples
+                inner_levels = sorted(set(level[1] for level in df.columns))
+                if len(inner_levels) == len(df.columns):
+                    mapping = dict(zip(inner_levels, range(len(df.columns))))
+                    df.columns = pd.MultiIndex.from_tuples(
+                        [(outer, mapping[inner]) for outer, inner in df.columns],
+                        names=df.columns.names,
+                    )
+                else:
+                    logger.error("Cannot map inner column levels to samples: mismatched length.")
+                    raise ValueError(
+                        "Cannot map inner column levels to samples: mismatched length."
+                    )
+
+
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
