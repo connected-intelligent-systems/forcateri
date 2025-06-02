@@ -90,7 +90,11 @@ class TimeSeries:
                     "Feature level in the DataFrame is not unique. "
                     "This is required for deterministic representation."
                 )
-            return feature_level_is_unique
+            determ_level_correct_name = all(
+                isinstance(x, str) and x == "value"
+                for x in df.columns.get_level_values(1)
+            )
+            return feature_level_is_unique and determ_level_correct_name
 
         elif representation == TimeSeries.QUANTILE_REP:
             matching_quantile_levels = (
