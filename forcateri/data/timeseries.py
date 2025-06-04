@@ -59,6 +59,40 @@ class TimeSeries:
             )
 
     @staticmethod
+    def _check_column_levels(df: pd.DataFrame, representation) -> bool:
+        match representation:
+            case TimeSeries.DETERM_REP:
+                logger.info("Checking DataFrame for deterministic representation. Feature levels must be unique.")
+                feature_level_is_unique = df.columns.get_level_values(
+                    TimeSeries.COL_INDEX_NAMES[0]
+                ).nunique() == len(
+                    df.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0])
+                )
+                return feature_level_is_unique
+            case TimeSeries.QUANTILE_REP:
+                logger.info("Checking DataFrame for quantile representation. Quantile levels should match accross all features. Also, the levels should be floats.")
+                matching_quantile_levels = (
+                    df.columns.to_frame(index=False)
+                    .groupby(TimeSeries.COL_INDEX_NAMES[0])[
+                        TimeSeries.COL_INDEX_NAMES[1]
+                    ]
+                    .nunique()
+                    .nunique()
+                    == 1
+                )
+                quantile_level_correct_name = all(
+                    isinstance(x, float) for x in df.columns.get_level_values(1)
+                )
+                return matching_quantile_levels and quantile_level_correct_name
+            case TimeSeries.SAMPLE_REP:
+                logger.info("Checking DataFrame for sample representation. Sample levels should be integers.")
+                sample_level_correct_name = all(
+                    isinstance(x, int) for x in df.columns.get_level_values(1)
+                )
+                return sample_level_correct_name
+        return False
+
+    @staticmethod
     def is_matching_format(df: pd.DataFrame, representation) -> bool:
         """
         Checks the structure of the row and the column index and returns true if a data frame
@@ -78,56 +112,9 @@ class TimeSeries:
         ):
             return False
         # Specific representation checks
-        if representation == TimeSeries.DETERM_REP:
-            feature_level_is_unique = df.columns.get_level_values(
-                TimeSeries.COL_INDEX_NAMES[0]
-            ).nunique() == len(
-                df.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0])
-            )
-            if not feature_level_is_unique:
-                logger.error("Features are having multiple value cols")
-                raise InvalidRepresentationFormat(
-                    "Feature level in the DataFrame is not unique. "
-                    "This is required for deterministic representation."
-                )
-            determ_level_correct_name = all(
-                isinstance(x, str) and x == "value"
-                for x in df.columns.get_level_values(1)
-            )
-            return feature_level_is_unique and determ_level_correct_name
+        are_levels_correct = TimeSeries._check_column_levels(df, representation)
 
-        elif representation == TimeSeries.QUANTILE_REP:
-            matching_quantile_levels = (
-                df.columns.to_frame(index=False)
-                .groupby(TimeSeries.COL_INDEX_NAMES[0])[TimeSeries.COL_INDEX_NAMES[1]]
-                .nunique()
-                .nunique()
-                == 1
-            )
-            quantile_level_correct_name = all(
-                isinstance(x, float) for x in df.columns.get_level_values(1)
-            )
-
-            if not matching_quantile_levels:
-                logger.error("Quantile levels are not matching across features")
-                raise InvalidRepresentationFormat(
-                    "Quantile levels in the DataFrame are different for each feature. "
-                    "This is required for quantile representation."
-                )
-            return matching_quantile_levels and quantile_level_correct_name
-
-        elif representation == TimeSeries.SAMPLE_REP:
-            # raise NotImplementedError("Sample representation is not implemented yet.")
-            sample_level_correct_name = all(
-                isinstance(x, int) for x in df.columns.get_level_values(1)
-            )
-            if not sample_level_correct_name:
-                logger.error("Sample levels are not integers")
-                raise InvalidRepresentationFormat(
-                    "Sample levels in the DataFrame must be integers. "
-                    "This is required for sample representation."
-                )
-            return sample_level_correct_name
+        return are_levels_correct
 
     @staticmethod
     def is_compatible_format(df: pd.DataFrame, representation) -> bool:
@@ -157,10 +144,13 @@ class TimeSeries:
                 "Check columns MultiIndex structure. One caveat is that df.index is not DateTimeIndex, casting to datetime is done in align_format()."
             )
             column_names_set = set(df.columns.names)
-            if index_names_set == set(
+            # are_levels_correct = TimeSeries._check_column_levels(
+            #     df, representation
+            # )
+            return index_names_set == set(
                 TimeSeries.ROW_INDEX_NAMES
-            ) and column_names_set == set(TimeSeries.COL_INDEX_NAMES):
-                return True
+            ) and column_names_set == set(TimeSeries.COL_INDEX_NAMES) #and are_levels_correct
+                
 
         return False
 
