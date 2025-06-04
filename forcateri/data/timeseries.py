@@ -601,7 +601,7 @@ class TimeSeries:
                     )
             return TimeSeries(
                 data=quantile_df,
-                representation=self.representation,
+                representation=TimeSeries.QUANTILE_REP,
                 quantiles=quantiles,
             )
         elif {self.representation, other.representation} == {
@@ -627,7 +627,7 @@ class TimeSeries:
                     )
             return TimeSeries(
                 data=sample_df,
-                representation=self.representation,
+                representation=TimeSeries.SAMPLE_REP,
             )
 
         new_data = self.data.add(other.data, fill_value=0)
@@ -692,7 +692,7 @@ class TimeSeries:
                     )
             return TimeSeries(
                 data=quantile_df,
-                representation=self.representation,
+                representation=TimeSeries.QUANTILE_REP,
                 quantiles=quantiles,
             )
         elif {self.representation, other.representation} == {
@@ -718,7 +718,7 @@ class TimeSeries:
                     )
             return TimeSeries(
                 data=sample_df,
-                representation=self.representation,
+                representation=TimeSeries.SAMPLE_REP,
             )
         new_data = self.data.subtract(other.data, fill_value=0)
         ts_kwargs = {
