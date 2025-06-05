@@ -59,7 +59,7 @@ class TimeSeries:
             )
 
     @staticmethod
-    def _check_column_levels(df: pd.DataFrame, representation) -> bool:
+    def _check_column_levels(df: pd.DataFrame, representation, strict:bool=False) -> bool:
         match representation:
             case TimeSeries.DETERM_REP:
                 logger.info("Checking DataFrame for deterministic representation. Feature levels must be unique.")
@@ -80,10 +80,14 @@ class TimeSeries:
                     .nunique()
                     == 1
                 )
-                quantile_level_correct_name = all(
-                    isinstance(x, float) for x in df.columns.get_level_values(1)
-                )
-                return matching_quantile_levels and quantile_level_correct_name
+                if strict:
+                    quantile_level_correct_name = all(
+                        isinstance(x, float) for x in df.columns.get_level_values(1)
+                    )
+                    return matching_quantile_levels and quantile_level_correct_name
+                else:
+                    # If strict is False, we only check that quantile levels are unique across features
+                    return matching_quantile_levels
             case TimeSeries.SAMPLE_REP:
                 logger.info("Checking DataFrame for sample representation. Sample levels should be integers.")
                 sample_level_correct_name = all(
@@ -99,22 +103,16 @@ class TimeSeries:
         has the expected format to serve as a TimeSeries data representation.
         No changes to the data or TimeSeries are made here.
         """
-        if not (
-            isinstance(df.index, pd.MultiIndex)
-            and isinstance(df.columns, pd.MultiIndex)
-        ):
-            return False
-        # Check index/column names and datetime type
-        if not (
-            df.index.names == TimeSeries.ROW_INDEX_NAMES
-            and df.columns.names == TimeSeries.COL_INDEX_NAMES
-            and isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
-        ):
-            return False
-        # Specific representation checks
-        are_levels_correct = TimeSeries._check_column_levels(df, representation)
+        if isinstance(df.index, pd.MultiIndex) and isinstance(df.columns, pd.MultiIndex):
+            # Ensure index/column names match expected, and that the second level of index is a DatetimeIndex
+            index_names_match = df.index.names == TimeSeries.ROW_INDEX_NAMES
+            column_names_match = df.columns.names == TimeSeries.COL_INDEX_NAMES
+            second_level_is_datetime = isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
 
-        return are_levels_correct
+            if index_names_match and column_names_match and second_level_is_datetime:
+                # Check specific representation requirements
+                return TimeSeries._check_column_levels(df, representation, strict=True)
+        return False
 
     @staticmethod
     def is_compatible_format(df: pd.DataFrame, representation) -> bool:
@@ -134,22 +132,23 @@ class TimeSeries:
             has_datetime = isinstance(
                 df.index.get_level_values(0), pd.DatetimeIndex
             ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
-            if index_names_set == set(TimeSeries.ROW_INDEX_NAMES) and has_datetime:
-                logger.info("Index is MultiIndex with datetime values.")
-                return True
+            if not isinstance(df.columns, pd.MultiIndex):
+                if index_names_set == set(TimeSeries.ROW_INDEX_NAMES) and has_datetime:
+                    logger.info("Index is MultiIndex with datetime values.")
+                    return True
 
-        # Check full MultiIndex structure
+            # Check full MultiIndex structure
         if isinstance(df.columns, pd.MultiIndex):
             logger.info(
                 "Check columns MultiIndex structure. One caveat is that df.index is not DateTimeIndex, casting to datetime is done in align_format()."
             )
             column_names_set = set(df.columns.names)
-            # are_levels_correct = TimeSeries._check_column_levels(
-            #     df, representation
-            # )
+            are_levels_correct = TimeSeries._check_column_levels(
+                df, representation
+            )
             return index_names_set == set(
                 TimeSeries.ROW_INDEX_NAMES
-            ) and column_names_set == set(TimeSeries.COL_INDEX_NAMES) #and are_levels_correct
+            ) and column_names_set == set(TimeSeries.COL_INDEX_NAMES) and are_levels_correct
                 
 
         return False
