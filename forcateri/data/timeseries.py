@@ -586,7 +586,6 @@ class TimeSeries:
 
         for feature in target_df.columns.get_level_values(0).unique():
 
-
             det_series = determ_ts.data.xs((feature, "value"), axis=1)
 
             for sub_column in target_df[feature].columns.unique():
@@ -837,16 +836,16 @@ class TimeSeries:
 
     def __isub__(self, other: TimeSeries) -> self:
         return self.__iadd__(-other)
-    
-    def __imul__(self,scalar:Union[int,float]) -> self:
+
+    def __imul__(self, scalar: Union[int, float]) -> self:
         if not isinstance(scalar, (int, float)):
             raise TypeError("Can only multiply by a scalar (int or float).")
         self.data *= scalar
         return self
-    
-    def __itruediv__(self,scalar:Union[int,float]) ->self:
+
+    def __itruediv__(self, scalar: Union[int, float]) -> self:
         if not isinstance(scalar, (int, float)):
             raise TypeError("Can only divide by scalar (int or float)")
         if scalar == 0:
             raise ZeroDivisionError("Cannot divide TimeSeries by zero.")
-        return self.__imul__(1/scalar)
+        return self.__imul__(1 / scalar)
