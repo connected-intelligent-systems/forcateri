@@ -59,10 +59,14 @@ class TimeSeries:
             )
 
     @staticmethod
-    def _check_column_levels(df: pd.DataFrame, representation, strict:bool=False) -> bool:
+    def _check_column_levels(
+        df: pd.DataFrame, representation, strict: bool = False
+    ) -> bool:
         match representation:
             case TimeSeries.DETERM_REP:
-                logger.info("Checking DataFrame for deterministic representation. Feature levels must be unique.")
+                logger.info(
+                    "Checking DataFrame for deterministic representation. Feature levels must be unique."
+                )
                 feature_level_is_unique = df.columns.get_level_values(
                     TimeSeries.COL_INDEX_NAMES[0]
                 ).nunique() == len(
@@ -70,7 +74,9 @@ class TimeSeries:
                 )
                 return feature_level_is_unique
             case TimeSeries.QUANTILE_REP:
-                logger.info("Checking DataFrame for quantile representation. Quantile levels should match accross all features. Also, the levels should be floats.")
+                logger.info(
+                    "Checking DataFrame for quantile representation. Quantile levels should match accross all features. Also, the levels should be floats."
+                )
                 matching_quantile_levels = (
                     df.columns.to_frame(index=False)
                     .groupby(TimeSeries.COL_INDEX_NAMES[0])[
@@ -89,7 +95,9 @@ class TimeSeries:
                     # If strict is False, we only check that quantile levels are unique across features
                     return matching_quantile_levels
             case TimeSeries.SAMPLE_REP:
-                logger.info("Checking DataFrame for sample representation. Sample levels should be integers.")
+                logger.info(
+                    "Checking DataFrame for sample representation. Sample levels should be integers."
+                )
                 sample_level_correct_name = all(
                     isinstance(x, int) for x in df.columns.get_level_values(1)
                 )
@@ -103,11 +111,15 @@ class TimeSeries:
         has the expected format to serve as a TimeSeries data representation.
         No changes to the data or TimeSeries are made here.
         """
-        if isinstance(df.index, pd.MultiIndex) and isinstance(df.columns, pd.MultiIndex):
+        if isinstance(df.index, pd.MultiIndex) and isinstance(
+            df.columns, pd.MultiIndex
+        ):
             # Ensure index/column names match expected, and that the second level of index is a DatetimeIndex
             index_names_match = df.index.names == TimeSeries.ROW_INDEX_NAMES
             column_names_match = df.columns.names == TimeSeries.COL_INDEX_NAMES
-            second_level_is_datetime = isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
+            second_level_is_datetime = isinstance(
+                df.index.get_level_values(1), pd.DatetimeIndex
+            )
 
             if index_names_match and column_names_match and second_level_is_datetime:
                 # Check specific representation requirements
@@ -143,13 +155,12 @@ class TimeSeries:
                 "Check columns MultiIndex structure. One caveat is that df.index is not DateTimeIndex, casting to datetime is done in align_format()."
             )
             column_names_set = set(df.columns.names)
-            are_levels_correct = TimeSeries._check_column_levels(
-                df, representation
+            are_levels_correct = TimeSeries._check_column_levels(df, representation)
+            return (
+                index_names_set == set(TimeSeries.ROW_INDEX_NAMES)
+                and column_names_set == set(TimeSeries.COL_INDEX_NAMES)
+                and are_levels_correct
             )
-            return index_names_set == set(
-                TimeSeries.ROW_INDEX_NAMES
-            ) and column_names_set == set(TimeSeries.COL_INDEX_NAMES) and are_levels_correct
-                
 
         return False
 
@@ -546,7 +557,8 @@ class TimeSeries:
             return self.get_feature_slice(index)
         else:
             return self.get_time_slice(index)
-    def _check_operation_compatibility(self, other:TimeSeries):
+
+    def _check_operation_compatibility(self, other: TimeSeries):
         """
         Helper to check compatibility for binary operations like addition or subtraction.
         """
@@ -560,11 +572,25 @@ class TimeSeries:
             raise ValueError(
                 "TimeSeries objects must have the same index and column names to perform this operation."
             )
+
     def __neg__(self) -> TimeSeries:
-        logger.info("Negation operation is being done")
+        """
+        Return a new TimeSeries instance with all values negated.
+        The negation is performed according to the current representation of the TimeSeries:
+            - For DETERMINISTIC representation, the 'value' column is negated.
+            - For QUANTILE representation, all quantile columns for each feature are negated.
+            - For SAMPLE representation, all sample columns for each feature are negated.
+        Returns:
+            TimeSeries: A new TimeSeries object with negated data.
+        Raises:
+            InvalidRepresentationFormat: If the current representation is not supported.
+        """
+
         negated_data = self.data.copy()
         if self.representation == TimeSeries.DETERM_REP:
-            negated_data.loc[:,(negated_data.columns.get_level_values(0),"value")] *= -1
+            negated_data.loc[
+                :, (negated_data.columns.get_level_values(0), "value")
+            ] *= -1
         elif self.representation == TimeSeries.QUANTILE_REP:
             for feature in negated_data.columns.get_level_values(0).unique():
                 # Get quantile names from the column itself to be robust
@@ -573,7 +599,7 @@ class TimeSeries:
         elif self.representation == TimeSeries.SAMPLE_REP:
             for feature in negated_data.columns.get_level_values(0).unique():
                 for sample in negated_data[feature].columns.unique():
-                    negated_data.loc[:,(feature,sample)] *= -1
+                    negated_data.loc[:, (feature, sample)] *= -1
         else:
             raise InvalidRepresentationFormat(
                 "Provided representation is not compatible"
@@ -583,9 +609,9 @@ class TimeSeries:
             "representation": self.representation,
         }
         if self.representation == TimeSeries.QUANTILE_REP:
-            ts_kwargs["quantiles"] = self.quantiles # Preserve quantiles list
+            ts_kwargs["quantiles"] = self.quantiles  # Preserve quantiles list
         return TimeSeries(**ts_kwargs)
-    
+
     def __add__(self, other: TimeSeries) -> TimeSeries:
         """
         Adds two TimeSeries objects together.
@@ -708,18 +734,73 @@ class TimeSeries:
         return TimeSeries(
             data=new_data, representation=self.representation, quantiles=self.quantiles
         )
-    
-    def __rmul__(self,scalar:Union[int,float]) -> TimeSeries:
+
+    def __rmul__(self, scalar: Union[int, float]) -> TimeSeries:
         """
-        Implements the right-hand scalar multiplication for the TimeSeries object.
-        This method allows scalar multiplication when the scalar appears on the left side of the multiplication operator.
-        For example, both `ts * 2` and `2 * ts` will work, where `ts` is a TimeSeries instance.
-        Args:
-            scalar (int or float): The scalar value to multiply with the TimeSeries.
-        Returns:
-            TimeSeries: A new TimeSeries instance resulting from the scalar multiplication.
+        Implements the right multiplication operation for the TimeSeries object.
+
+        Parameters
+        ----------
+        scalar : int or float
+            The scalar value to multiply the TimeSeries data by.
+
+        Returns
+        -------
+        TimeSeries
+            A new TimeSeries object with the data multiplied by the scalar.
+
+        Raises
+        ------
+        TypeError
+            If the scalar is not an int or float.
         """
 
-        
         return self.__mul__(scalar)
 
+    def __truediv__(self, scalar: Union[int, float]):
+        """
+        Divides the TimeSeries data by a scalar value.
+
+        Parameters
+        ----------
+        scalar : int or float
+            The scalar value to divide the TimeSeries data by.
+
+        Returns
+        -------
+        TimeSeries
+            A new TimeSeries object with the data divided by the scalar.
+
+        Raises
+        ------
+        TypeError
+            If the scalar is not an int or float.
+        ZeroDivisionError
+            If the scalar is zero.
+        """
+        if not isinstance(scalar, (int, float)):
+            raise TypeError("Can only divide by scalar (int or float)")
+        if scalar == 0:
+            raise ZeroDivisionError("Cannot divide TimeSeries by zero.")
+        return self.__mul__(1 / scalar)
+
+    def __abs__(self):
+        """
+        Return a new TimeSeries instance with the absolute values of the data.
+
+        This method computes the element-wise absolute value of the underlying data
+        and returns a new TimeSeries object with the same representation and, if applicable,
+        the same quantiles.
+
+        Returns:
+            TimeSeries: A new TimeSeries object with absolute values of the original data.
+        """
+        new_data = self.data.abs()
+        ts_kwargs = {
+            "data": new_data,
+            "representation": self.representation,
+        }
+        if self.representation == TimeSeries.QUANTILE_REP:
+            ts_kwargs["quantiles"] = self.quantiles
+
+        return TimeSeries(**ts_kwargs)
