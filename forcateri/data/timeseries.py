@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime
 from typing import List, Optional, Union, Tuple, Callable
+from typing_extensions import Self
 
 import numpy as np
 import pandas as pd
@@ -637,15 +638,11 @@ class TimeSeries:
             negated_data.loc[
                 :, (negated_data.columns.get_level_values(0), "value")
             ] *= -1
-        elif self.representation == TimeSeries.QUANTILE_REP:
+        elif self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}:
             for feature in negated_data.columns.get_level_values(0).unique():
                 # Get quantile names from the column itself to be robust
-                for quantile in negated_data[feature].columns.unique():
-                    negated_data.loc[:, (feature, quantile)] *= -1
-        elif self.representation == TimeSeries.SAMPLE_REP:
-            for feature in negated_data.columns.get_level_values(0).unique():
-                for sample in negated_data[feature].columns.unique():
-                    negated_data.loc[:, (feature, sample)] *= -1
+                for sub_column in negated_data[feature].columns.unique():
+                    negated_data.loc[:, (feature, sub_column)] *= -1
         else:
             raise InvalidRepresentationFormat(
                 "Provided representation is not compatible"
@@ -801,9 +798,29 @@ class TimeSeries:
 
         return TimeSeries(**ts_kwargs)
 
-    def __iadd__(self, other: TimeSeries) -> self:
+    def __iadd__(self, other: TimeSeries) -> Self:
         """
-        In-place addition: adds another TimeSeries object to this one, modifying self.
+        Performs in-place addition with another TimeSeries object.
+
+        This method modifies the current TimeSeries instance by adding the values from another
+        TimeSeries object (`other`). The operation is performed in-place, updating the data and
+        representation of `self` as needed. Handles mixed representations (e.g., deterministic with
+        quantile/sample) and ensures compatibility before performing the operation.
+
+        Parameters
+        ----------
+        other : TimeSeries
+            The TimeSeries object to add to this instance.
+
+        Returns
+        -------
+        self : TimeSeries
+            The modified TimeSeries instance after in-place addition.
+
+        Raises
+        ------
+        ValueError
+            If the two TimeSeries objects are not compatible for addition.
         """
         self._check_operation_compatibility(other)
 
@@ -834,16 +851,67 @@ class TimeSeries:
         self.data = self.data.add(other.data, fill_value=0)
         return self
 
-    def __isub__(self, other: TimeSeries) -> self:
+    def __isub__(self, other: TimeSeries) -> Self:
+        """
+        Implements the in-place subtraction operator ( -= ) for TimeSeries objects.
+
+        Parameters
+        ----------
+        other : TimeSeries
+            The TimeSeries instance to subtract from self.
+
+        Returns
+        -------
+        self
+            The updated TimeSeries instance after subtraction.
+        """
         return self.__iadd__(-other)
 
-    def __imul__(self, scalar: Union[int, float]) -> self:
+    def __imul__(self, scalar: Union[int, float]) -> Self:
+        """
+        Implements in-place multiplication of the time series data by a scalar.
+
+        Parameters
+        ----------
+        scalar : int or float
+            The scalar value to multiply the time series data by.
+
+        Returns
+        -------
+        self : Timeseries
+            The modified instance with updated data.
+
+        Raises
+        ------
+        TypeError
+            If `scalar` is not an int or float.
+        """
         if not isinstance(scalar, (int, float)):
             raise TypeError("Can only multiply by a scalar (int or float).")
         self.data *= scalar
         return self
 
-    def __itruediv__(self, scalar: Union[int, float]) -> self:
+    def __itruediv__(self, scalar: Union[int, float]) -> Self:
+        """
+        In-place division: divides the TimeSeries data by a scalar value, modifying self.
+
+        Parameters
+        ----------
+        scalar : int or float
+            The scalar value to divide the TimeSeries data by.
+
+        Returns
+        -------
+        self
+            The updated TimeSeries object after division.
+
+        Raises
+        ------
+        TypeError
+            If the scalar is not an int or float.
+        ZeroDivisionError
+            If the scalar is zero.
+        """
         if not isinstance(scalar, (int, float)):
             raise TypeError("Can only divide by scalar (int or float)")
         if scalar == 0:
