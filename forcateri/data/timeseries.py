@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import List, Optional, Union, Tuple
+from typing import List, Optional, Union, Tuple, Callable
 
 import numpy as np
 import pandas as pd
@@ -558,6 +558,53 @@ class TimeSeries:
         else:
             return self.get_time_slice(index)
 
+    def _perform_mixed_operation_core(
+        self,
+        other: TimeSeries,
+        operation_func: Callable[[pd.Series, pd.Series], pd.Series],
+        inplace: bool,
+    ) -> TimeSeries:
+        main_ts = self
+        determ_ts = other
+        if not (
+            main_ts.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            and determ_ts.representation == TimeSeries.DETERM_REP
+        ):
+            # This check is a safeguard; higher-level calls should prevent this state
+            raise ValueError(
+                "Mixed operation core requires main_ts to be QUANTILE/SAMPLE and other to be DETERM_REP."
+            )
+
+        # Decide which DataFrame to operate on: a copy or self.data directly
+        target_df = main_ts.data if inplace else main_ts.data.copy()
+
+        quantiles_to_preserve = (
+            main_ts.quantiles
+            if main_ts.representation == TimeSeries.QUANTILE_REP
+            else None
+        )
+
+        for feature in target_df.columns.get_level_values(0).unique():
+
+
+            det_series = determ_ts.data.xs((feature, "value"), axis=1)
+
+            for sub_column in target_df[feature].columns.unique():
+                # Perform the operation and assign back directly to target_df
+                target_df.loc[:, (feature, sub_column)] = operation_func(
+                    target_df.loc[:, (feature, sub_column)], det_series
+                )
+
+        if inplace:
+            self.data = target_df  # In-place modification, though target_df is already self.data
+            return self
+        else:
+            return TimeSeries(
+                data=target_df,
+                representation=main_ts.representation,
+                quantiles=quantiles_to_preserve,
+            )
+
     def _check_operation_compatibility(self, other: TimeSeries):
         """
         Helper to check compatibility for binary operations like addition or subtraction.
@@ -612,80 +659,30 @@ class TimeSeries:
             ts_kwargs["quantiles"] = self.quantiles  # Preserve quantiles list
         return TimeSeries(**ts_kwargs)
 
-    def __add__(self, other: TimeSeries) -> TimeSeries:
+    def __add__(self, other: "TimeSeries") -> "TimeSeries":
         """
         Adds two TimeSeries objects together.
-
-        Parameters
-        ----------
-        other : TimeSeries
-            The TimeSeries to add to this one.
-
-        Returns
-        -------
-        TimeSeries
-            A new TimeSeries object containing the sum of the data.
+        Returns a new TimeSeries object containing the sum of the data.
         """
         self._check_operation_compatibility(other)
 
-        if {self.representation, other.representation} == {
-            TimeSeries.QUANTILE_REP,
-            TimeSeries.DETERM_REP,
-        }:
-            quantile_df = (
-                self.data.copy()
-                if self.representation == TimeSeries.QUANTILE_REP
-                else other.data.copy()
+        # Handle mixed representations (QUANTILE/SAMPLE + DETERM)
+        if (
+            self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            and other.representation == TimeSeries.DETERM_REP
+        ):
+            return self._perform_mixed_operation_core(
+                other, operation_func=lambda x, y: x + y, inplace=False
             )
-            determ_df = (
-                other.data.copy()
-                if self.representation == TimeSeries.QUANTILE_REP
-                else self.data.copy()
-            )
-            quantiles = (
-                self.quantiles
-                if self.representation == TimeSeries.QUANTILE_REP
-                else other.quantiles
-            )
-            for feature in quantile_df.columns.get_level_values(0).unique():
-                feature_quantiles = quantile_df.xs(feature, level=0, axis=1)
-                det_series = determ_df.xs((feature, "value"), axis=1)
-                for quantile in quantile_df.columns.get_level_values(1).unique():
-
-                    quantile_df.loc[:, (feature, quantile)] = (
-                        feature_quantiles[quantile] + det_series
-                    )
-            return TimeSeries(
-                data=quantile_df,
-                representation=TimeSeries.QUANTILE_REP,
-                quantiles=quantiles,
-            )
-        elif {self.representation, other.representation} == {
-            TimeSeries.SAMPLE_REP,
-            TimeSeries.DETERM_REP,
-        }:
-            sample_df = (
-                self.data.copy()
-                if self.representation == TimeSeries.SAMPLE_REP
-                else other.data.copy()
-            )
-            determ_df = (
-                other.data.copy()
-                if self.representation == TimeSeries.SAMPLE_REP
-                else self.data.copy()
-            )
-            for feature in sample_df.columns.get_level_values(0).unique():
-                feature_samples = sample_df.xs(feature, level=0, axis=1)
-                det_series = determ_df.xs((feature, "value"), axis=1)
-                for sample in sample_df.columns.get_level_values(1).unique():
-                    sample_df.loc[:, (feature, sample)] = (
-                        feature_samples[sample] + det_series
-                    )
-            return TimeSeries(
-                data=sample_df,
-                representation=TimeSeries.SAMPLE_REP,
+        elif (
+            other.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            and self.representation == TimeSeries.DETERM_REP
+        ):
+            return other._perform_mixed_operation_core(
+                self, operation_func=lambda x, y: x + y, inplace=False
             )
 
+        # Handle same representations (or other combinations with direct pandas add)
         new_data = self.data.add(other.data, fill_value=0)
         ts_kwargs = {
             "data": new_data,
@@ -804,3 +801,52 @@ class TimeSeries:
             ts_kwargs["quantiles"] = self.quantiles
 
         return TimeSeries(**ts_kwargs)
+
+    def __iadd__(self, other: TimeSeries) -> self:
+        """
+        In-place addition: adds another TimeSeries object to this one, modifying self.
+        """
+        self._check_operation_compatibility(other)
+
+        # Handle mixed representations (QUANTILE/SAMPLE + DETERM)
+        if (
+            self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            and other.representation == TimeSeries.DETERM_REP
+        ):
+            # If self is quantile/sample and other is deterministic, perform inplace operation
+            return self._perform_mixed_operation_core(
+                other, operation_func=lambda x, y: x + y, inplace=True
+            )
+        elif (
+            other.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            and self.representation == TimeSeries.DETERM_REP
+        ):
+            temp_result = other._perform_mixed_operation_core(
+                self, operation_func=lambda x, y: x + y, inplace=False
+            )
+
+            # The caveat here is that if self is deterministic inplace addition to quantiles/sample, will change the data to quantile/sample representation
+            logger.info("Attention the TS object's data is not Deterministic now")
+            self.data = temp_result.data
+            self.representation = temp_result.representation
+            self.quantiles = temp_result.quantiles
+            return self
+
+        self.data = self.data.add(other.data, fill_value=0)
+        return self
+
+    def __isub__(self, other: TimeSeries) -> self:
+        return self.__iadd__(-other)
+    
+    def __imul__(self,scalar:Union[int,float]) -> self:
+        if not isinstance(scalar, (int, float)):
+            raise TypeError("Can only multiply by a scalar (int or float).")
+        self.data *= scalar
+        return self
+    
+    def __itruediv__(self,scalar:Union[int,float]) ->self:
+        if not isinstance(scalar, (int, float)):
+            raise TypeError("Can only divide by scalar (int or float)")
+        if scalar == 0:
+            raise ZeroDivisionError("Cannot divide TimeSeries by zero.")
+        return self.__imul__(1/scalar)
