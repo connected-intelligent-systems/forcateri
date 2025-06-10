@@ -29,6 +29,7 @@ class TimeSeries:
         if representation is None:
             representation = TimeSeries.DETERM_REP
         self.representation = representation
+        self.quantiles = None
         if representation == TimeSeries.QUANTILE_REP:
             if not all(isinstance(x, float) for x in quantiles):
                 raise TypeError("Quantiles must be a list of floats.")
