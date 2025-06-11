@@ -26,8 +26,11 @@ class TimeSeries:
         representation=None,
         quantiles: Optional[List[float]] = None,
     ):
-        if representation is None:
+        if representation is None and quantiles is None:
             representation = TimeSeries.DETERM_REP
+        elif representation is None and quantiles is not None:
+            representation = TimeSeries.QUANTILE_REP
+        
         self.representation = representation
         self.quantiles = None
         if representation == TimeSeries.QUANTILE_REP:
@@ -74,7 +77,12 @@ class TimeSeries:
                 ).nunique() == len(
                     df.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0])
                 )
-                return feature_level_is_unique
+                level_value_is_unique = len(set(df.columns.get_level_values(1))) == 1
+                if level_value_is_unique:
+                    level_value_name_correct = set(df.columns.get_level_values(1)).pop() == 'value'
+                    return feature_level_is_unique and level_value_name_correct
+                return False
+            
             case TimeSeries.QUANTILE_REP:
                 logger.info(
                     "Checking DataFrame for quantile representation. Quantile levels should match accross all features. Also, the levels should be floats."
@@ -107,23 +115,30 @@ class TimeSeries:
         return False
 
     @staticmethod
-    def is_matching_format(df: pd.DataFrame, representation) -> bool:
+    def is_matching_format(df: pd.DataFrame, representation = None) -> bool:
         """
         Checks the structure of the row and the column index and returns true if a data frame
         has the expected format to serve as a TimeSeries data representation.
         No changes to the data or TimeSeries are made here.
         """
+        if representation is None:
+            representation = TimeSeries.DETERM_REP
+        elif representation not in (TimeSeries.DETERM_REP,TimeSeries.QUANTILE_REP,TimeSeries.SAMPLE_REP):
+            raise ValueError("Representation is not in required format")
         if isinstance(df.index, pd.MultiIndex) and isinstance(
             df.columns, pd.MultiIndex
         ):
             # Ensure index/column names match expected, and that the second level of index is a DatetimeIndex
             index_names_match = df.index.names == TimeSeries.ROW_INDEX_NAMES
             column_names_match = df.columns.names == TimeSeries.COL_INDEX_NAMES
+            first_level_is_timedelta = isinstance(
+                df.index.get_level_values(0),pd.TimedeltaIndex
+            )
             second_level_is_datetime = isinstance(
                 df.index.get_level_values(1), pd.DatetimeIndex
             )
 
-            if index_names_match and column_names_match and second_level_is_datetime:
+            if index_names_match and column_names_match and first_level_is_timedelta and second_level_is_datetime:
                 # Check specific representation requirements
                 return TimeSeries._check_column_levels(df, representation, strict=True)
         return False
