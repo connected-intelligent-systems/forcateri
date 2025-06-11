@@ -26,11 +26,12 @@ class TimeSeries:
         representation=None,
         quantiles: Optional[List[float]] = None,
     ):
-        if representation is None and quantiles is None:
-            representation = TimeSeries.DETERM_REP
-        elif representation is None and quantiles is not None:
-            representation = TimeSeries.QUANTILE_REP
-        
+        if representation is None:
+            if quantiles is None:
+                representation = TimeSeries.DETERM_REP
+            else:
+                representation = TimeSeries.QUANTILE_REP
+
         self.representation = representation
         self.quantiles = None
         if representation == TimeSeries.QUANTILE_REP:
