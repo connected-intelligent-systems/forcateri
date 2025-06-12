@@ -4,9 +4,9 @@ import pandas as pd
 
 from ..data.cachedapidata import CachedAPIData
 from ..data.timeseries import TimeSeries
+from ..data.clearmldatamixin import ClearmlDataMixin
 
-
-class BaltBestAPIData(CachedAPIData):
+class BaltBestAPIData(ClearmlDataMixin,CachedAPIData):
 
     def __init__(
         self,
