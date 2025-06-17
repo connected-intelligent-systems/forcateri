@@ -29,14 +29,14 @@ class CachedAPIData(DataSource):
 
     @abstractmethod
     def get_data(self) -> List[TimeSeries]:
-
-        if self.local_copy:
-            if self.is_up2date():
-                self._fetch_from_cache()
-            else:
-                self.update_local_copy()
-        else:
-            self._fetch_data_from_api()
+        pass
+        # if self.local_copy:
+        #     if self.is_up2date():
+        #         self._fetch_from_cache()
+        #     else:
+        #         self.update_local_copy()
+        # else:
+        #     self._fetch_data_from_api()
 
     @abstractmethod
     def _fetch_data_from_api(self):

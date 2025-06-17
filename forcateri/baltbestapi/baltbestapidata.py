@@ -22,7 +22,7 @@ class BaltBestAPIData(ClearmlDataMixin,CachedAPIData):
         ],
         **kwargs
     ):
-        super().__init__(name=kwargs["name"])
+        super().__init__(name = kwargs['name'],dataset_project=kwargs['dataset_project'], dataset_name=kwargs['dataset_name'], dataset_version=kwargs['dataset_version'])
         self.url = kwargs["url"]
         self.local_copy = kwargs["local_copy"]
         self.group_col = group_col
@@ -31,8 +31,14 @@ class BaltBestAPIData(ClearmlDataMixin,CachedAPIData):
         self.freq = freq
 
     def get_data(self):
-
-        super().get_data()
+        
+        if self.local_copy:
+            if self.is_up2date():
+                self._fetch_from_cache()
+            else:
+                self.update_local_copy()
+        else:
+            self.local_copy = self.get_from_clearml()
 
     def _fetch_data_from_api(self):
         # TODO For now, the logic does not get the data from API

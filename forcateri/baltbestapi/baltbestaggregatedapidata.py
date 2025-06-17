@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 
 from forcateri.baltbestapi.baltbestapidata import BaltBestAPIData
-
+from ..data.clearmldatamixin import ClearmlDataMixin
 from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,8 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
 
     def __init__(self, **kwargs):
         super().__init__(
-            name=kwargs["name"], url=kwargs["url"], local_copy=kwargs["local_copy"]
+            #name=kwargs["name"], url=kwargs["url"], local_copy=kwargs["local_copy"], 
+            **kwargs
         )
         self.ts = []
         self.target: str = kwargs.get("target", None)

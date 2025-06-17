@@ -15,7 +15,7 @@ class ClearmlDataMixin:
             dataset_project=self.dataset_project,
             dataset_name=self.dataset_name,
             dataset_version=self.dataset_version,
-        )
+        ).get_local_copy()
         return data_root
 
     def update_on_clearml():
