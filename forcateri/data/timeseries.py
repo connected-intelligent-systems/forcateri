@@ -80,10 +80,12 @@ class TimeSeries:
                 )
                 level_value_is_unique = len(set(df.columns.get_level_values(1))) == 1
                 if level_value_is_unique:
-                    level_value_name_correct = set(df.columns.get_level_values(1)).pop() == 'value'
+                    level_value_name_correct = (
+                        set(df.columns.get_level_values(1)).pop() == "value"
+                    )
                     return feature_level_is_unique and level_value_name_correct
                 return False
-            
+
             case TimeSeries.QUANTILE_REP:
                 logger.info(
                     "Checking DataFrame for quantile representation. Quantile levels should match accross all features. Also, the levels should be floats."
@@ -116,7 +118,7 @@ class TimeSeries:
         return False
 
     @staticmethod
-    def is_matching_format(df: pd.DataFrame, representation = None) -> bool:
+    def is_matching_format(df: pd.DataFrame, representation=None) -> bool:
         """
         Checks the structure of the row and the column index and returns true if a data frame
         has the expected format to serve as a TimeSeries data representation.
@@ -124,7 +126,11 @@ class TimeSeries:
         """
         if representation is None:
             representation = TimeSeries.DETERM_REP
-        elif representation not in (TimeSeries.DETERM_REP,TimeSeries.QUANTILE_REP,TimeSeries.SAMPLE_REP):
+        elif representation not in (
+            TimeSeries.DETERM_REP,
+            TimeSeries.QUANTILE_REP,
+            TimeSeries.SAMPLE_REP,
+        ):
             raise ValueError("Representation is not in required format")
         if isinstance(df.index, pd.MultiIndex) and isinstance(
             df.columns, pd.MultiIndex
@@ -133,13 +139,18 @@ class TimeSeries:
             index_names_match = df.index.names == TimeSeries.ROW_INDEX_NAMES
             column_names_match = df.columns.names == TimeSeries.COL_INDEX_NAMES
             first_level_is_timedelta = isinstance(
-                df.index.get_level_values(0),pd.TimedeltaIndex
+                df.index.get_level_values(0), pd.TimedeltaIndex
             )
             second_level_is_datetime = isinstance(
                 df.index.get_level_values(1), pd.DatetimeIndex
             )
 
-            if index_names_match and column_names_match and first_level_is_timedelta and second_level_is_datetime:
+            if (
+                index_names_match
+                and column_names_match
+                and first_level_is_timedelta
+                and second_level_is_datetime
+            ):
                 # Check specific representation requirements
                 return TimeSeries._check_column_levels(df, representation, strict=True)
         return False
@@ -723,7 +734,7 @@ class TimeSeries:
 
         return self.__add__(-other)
 
-    def __mul__(self, scalar: Union[int, float]) -> TimeSeries:
+    def __mul__(self, other: Union[int, float, TimeSeries]) -> TimeSeries:
         """
         Multiplies the TimeSeries data by a scalar value.
 
@@ -737,10 +748,19 @@ class TimeSeries:
         TimeSeries
             A new TimeSeries object with the data multiplied by the scalar.
         """
-        if not isinstance(scalar, (int, float)):
-            raise TypeError("Can only multiply by a scalar (int or float).")
-
-        new_data = self.data * scalar
+        if isinstance(other, (int, float)):
+            # raise TypeError("Can only multiply by a scalar (int or float).")
+            new_data = self.data * other
+        elif isinstance(other, TimeSeries):
+            if self.data.shape != other.data.shape:
+                logger.info("Mul cannot be applied, different shapes")
+                # Need to think about multiplication of different representations
+                raise ValueError("TimeSeries objects have different shapes")
+            new_data = self.data * other.data
+        else:
+            raise TypeError(
+                "Can only multiply by a scalar(int,float) or by other TimeSeries object"
+            )
         return TimeSeries(
             data=new_data, representation=self.representation, quantiles=self.quantiles
         )
@@ -884,7 +904,7 @@ class TimeSeries:
         """
         return self.__iadd__(-other)
 
-    def __imul__(self, scalar: Union[int, float]) -> Self:
+    def __imul__(self, other: Union[int, float, TimeSeries]) -> Self:
         """
         Implements in-place multiplication of the time series data by a scalar.
 
@@ -903,9 +923,19 @@ class TimeSeries:
         TypeError
             If `scalar` is not an int or float.
         """
-        if not isinstance(scalar, (int, float)):
-            raise TypeError("Can only multiply by a scalar (int or float).")
-        self.data *= scalar
+        if isinstance(other, (int, float)):
+            # raise TypeError("Can only multiply by a scalar (int or float).")
+            self.data *= other
+        elif isinstance(other, TimeSeries):
+            if self.data.shape != other.data.shape:
+                logger.info("Mul cannot be applied, different shapes")
+                # Need to think about multiplication of different representations
+                raise ValueError("TimeSeries objects have different shapes")
+            self.data *= other.data
+        else:
+            raise TypeError(
+                "Can only multiply by a scalar(int,float) or by other TimeSeries object"
+            )
         return self
 
     def __itruediv__(self, scalar: Union[int, float]) -> Self:
