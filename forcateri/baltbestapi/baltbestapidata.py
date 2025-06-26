@@ -5,6 +5,7 @@ import pandas as pd
 from ..data.cachedapidata import CachedAPIData
 from ..data.timeseries import TimeSeries
 from ..data.clearmldatamixin import ClearmlDataMixin
+from pathlib import Path
 
 class BaltBestAPIData(ClearmlDataMixin,CachedAPIData):
 
@@ -21,8 +22,9 @@ class BaltBestAPIData(ClearmlDataMixin,CachedAPIData):
             "temperature_room_avg",
         ],
         **kwargs
-    ):
-        super().__init__(name = kwargs['name'],dataset_project=kwargs['dataset_project'], dataset_name=kwargs['dataset_name'], dataset_version=kwargs['dataset_version'])
+    ):  
+        self.link_dataset(dataset_project=kwargs['dataset_project'], dataset_name=kwargs['dataset_name'], file_name=kwargs['file_name'])
+        super().__init__(name = kwargs['name'])
         self.url = kwargs["url"]
         self.local_copy = kwargs["local_copy"]
         self.group_col = group_col
@@ -39,6 +41,7 @@ class BaltBestAPIData(ClearmlDataMixin,CachedAPIData):
                 self.update_local_copy()
         else:
             self.local_copy = self.get_from_clearml()
+            self._fetch_from_cache()
 
     def _fetch_data_from_api(self):
         # TODO For now, the logic does not get the data from API
