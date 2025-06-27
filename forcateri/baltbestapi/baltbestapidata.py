@@ -29,6 +29,7 @@ class BaltBestAPIData(ClearmlDataMixin, CachedAPIData):
                 self.update_local_copy()
         else:
             self.local_copy = self.get_from_clearml()
+            
             self._fetch_from_cache()
 
     def _fetch_data_from_api(self):

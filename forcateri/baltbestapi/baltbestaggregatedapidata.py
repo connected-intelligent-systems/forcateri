@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from forcateri.baltbestapi.baltbestapidata import BaltBestAPIData
+from pathlib import Path
 
 from ..data.clearmldatamixin import ClearmlDataMixin
 from ..data.timeseries import TimeSeries
@@ -14,6 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class BaltBestAggregatedAPIData(BaltBestAPIData):
+    dataset_project: str = "ForeSightNEXT/BaltBest/Forcateri"
+    dataset_name: str = "test"
+    file_name: str = "showcase_data.csv"
 
     def __init__(
         self,
@@ -22,16 +26,11 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         freq: str = "h",
         known="temperature_outdoor_avg",
         observed: List[str] = [
-            "q_hca",
             "temperature_1_max",
             "temperature_2_max",
-            "temperature_outdoor_avg",
             "temperature_room_avg",
         ],
         target: str = "q_hca",
-        dataset_project: str = "ForeSightNEXT/BaltBest/Forcateri",
-        dataset_name: str = "BaltBestAggregatedAPIData",
-        file_name: str = "showcase_data.csv",
         static: Optional[Union[str, List[str]]] = None,
         url: str = "https://edc.baltbest.de/public",
         local_copy: Optional[str] = None,
@@ -42,9 +41,9 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         )
         self.ts = []
         self.link_dataset(
-            dataset_project=dataset_project,
-            dataset_name=dataset_name,
-            file_name=file_name,
+            dataset_project=BaltBestAggregatedAPIData.dataset_project,
+            dataset_name=BaltBestAggregatedAPIData.dataset_name,
+            file_name=BaltBestAggregatedAPIData.file_name,
         )
         self.target: str = target
         self.group_col: str = group_col
@@ -89,8 +88,8 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         ValueError
             If the time column is not present in the DataFrame.
         """
-
-        df = pd.read_csv(self.local_copy)
+        # print(f"Local copy set to: {self.local_copy}")
+        df = pd.read_csv(Path(self.local_copy) / self.file_name)
         df[self.time_col] = pd.to_datetime(df[self.time_col])
         df = (
             df.set_index(self.time_col)
