@@ -1,11 +1,11 @@
+from pathlib import Path
 from typing import List, Optional
 
 import pandas as pd
 
 from ..data.cachedapidata import CachedAPIData
-from ..data.timeseries import TimeSeries
 from ..data.clearmldatamixin import ClearmlDataMixin
-from pathlib import Path
+from ..data.timeseries import TimeSeries
 
 
 class BaltBestAPIData(ClearmlDataMixin, CachedAPIData):

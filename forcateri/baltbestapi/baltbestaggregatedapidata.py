@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 
 from forcateri.baltbestapi.baltbestapidata import BaltBestAPIData
+
 from ..data.clearmldatamixin import ClearmlDataMixin
 from ..data.timeseries import TimeSeries
 
