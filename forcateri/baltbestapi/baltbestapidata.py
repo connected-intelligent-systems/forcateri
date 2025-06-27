@@ -7,33 +7,21 @@ from ..data.timeseries import TimeSeries
 from ..data.clearmldatamixin import ClearmlDataMixin
 from pathlib import Path
 
-class BaltBestAPIData(ClearmlDataMixin,CachedAPIData):
+
+class BaltBestAPIData(ClearmlDataMixin, CachedAPIData):
 
     def __init__(
         self,
-        group_col: str = "room_id",
-        time_col: str = "datetime",
-        freq: str = "h",
-        value_cols: List[str] = [
-            "q_hca",
-            "temperature_1_max",
-            "temperature_2_max",
-            "temperature_outdoor_avg",
-            "temperature_room_avg",
-        ],
-        **kwargs
-    ):  
-        self.link_dataset(dataset_project=kwargs['dataset_project'], dataset_name=kwargs['dataset_name'], file_name=kwargs['file_name'])
-        super().__init__(name = kwargs['name'])
-        self.url = kwargs["url"]
-        self.local_copy = kwargs["local_copy"]
-        self.group_col = group_col
-        self.time_col = time_col
-        self.value_cols = value_cols
-        self.freq = freq
+        url: str = "https://edc.baltbest.de/public",
+        local_copy: Optional[Path] = None,
+    ):
+
+        super().__init__()
+        self.url = url
+        self.local_copy = local_copy
 
     def get_data(self):
-        
+
         if self.local_copy:
             if self.is_up2date():
                 self._fetch_from_cache()

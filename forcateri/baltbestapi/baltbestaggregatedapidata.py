@@ -14,20 +14,44 @@ logger = logging.getLogger(__name__)
 
 class BaltBestAggregatedAPIData(BaltBestAPIData):
 
-    def __init__(self, **kwargs):
+    def __init__(
+        self,
+        group_col: str = "room_id",
+        time_col: str = "datetime",
+        freq: str = "h",
+        known="temperature_outdoor_avg",
+        observed: List[str] = [
+            "q_hca",
+            "temperature_1_max",
+            "temperature_2_max",
+            "temperature_outdoor_avg",
+            "temperature_room_avg",
+        ],
+        target: str = "q_hca",
+        dataset_project: str = "ForeSightNEXT/BaltBest/Forcateri",
+        dataset_name: str = "BaltBestAggregatedAPIData",
+        file_name: str = "showcase_data.csv",
+        static: Optional[Union[str, List[str]]] = None,
+        url: str = "https://edc.baltbest.de/public",
+        local_copy: Optional[str] = None,
+    ):
         super().__init__(
-            #name=kwargs["name"], url=kwargs["url"], local_copy=kwargs["local_copy"], 
-            **kwargs
+            url=url,
+            local_copy=local_copy,
         )
         self.ts = []
-        self.target: str = kwargs.get("target", None)
-        self.group_col: str = kwargs.get("group_col", None)
-        self.time_col: str = kwargs.get("time_col", None)
-        # self.value_cols:List[str] = kwargs.get('value_cols', None)
-        self.freq: str = kwargs.get("freq", "60min")
-        self.known: Union[str, List[str]] = kwargs.get("known", None)
-        self.observed: Union[str, List[str]] = kwargs.get("observed", None)
-        self.static: Union[str, List[str]] = kwargs.get("static", None)
+        self.link_dataset(
+            dataset_project=dataset_project,
+            dataset_name=dataset_name,
+            file_name=file_name,
+        )
+        self.target: str = target
+        self.group_col: str = group_col
+        self.time_col: str = time_col
+        self.freq: str = freq
+        self.known: Union[str, List[str]] = known
+        self.observed: Union[str, List[str]] = observed
+        self.static: Union[str, List[str]] = static
         self.value_cols: List[str] = self._get_value_cols(
             self.target, self.known, self.observed, self.static
         )
