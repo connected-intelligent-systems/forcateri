@@ -1,5 +1,6 @@
 import logging
-from typing import List, Optional, Tuple
+from pathlib import Path
+from typing import List, Optional, Tuple,Union
 
 import pandas as pd
 from darts import TimeSeries as DartsTimeSeries
@@ -13,7 +14,7 @@ from .dartsmodeladapter import DartsModelAdapter
 
 
 class DartsTCNModel(DartsModelAdapter):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, model: Optional[TCNModel] = None, **kwargs):
         """
         Initializes the Darts TCNModel with specified parameters and scalers.
         Parameters
@@ -48,23 +49,26 @@ class DartsTCNModel(DartsModelAdapter):
 
         super().__init__(*args, **kwargs)
         self.quantiles = kwargs.get("quantiles", None)
-        self.model = TCNModel(
-            input_chunk_length=kwargs.get("input_chunk_length", 7),
-            output_chunk_length=kwargs.get("output_chunk_length", 5),
-            kernel_size=kwargs.get("kernel_size", 3),
-            num_filters=kwargs.get("num_filters", 32),
-            dilation_base=kwargs.get("dilation_base", 2),
-            num_layers=kwargs.get("num_layers", 3),
-            dropout=kwargs.get("dropout", 0.1),
-            weight_norm=kwargs.get("weight_norm", True),
-            n_epochs=kwargs.get("n_epochs", 1),
-            batch_size=kwargs.get("batch_size", 8),
-            optimizer_kwargs=kwargs.get("optimizer_kwargs", {"lr": 1e-3}),
-            random_state=kwargs.get("random_state", None),
-            likelihood=kwargs.get(
-                "likelihood", QuantileRegression(quantiles=self.quantiles)
-            ),
-        )
+        if model is not None:
+            self.model = model
+        else:
+            self.model = TCNModel(
+                input_chunk_length=kwargs.get("input_chunk_length", 7),
+                output_chunk_length=kwargs.get("output_chunk_length", 5),
+                kernel_size=kwargs.get("kernel_size", 3),
+                num_filters=kwargs.get("num_filters", 32),
+                dilation_base=kwargs.get("dilation_base", 2),
+                num_layers=kwargs.get("num_layers", 3),
+                dropout=kwargs.get("dropout", 0.1),
+                weight_norm=kwargs.get("weight_norm", True),
+                n_epochs=kwargs.get("n_epochs", 1),
+                batch_size=kwargs.get("batch_size", 8),
+                optimizer_kwargs=kwargs.get("optimizer_kwargs", {"lr": 1e-3}),
+                random_state=kwargs.get("random_state", None),
+                likelihood=kwargs.get(
+                    "likelihood", QuantileRegression(quantiles=self.quantiles)
+                ),
+            )
 
         self.scaler_target = Scaler()
         self.scaler_cov = Scaler()
@@ -139,3 +143,19 @@ class DartsTCNModel(DartsModelAdapter):
         **kwargs,
     ):
         raise NotImplementedError("Tune method is not implemented yet.")
+    
+    @classmethod
+    def load(cls,path: Union[Path, str]) -> "DartsTCNModel":
+        try:
+            model = TCNModel.load(path)
+            # if not isinstance(model, ForecastingModel):
+            #     raise InvalidModelTypeError(
+            #         "The loaded model is not a valid Darts model."
+            #     )
+            #else:
+                
+            logging.info(f"Model loaded from {path}")
+            return cls(model=model)
+        except Exception as e:
+            logging.error(f"Failed to load the model from {path}, check the model path")
+            raise ModelAdapterError("Failed to load the model.") from e

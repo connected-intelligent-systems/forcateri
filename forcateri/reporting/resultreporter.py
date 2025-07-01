@@ -1,5 +1,5 @@
 from typing import List
-
+import matplotlib.pyplot as plt
 
 from .metric import Metric
 from ..data.adapterinput import AdapterInput

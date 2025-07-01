@@ -214,7 +214,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
     ):
         raise NotImplementedError("Subclasses must implement this method.")
 
-    def load(self, path: Union[Path, str]) -> None:
+    @classmethod
+    def load(cls,path: Union[Path, str]) -> "DartsModelAdapter":
         """
         Loads a model from the specified path.
 
@@ -231,14 +232,15 @@ class DartsModelAdapter(ModelAdapter, ABC):
             If the model fails to load due to file not found or other I/O errors.
         """
         try:
-            model = ForecastingModel.load_model(path)
-            if not isinstance(model, ForecastingModel):
-                raise InvalidModelTypeError(
-                    "The loaded model is not a valid Darts model."
-                )
-            else:
-                self.model = model
-                logging.info(f"Model loaded from {path}")
+            model = ForecastingModel.load(path)
+            # if not isinstance(model, ForecastingModel):
+            #     raise InvalidModelTypeError(
+            #         "The loaded model is not a valid Darts model."
+            #     )
+            #else:
+                
+            logging.info(f"Model loaded from {path}")
+            return cls(model=model)
         except Exception as e:
             logging.error(f"Failed to load the model from {path}, check the model path")
             raise ModelAdapterError("Failed to load the model.") from e
