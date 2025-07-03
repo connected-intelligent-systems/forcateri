@@ -183,7 +183,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
                     )
                     offset = ts_obj.data.index.get_level_values("time_stamp") - t0
                     new_index = pd.MultiIndex.from_arrays(
-                        [offset, ts_obj.data.index.get_level_values("time_stamp")],
+                        [offset, [t0] * len(offset)],
                         names=["offset", "time_stamp"],
                     )
                     ts_obj.data.index = new_index
