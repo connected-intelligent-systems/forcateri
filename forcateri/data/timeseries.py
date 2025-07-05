@@ -369,40 +369,36 @@ class TimeSeries:
 
     def by_time(self, horizon: Optional[Union[int, pd.Timestamp]] = None):
         """
-        Filter the data by a specific point in time or a time-based offset.
+        Returns a DataFrame with 'time_stamp' as the outer index.
 
         Parameters
         ----------
-        horizon : int or pd.Timestamp, optional
-            - If a `pd.Timestamp` is provided, returns data corresponding to that exact timestamp.
-            - If an `int` is provided, this can be used to implement logic such as selecting
-            the last `n` time steps or indexing based on time step position (TODO).
-            - If None or an unsupported type, a ValueError is raised.
+        horizon : int or pd.Timedelta, optional
+            - If an `int` is provided, it is interpreted as an offset in hours.
+            - If a `pd.Timedelta` is provided, it is used directly to select a specific offset.
+            - If None, the MultiIndex is reordered to make 'time_stamp' the outer index.
 
         Returns
         -------
         pd.DataFrame
-            A filtered subset of the original time series data based on the specified horizon.
+            A filtered or reindexed view of the time series data.
 
         Raises
         ------
         ValueError
-            If the provided `horizon` is neither a `pd.Timestamp` nor an `int`.
-
-        Notes
-        -----
-        The DataFrame is assumed to have a MultiIndex where one of the levels is time-based.
-        The `swaplevel(axis=0)` is used for convenient access by timestamp. Ensure that
-        after swapping, timestamps are accessible at the top level of the index.
+            If the horizon is not one of the supported types.
         """
-        if isinstance(horizon, pd.Timestamp):
-            return self.data.swaplevel(axis=0).loc(horizon)
-        elif isinstance(horizon, int):
-            # TODO the logic to handle int horizon
-            raise NotImplementedError()
-        else:
-            logger.error("Incorrect format")
-            raise ValueError("Please provide the pd.timestamp as horizon")
+        if horizon is not None:
+            if isinstance(horizon, int):
+                horizon = pd.to_timedelta(f"{horizon}:00:00")
+            elif not isinstance(horizon, pd.Timedelta):
+                raise ValueError("Horizon must be an int (interpreted as hours) or pd.Timedelta.")
+
+            # Filter and return only that offset (drops 'offset' level)
+            return self.data.xs(horizon, level="offset")
+
+        # Otherwise, reorder index to make time_stamp the outer index
+        return self.data.swaplevel('offset', 'time_stamp').sort_index(level='time_stamp')
 
     def by_horizon(self, t0):
         """
