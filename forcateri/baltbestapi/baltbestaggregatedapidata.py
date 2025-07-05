@@ -90,7 +90,7 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         """
         # print(f"Local copy set to: {self.local_copy}")
         df = pd.read_csv(Path(self.local_copy) / self.file_name)
-        df[self.time_col] = pd.to_datetime(df[self.time_col])
+        df[self.time_col] = pd.to_datetime(df[self.time_col]).dt.tz_localize(None)
         df = (
             df.set_index(self.time_col)
             .groupby(self.group_col)
