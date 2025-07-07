@@ -14,7 +14,7 @@ from ...data.timeseries import TimeSeries
 from ..modeladapter import ModelAdapter
 from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
 
-
+logger = logging.getLogger(__name__)
 class DartsModelAdapter(ModelAdapter, ABC):
 
     def __init__(self, freq: str = "60min", *args, **kwargs):
@@ -72,7 +72,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.model.fit(**fit_args)
 
     def predict(
-        self, data: List[AdapterInput], n: Optional[int] = 1, **kwargs
+        self, data: List[AdapterInput], n: Optional[int] = 1, historical_forecast = True,predict_likelihood_parameters = True
     ) -> List[DartsTimeSeries]:
         """
         Predict using the model and provided data.
@@ -80,11 +80,18 @@ class DartsModelAdapter(ModelAdapter, ABC):
         target, known, observed, static = self.convert_input(data)
         predict_args = {}
         predict_args.update(self._get_covariate_args(known, observed, static))
-        if n is not None:
-            predict_args["n"] = n
-        prediction = self.model.predict(series=target, **predict_args, **kwargs)
+        predict_args.update({"predict_likelihood_parameters": predict_likelihood_parameters})
+        if historical_forecast:
+            # If historical forecast is True, use the model's historical_forecast method
+            prediction = self.model.historical_forecasts(
+                series=target, retrain=False,**predict_args, 
+            )
+        else:
+            if n is not None:
+                predict_args["n"] = n
+            prediction = self.model.predict(series=target, **predict_args)
         self.last_time_stamps = [t.target.data.index[-1][1] for t in data]
-        self.isquantile = kwargs.get("predict_likelihood_parameters")
+        self.isquantile = predict_likelihood_parameters
         # prediction_ts_format = self.to_time_series(prediction)
         return prediction
 
@@ -171,7 +178,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
     def to_time_series(
         self, ts: Union[DartsTimeSeries, List[DartsTimeSeries]]
     ) -> Union[TimeSeries, List[TimeSeries]]:
-
+        logger.info("Converting DartsTimeSeries to TimeSeries format.")
         if self.isquantile:
             if type(ts) == list:
                 timeseries = []
@@ -181,7 +188,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
                     ts_obj = TimeSeries(
                         darts_df, representation="quantile", quantiles=self.quantiles
                     )
-                    offset = ts_obj.data.index.get_level_values("time_stamp") - t0
+                    offset = ts_obj.data.index.get_level_values("time_stamp") - t0 #TODO Need to think about the logic of counting the offsets, and link to horizon of the dartsmodel
                     new_index = pd.MultiIndex.from_arrays(
                         [offset, [t0] * len(offset)],
                         names=["offset", "time_stamp"],
@@ -202,7 +209,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 )
                 ts_obj.data.index = new_index
                 return ts_obj
-
+        logger.info("Not a quantile prediction, converting to TimeSeries format.")
+        raise NotImplementedError(
+            "Conversion to TimeSeries format is not implemented for non-quantile predictions."
+        )
         return ts
 
     @abstractmethod

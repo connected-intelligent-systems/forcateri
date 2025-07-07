@@ -367,7 +367,7 @@ class TimeSeries:
         # return quantile_values
         raise NotImplementedError()
 
-    def by_time(self, horizon: Optional[Union[int, pd.Timestamp]] = None):
+    def by_time(self, horizon: Optional[Union[int, pd.Timedelta]] = None):
         """
         Returns a DataFrame with 'time_stamp' as the outer index.
 

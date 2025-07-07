@@ -128,11 +128,12 @@ class DartsTCNModel(DartsModelAdapter):
         observed = self.scaler_cov.fit_transform(observed)
         return target, known, observed, static
 
-    def predict(self, data: List[AdapterInput], n: Optional[int] = 1, **kwargs):
+    def predict(self, data: List[AdapterInput], n: Optional[int] = 1, historical_forecast=True,predict_likelihood_parameters = True):
         """
         Predict using the model and provided data.
         """
-        predictions = super().predict(data=data, n=n, **kwargs)
+        predictions = super().predict(data=data, n=n, historical_forecast=historical_forecast,predict_likelihood_parameters=predict_likelihood_parameters)
+
         # If the parent class does not accept 'n', remove it from the call
         return predictions
 
