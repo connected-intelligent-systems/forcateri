@@ -32,8 +32,9 @@ class TimeSeries:
             else:
                 representation = TimeSeries.QUANTILE_REP
 
-        self._representation = representation
+        
         self.quantiles = None
+        self.representation = representation
         if representation == TimeSeries.QUANTILE_REP:
             if not all(isinstance(x, float) for x in quantiles):
                 raise TypeError("Quantiles must be a list of floats.")
@@ -49,6 +50,7 @@ class TimeSeries:
         # If already in internal format (e.g. MultiIndex on both axes), just store it
         if TimeSeries.is_matching_format(data, self.representation):
             self.data = data.copy()
+            
             logger.info("TimeSeries initialized from internal-format DataFrame.")
         elif TimeSeries.is_compatible_format(data, self.representation):
             # If the DataFrame is compatible but not in the expected format, align it
@@ -63,24 +65,38 @@ class TimeSeries:
                 f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
+        self._representations = list(self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique())
+        self._features = list(self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique())
+
+    @property
+    def features(self):
+        "The features property"
+        return self._features 
+    
+    @features.setter
+    def features(self,feature_list:List[str]):
+        "Setter for features"
+        self._features = feature_list
+    
+    @features.deleter
+    def features(self):
+        "Deleter for features"
+        del self._features
 
     @property 
-    def representation(self):
+    def representations(self):
         "The representation property"
-        return self._representation
+        return self._representations
     
-    @representation.setter 
-    def represenation(self,value):
+    @representations.setter 
+    def representations(self,value:Union[List[float], List[int],List[str]]):
         "Setter for representation"
-        if value in (TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP, TimeSeries.DETERM_REP):
-            self._representation = value
-        raise InvalidRepresentationFormat(
-                "Provided representation cannot be set, it is not in the required format"
-            ) 
-    @represenation.deleter
-    def representation(self):
-        "Deleter for representation"
-        del self._representation
+        self._representations = value
+
+    @representations.deleter
+    def representations(self):
+        "Deleter for representations"
+        del self._representations
 
     @staticmethod
     def _check_column_levels(
