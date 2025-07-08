@@ -33,13 +33,13 @@ class TimeSeries:
                 representation = TimeSeries.QUANTILE_REP
 
         self._representation = representation
-        self._quantiles = None
+        self.quantiles = None
         if representation == TimeSeries.QUANTILE_REP:
             if not all(isinstance(x, float) for x in quantiles):
                 raise TypeError("Quantiles must be a list of floats.")
             if not all(0 <= x <= 1 for x in quantiles):
                 raise ValueError("Quantiles must be between 0 and 1.")
-            self._quantiles = quantiles
+            self.quantiles = quantiles
         elif representation == TimeSeries.SAMPLE_REP:
             # raise NotImplementedError("Sample representation is not implemented yet.")
             pass
