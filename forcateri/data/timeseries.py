@@ -26,6 +26,11 @@ class TimeSeries:
         representation=None,
         quantiles: Optional[List[float]] = None,
     ):
+        self._features = []
+        self._representations = []
+        self._offsets = pd.TimedeltaIndex([])
+        self._timestamps = pd.DatetimeIndex([])
+        
         if representation is None:
             if quantiles is None:
                 representation = TimeSeries.DETERM_REP
@@ -67,6 +72,8 @@ class TimeSeries:
             )
         self._representations = list(self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique())
         self._features = list(self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique())
+        self._offsets = self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0])
+        self._timestamps = self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1])
 
     @property
     def features(self):
@@ -74,9 +81,12 @@ class TimeSeries:
         return self._features 
     
     @features.setter
-    def features(self,feature_list:List[str]):
-        "Setter for features"
-        self._features = feature_list
+    def features(self, feature_list: List[str]):
+        if isinstance(feature_list, list) and all(isinstance(f, str) for f in feature_list):
+            self._features = feature_list
+        else:
+            raise TypeError("Features must be a list of strings.")
+
     
     @features.deleter
     def features(self):
@@ -88,15 +98,54 @@ class TimeSeries:
         "The representation property"
         return self._representations
     
-    @representations.setter 
-    def representations(self,value:Union[List[float], List[int],List[str]]):
-        "Setter for representation"
-        self._representations = value
+    @representations.setter
+    def representations(self, value: Union[List[float], List[int], List[str]]):
+        if isinstance(value, list) and all(isinstance(v, (float, int, str)) for v in value):
+            self._representations = value
+        else:
+            raise TypeError("Representations must be a list of float, int, or str.")
+
 
     @representations.deleter
     def representations(self):
         "Deleter for representations"
         del self._representations
+
+    @property
+    def offsets(self):
+        "The offsets property"
+        return self._offsets
+
+    @offsets.setter 
+    def offsets(self,new_offset:pd.TimedeltaIndex):
+        "Setter for offsets"
+        if isinstance(new_offset,pd.TimedeltaIndex):
+            self._offsets = new_offset 
+        else:
+            raise TypeError("Offset should be of type pd.TimedeltaIndex")
+    
+    @offsets.deleter
+    def offsets(self):
+        "Deleter for offsets"
+        del self._offsets
+
+    @property
+    def timestamps(self):
+        "The timestamps property"
+        return self._timestamps
+    
+    @timestamps.setter
+    def timestamps(self,new_timestamps:pd.DatetimeIndex):
+        "Setter for timestamps"
+        if isinstance(new_timestamps,pd.DatetimeIndex):
+            self._timestamps = new_timestamps
+        else:
+            raise TypeError("Timestamps should be of type pd.DatetimeIndex")
+
+    @timestamps.deleter
+    def timestamps(self):
+        "Deleter for timestamps"
+        del self._timestamps
 
     @staticmethod
     def _check_column_levels(
