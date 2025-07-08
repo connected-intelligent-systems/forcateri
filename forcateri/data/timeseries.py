@@ -32,14 +32,14 @@ class TimeSeries:
             else:
                 representation = TimeSeries.QUANTILE_REP
 
-        self.representation = representation
-        self.quantiles = None
+        self._representation = representation
+        self._quantiles = None
         if representation == TimeSeries.QUANTILE_REP:
             if not all(isinstance(x, float) for x in quantiles):
                 raise TypeError("Quantiles must be a list of floats.")
             if not all(0 <= x <= 1 for x in quantiles):
                 raise ValueError("Quantiles must be between 0 and 1.")
-            self.quantiles = quantiles
+            self._quantiles = quantiles
         elif representation == TimeSeries.SAMPLE_REP:
             # raise NotImplementedError("Sample representation is not implemented yet.")
             pass
@@ -63,6 +63,24 @@ class TimeSeries:
                 f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
+
+    @property 
+    def representation(self):
+        "The representation property"
+        return self._representation
+    
+    @representation.setter 
+    def represenation(self,value):
+        "Setter for representation"
+        if value in (TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP, TimeSeries.DETERM_REP):
+            self._representation = value
+        raise InvalidRepresentationFormat(
+                "Provided representation cannot be set, it is not in the required format"
+            ) 
+    @represenation.deleter
+    def representation(self):
+        "Deleter for representation"
+        del self._representation
 
     @staticmethod
     def _check_column_levels(
