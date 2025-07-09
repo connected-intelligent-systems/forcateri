@@ -30,14 +30,13 @@ class TimeSeries:
         self._representations = []
         self._offsets = pd.TimedeltaIndex([])
         self._timestamps = pd.DatetimeIndex([])
-        
+
         if representation is None:
             if quantiles is None:
                 representation = TimeSeries.DETERM_REP
             else:
                 representation = TimeSeries.QUANTILE_REP
 
-        
         self.quantiles = None
         self.representation = representation
         if representation == TimeSeries.QUANTILE_REP:
@@ -55,7 +54,7 @@ class TimeSeries:
         # If already in internal format (e.g. MultiIndex on both axes), just store it
         if TimeSeries.is_matching_format(data, self.representation):
             self.data = data.copy()
-            
+
             logger.info("TimeSeries initialized from internal-format DataFrame.")
         elif TimeSeries.is_compatible_format(data, self.representation):
             # If the DataFrame is compatible but not in the expected format, align it
@@ -70,82 +69,40 @@ class TimeSeries:
                 f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
-        self._representations = list(self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique())
-        self._features = list(self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique())
-        self._offsets = self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0])
-        self._timestamps = self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1])
+        self._representations = list(
+            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique()
+        )
+        self._features = list(
+            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
+        )
+        self._offsets = self.data.index.get_level_values(
+            TimeSeries.ROW_INDEX_NAMES[0]
+        ).unique()
+        self._timestamps = self.data.index.get_level_values(
+            TimeSeries.ROW_INDEX_NAMES[1]
+        ).unique()
 
     @property
     def features(self):
         "The features property"
-        return self._features 
-    
-    @features.setter
-    def features(self, feature_list: List[str]):
-        if isinstance(feature_list, list) and all(isinstance(f, str) for f in feature_list):
-            self._features = feature_list
-        else:
-            raise TypeError("Features must be a list of strings.")
+        return self._features
 
-    
-    @features.deleter
-    def features(self):
-        "Deleter for features"
-        del self._features
-
-    @property 
+    @property
     def representations(self):
         "The representation property"
         return self._representations
-    
-    @representations.setter
-    def representations(self, value: Union[List[float], List[int], List[str]]):
-        if isinstance(value, list) and all(isinstance(v, (float, int, str)) for v in value):
-            self._representations = value
-        else:
-            raise TypeError("Representations must be a list of float, int, or str.")
 
-
-    @representations.deleter
-    def representations(self):
-        "Deleter for representations"
-        del self._representations
 
     @property
     def offsets(self):
         "The offsets property"
         return self._offsets
 
-    @offsets.setter 
-    def offsets(self,new_offset:pd.TimedeltaIndex):
-        "Setter for offsets"
-        if isinstance(new_offset,pd.TimedeltaIndex):
-            self._offsets = new_offset 
-        else:
-            raise TypeError("Offset should be of type pd.TimedeltaIndex")
-    
-    @offsets.deleter
-    def offsets(self):
-        "Deleter for offsets"
-        del self._offsets
 
     @property
     def timestamps(self):
         "The timestamps property"
         return self._timestamps
-    
-    @timestamps.setter
-    def timestamps(self,new_timestamps:pd.DatetimeIndex):
-        "Setter for timestamps"
-        if isinstance(new_timestamps,pd.DatetimeIndex):
-            self._timestamps = new_timestamps
-        else:
-            raise TypeError("Timestamps should be of type pd.DatetimeIndex")
-
-    @timestamps.deleter
-    def timestamps(self):
-        "Deleter for timestamps"
-        del self._timestamps
 
     @staticmethod
     def _check_column_levels(
@@ -473,15 +430,17 @@ class TimeSeries:
         """
         if horizon is not None:
             if isinstance(horizon, int):
-                horizon = pd.to_timedelta(f"{horizon}:00:00")
+                horizon = self._offsets[horizon]
             elif not isinstance(horizon, pd.Timedelta):
-                raise ValueError("Horizon must be an int (interpreted as hours) or pd.Timedelta.")
+                raise ValueError("Horizon must be an int or pd.Timedelta.")
 
             # Filter and return only that offset (drops 'offset' level)
             return self.data.xs(horizon, level="offset")
 
         # Otherwise, reorder index to make time_stamp the outer index
-        return self.data.swaplevel('offset', 'time_stamp').sort_index(level='time_stamp')
+        return self.data.swaplevel("offset", "time_stamp").sort_index(
+            level="time_stamp"
+        )
 
     def by_horizon(self, t0):
         """
