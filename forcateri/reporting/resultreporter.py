@@ -24,22 +24,22 @@ class ResultReporter:
     ):  # dont forget to remove predictions after testing
         self.__create_plots(predictions)
 
-    def __compute_metrics():
+    def _compute_metrics():
         pass
 
-    def __select_debug_samples():
+    def _select_debug_samples():
         pass
 
-    def __report_metrics():
+    def _report_metrics():
         pass
 
-    def __create_plots(self, predictions):
+    def _create_plots(self):
 
         for model in self.models:
-            predictions = model.predict(self.test_data)  # Uncomment later after test
-            predictions_ts_list = model.to_time_series(
-                predictions
-            )  # List of TimeSeries objects
+            predictions_ts_list = model.predict(self.test_data)  # List of TimeSeries objects
+            # predictions_ts_list = model.to_time_series(
+            #     predictions
+            # )  # 
             for i, (adapter_input, pred_ts) in enumerate(
                 zip(self.test_data, predictions_ts_list)
             ):
@@ -68,14 +68,14 @@ class ResultReporter:
                         color="blue",
                         linewidth=2,
                     )
-                    ax.fill_between(
-                        pred_df.index,
-                        pred_df[pred_df.columns[0]],
-                        pred_df[pred_df.columns[-1]],
-                        color="blue",
-                        alpha=0.2,
-                        label="Confidence Interval (10%-90%)",
-                    )
+                    # ax.fill_between(
+                    #     pred_df.index,
+                    #     pred_df[pred_df.columns[0]],
+                    #     pred_df[pred_df.columns[-1]],
+                    #     color="blue",
+                    #     alpha=0.2,
+                    #     label="Confidence Interval (10%-90%)",
+                    # )
                     ax.plot(
                         gt_df.index,
                         gt_df.values,
@@ -93,11 +93,11 @@ class ResultReporter:
                     plt.tight_layout()
                     plt.show()
 
-    def __report_plots():
+    def _report_plots():
         pass
 
-    def __report_debug_samples():
+    def _report_debug_samples():
         pass
 
-    def __persist_artifacts():
+    def _persist_artifacts():
         pass

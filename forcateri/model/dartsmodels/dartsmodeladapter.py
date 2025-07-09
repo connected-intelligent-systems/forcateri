@@ -72,7 +72,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.model.fit(**fit_args)
 
     def predict(
-        self, data: List[AdapterInput], n: Optional[int] = 1, historical_forecast = True,predict_likelihood_parameters = True
+        self, data: List[AdapterInput], n: Optional[int] = 1, historical_forecast = True, predict_likelihood_parameters = True
     ) -> List[DartsTimeSeries]:
         """
         Predict using the model and provided data.
@@ -92,8 +92,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
             prediction = self.model.predict(series=target, **predict_args)
         self.last_time_stamps = [t.target.data.index[-1][1] for t in data]
         self.isquantile = predict_likelihood_parameters
-        # prediction_ts_format = self.to_time_series(prediction)
-        return prediction
+        prediction_ts_format = self.to_time_series(prediction) #Check the logic later
+        return prediction_ts_format
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
