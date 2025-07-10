@@ -81,24 +81,12 @@ class DartsModelAdapter(ModelAdapter, ABC):
         Predict using the model and provided data.
         """
         target, known, observed, static = self.convert_input(data)
-        predict_args = {'series':target}
+        predict_args = {"series": target}
         predict_args.update(self._get_covariate_args(known, observed, static))
-        # predict_args.update({"predict_likelihood_parameters": predict_likelihood_parameters})
-        # if historical_forecast:
-        #     # If historical forecast is True, use the model's historical_forecast method
-        #     last_points_only = False
-        #     print(f"Last points_only:{last_points_only}")
-        #     # prediction = self.model.historical_forecasts(
-        #     #     series=target,last_points_only=last_points_only, retrain=False,**predict_args,
-        #     # )
-        # else:
-        #     if n is not None:
-        #         predict_args["n"] = n
-        # prediction = self.model.predict(series=target, **predict_args)
+
         self._predict_args = predict_args
         self.last_time_stamps = [t.target.data.index[-1][1] for t in data]
-        # self.isquantile = predict_likelihood_parameters
-        # prediction_ts_format = self.to_time_series(prediction) #Check the logic later
+
         # return prediction
 
     @staticmethod
