@@ -132,10 +132,23 @@ class DartsTCNModel(DartsModelAdapter):
         """
         Predict using the model and provided data.
         """
-        predictions = super().predict(data=data, n=n, historical_forecast=historical_forecast,predict_likelihood_parameters=predict_likelihood_parameters)
 
-        # If the parent class does not accept 'n', remove it from the call
-        return predictions
+        super().predict(data=data, n=n)
+        self._predict_args.update({"predict_likelihood_parameters": predict_likelihood_parameters})
+        if historical_forecast:
+            # If historical forecast is True, use the model's historical_forecast method
+            last_points_only = False
+            print(f"Last points_only:{last_points_only}")
+            prediction = self.model.historical_forecasts(
+                **self._predict_args,forecast_horizon=5,last_points_only=last_points_only, retrain=False,
+            )
+        else:
+            if n is not None:
+                self._predict_args["n"] = n
+            prediction = self.model.predict(**self._predict_args)
+        # self.isquantile = predict_likelihood_parameters
+        # prediction_ts_format = self.to_time_series(prediction) #Check the logic later
+        return prediction
 
     def tune(
         self,

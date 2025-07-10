@@ -15,6 +15,8 @@ from ..modeladapter import ModelAdapter
 from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
 
 logger = logging.getLogger(__name__)
+
+
 class DartsModelAdapter(ModelAdapter, ABC):
 
     def __init__(self, freq: str = "60min", *args, **kwargs):
@@ -71,29 +73,33 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         self.model.fit(**fit_args)
 
+    @abstractmethod
     def predict(
-        self, data: List[AdapterInput], n: Optional[int] = 1, historical_forecast = True, predict_likelihood_parameters = True
+        self, data: List[AdapterInput], n: Optional[int] = 1
     ) -> List[DartsTimeSeries]:
         """
         Predict using the model and provided data.
         """
         target, known, observed, static = self.convert_input(data)
-        predict_args = {}
+        predict_args = {'series':target}
         predict_args.update(self._get_covariate_args(known, observed, static))
-        predict_args.update({"predict_likelihood_parameters": predict_likelihood_parameters})
-        if historical_forecast:
-            # If historical forecast is True, use the model's historical_forecast method
-            prediction = self.model.historical_forecasts(
-                series=target, retrain=False,**predict_args, 
-            )
-        else:
-            if n is not None:
-                predict_args["n"] = n
-            prediction = self.model.predict(series=target, **predict_args)
+        # predict_args.update({"predict_likelihood_parameters": predict_likelihood_parameters})
+        # if historical_forecast:
+        #     # If historical forecast is True, use the model's historical_forecast method
+        #     last_points_only = False
+        #     print(f"Last points_only:{last_points_only}")
+        #     # prediction = self.model.historical_forecasts(
+        #     #     series=target,last_points_only=last_points_only, retrain=False,**predict_args,
+        #     # )
+        # else:
+        #     if n is not None:
+        #         predict_args["n"] = n
+        # prediction = self.model.predict(series=target, **predict_args)
+        self._predict_args = predict_args
         self.last_time_stamps = [t.target.data.index[-1][1] for t in data]
-        self.isquantile = predict_likelihood_parameters
-        prediction_ts_format = self.to_time_series(prediction) #Check the logic later
-        return prediction_ts_format
+        # self.isquantile = predict_likelihood_parameters
+        # prediction_ts_format = self.to_time_series(prediction) #Check the logic later
+        # return prediction
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -188,7 +194,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
                     ts_obj = TimeSeries(
                         darts_df, representation="quantile", quantiles=self.quantiles
                     )
-                    offset = ts_obj.data.index.get_level_values("time_stamp") - t0 #TODO Need to think about the logic of counting the offsets, and link to horizon of the dartsmodel
+                    offset = (
+                        ts_obj.data.index.get_level_values("time_stamp") - t0
+                    )  # TODO Need to think about the logic of counting the offsets, and link to horizon of the dartsmodel
                     new_index = pd.MultiIndex.from_arrays(
                         [offset, [t0] * len(offset)],
                         names=["offset", "time_stamp"],
@@ -225,7 +233,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         raise NotImplementedError("Subclasses must implement this method.")
 
     @classmethod
-    def load(cls,path: Union[Path, str]) -> "DartsModelAdapter":
+    def load(cls, path: Union[Path, str]) -> "DartsModelAdapter":
         """
         Loads a model from the specified path.
 
@@ -247,8 +255,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
             #     raise InvalidModelTypeError(
             #         "The loaded model is not a valid Darts model."
             #     )
-            #else:
-                
+            # else:
+
             logging.info(f"Model loaded from {path}")
             return cls(model=model)
         except Exception as e:
