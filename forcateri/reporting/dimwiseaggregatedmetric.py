@@ -22,7 +22,7 @@ class DimwiseAggregatedMetric(Metric):
         else:
             raise ValueError("Axis not found neither in row nor in column index.")
     
-    def compute_metric(
+    def compute_metric(self,
         axes: List[str],
         reduction: Callable[[np.ndarray, np.ndarray], Union[np.ndarray, float]],
         ts_gt:TimeSeries,
