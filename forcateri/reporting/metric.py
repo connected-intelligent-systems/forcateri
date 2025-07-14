@@ -4,7 +4,7 @@ from typing import Callable
 class Metric:
     
     def __init__(self, func: str):
-        self.func = self.__get_func(func)  # store the specific metric function
+        self.func = self._get_func(func)  # store the specific metric function
 
     
     def __call__(self,gt:np.ndarray,pred:np.ndarray):
