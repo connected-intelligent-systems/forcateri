@@ -1,10 +1,12 @@
 from typing import Callable, List, OrderedDict, Union
 import numpy as np
 import pandas as pd
+import logging
 
 from .metric import Metric
 from ..data.timeseries import TimeSeries
 
+logger = logging.getLogger(__name__)
 
 class DimwiseAggregatedMetric(Metric):
     OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
@@ -30,7 +32,7 @@ class DimwiseAggregatedMetric(Metric):
     def __call__(self, ts_gt: TimeSeries, ts_pred: TimeSeries):
         flat_pred = ts_pred.data.copy().stack(level=0, future_stack=True)
         flat_gt = ts_gt.data.copy().stack(level=0, future_stack=True)
-        print(f"Reducing axes {self.axes}")
+        logger.info(f"Reducing axes {self.axes}")
         group_by = sorted(
             list(
                 {
@@ -46,7 +48,7 @@ class DimwiseAggregatedMetric(Metric):
         )
 
         if len(group_by) == 0:
-            print("No axes left for grouping. Reducing entire data frames.")
+            logger.info("No axes left for grouping. Reducing entire data frames.")
             reduced = self.reduction(flat_gt.values, flat_pred.values)
             return pd.DataFrame(
                 data=reduced.reshape(1, 2),
@@ -56,7 +58,7 @@ class DimwiseAggregatedMetric(Metric):
             )
 
         else:
-            print(f"=> grouping_by {group_by}")
+            logger.info(f"=> grouping_by {group_by}")
 
             reduced_index = pd.MultiIndex.from_product(
                 [
