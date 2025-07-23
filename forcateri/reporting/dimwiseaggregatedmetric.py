@@ -4,6 +4,7 @@ import pandas as pd
 import logging
 
 from .metric import Metric
+from .metric_aggregations import quantile_metric
 from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,7 @@ class DimwiseAggregatedMetric(Metric):
     ):
         self.axes = axes
         self.reduction = reduction
+        
 
     @staticmethod
     def get_level_values(df, axis):
@@ -47,9 +49,15 @@ class DimwiseAggregatedMetric(Metric):
             )
         )
 
+        is_quantile = self.reduction is quantile_metric
+        quantiles = getattr(ts_pred, "quantiles", None) if is_quantile else None
+
         if len(group_by) == 0:
             logger.info("No axes left for grouping. Reducing entire data frames.")
-            reduced = self.reduction(flat_gt.values, flat_pred.values)
+            if is_quantile:
+                reduced = self.reduction(flat_gt.values, flat_pred.values, quantiles)
+            else:
+                reduced = self.reduction(flat_gt.values, flat_pred.values)
             return pd.DataFrame(
                 data=reduced.reshape(1, 2),
                 columns=DimwiseAggregatedMetric.get_level_values(
@@ -80,7 +88,10 @@ class DimwiseAggregatedMetric(Metric):
                 assert (
                     gt_label == pred_label
                 )  # due to the identical structure before grouping and the same group_by
-                reduced = self.reduction(gt.values, pred.values)
+                if is_quantile:
+                    reduced = self.reduction(flat_gt.values, flat_pred.values, quantiles)
+                else:
+                    reduced = self.reduction(flat_gt.values, flat_pred.values)
                 reduced_df.loc[pred_label] = reduced
 
             return reduced_df
