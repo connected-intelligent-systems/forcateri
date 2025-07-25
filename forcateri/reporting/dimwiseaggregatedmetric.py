@@ -49,15 +49,12 @@ class DimwiseAggregatedMetric(Metric):
             )
         )
 
-        is_quantile = self.reduction is quantile_metric
-        quantiles = getattr(ts_pred, "quantiles", None) if is_quantile else None
+        
 
         if len(group_by) == 0:
             logger.info("No axes left for grouping. Reducing entire data frames.")
-            if is_quantile:
-                reduced = self.reduction(flat_gt.values, flat_pred.values, quantiles)
-            else:
-                reduced = self.reduction(flat_gt.values, flat_pred.values)
+
+            reduced = self.reduction(flat_gt.values, flat_pred.values)
             return pd.DataFrame(
                 data=reduced.reshape(1, 2),
                 columns=DimwiseAggregatedMetric.get_level_values(
@@ -88,10 +85,8 @@ class DimwiseAggregatedMetric(Metric):
                 assert (
                     gt_label == pred_label
                 )  # due to the identical structure before grouping and the same group_by
-                if is_quantile:
-                    reduced = self.reduction(flat_gt.values, flat_pred.values, quantiles)
-                else:
-                    reduced = self.reduction(flat_gt.values, flat_pred.values)
+
+                reduced = self.reduction(flat_gt.values, flat_pred.values)
                 reduced_df.loc[pred_label] = reduced
 
             return reduced_df
