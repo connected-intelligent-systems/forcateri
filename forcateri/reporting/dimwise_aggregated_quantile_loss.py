@@ -1,6 +1,7 @@
 from forcateri.reporting.dimwiseaggregatedmetric import DimwiseAggregatedMetric
 from forcateri.reporting.metric_aggregations import quantile_metric
-
+from typing import List 
+from forcateri import TimeSeries
 
 class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
     def __init__(
