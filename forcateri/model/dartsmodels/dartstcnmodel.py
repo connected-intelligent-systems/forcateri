@@ -128,27 +128,33 @@ class DartsTCNModel(DartsModelAdapter):
         observed = self.scaler_cov.fit_transform(observed)
         return target, known, observed, static
 
-    def predict(self, data: List[AdapterInput], n: Optional[int] = 1, historical_forecast=True,predict_likelihood_parameters = True):
+    def predict(self, data: Union[AdapterInput,List[AdapterInput]], n: Optional[int] = 1, historical_forecast=True,predict_likelihood_parameters = True,forecast_horizon=5):
         """
         Predict using the model and provided data.
         """
 
-        super().predict(data=data, n=n)
+        super().prepare_predict_args(data=data)
         self._predict_args.update({"predict_likelihood_parameters": predict_likelihood_parameters})
         if historical_forecast:
             # If historical forecast is True, use the model's historical_forecast method
             last_points_only = False
             print(f"Last points_only:{last_points_only}")
             prediction = self.model.historical_forecasts(
-                **self._predict_args,forecast_horizon=5,last_points_only=last_points_only, retrain=False,
+                **self._predict_args,forecast_horizon=forecast_horizon,last_points_only=last_points_only, retrain=False,
             )
         else:
             if n is not None:
                 self._predict_args["n"] = n
             prediction = self.model.predict(**self._predict_args)
         # self.isquantile = predict_likelihood_parameters
-        # prediction_ts_format = self.to_time_series(prediction) #Check the logic later
-        return prediction
+        prediction_ts_format = DartsModelAdapter.to_time_series(
+            ts=prediction[0], quantiles=self.quantiles
+        )
+        # if isinstance(data,list):
+        #     prediction_ts_format = [DartsModelAdapter.to_time_series(ts=pred,quantiles=self.quantiles) for pred in prediction]
+        # else:
+        #     prediction_ts_format = DartsModelAdapter.to_time_series(ts=prediction, quantiles=self.quantiles)
+        return prediction_ts_format
 
     def tune(
         self,

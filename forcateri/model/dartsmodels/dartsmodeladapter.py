@@ -74,10 +74,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         self.model.fit(**fit_args)
 
-    @abstractmethod
-    def predict(
-        self, data: List[AdapterInput], n: Optional[int] = 1
-    ) -> List[DartsTimeSeries]:
+    def prepare_predict_args(
+        self, data: List[AdapterInput]
+    ) -> Union[DartsTimeSeries, List[DartsTimeSeries]]:
         """
         Predict using the model and provided data.
         """
@@ -86,9 +85,13 @@ class DartsModelAdapter(ModelAdapter, ABC):
         predict_args.update(self._get_covariate_args(known, observed, static))
 
         self._predict_args = predict_args
-        self.last_time_stamps = [t.target.data.index[-1][1] for t in data]
 
-        # return prediction
+    @abstractmethod
+    def predict(self, *args,**kwargs) -> Union[TimeSeries, List[TimeSeries]]:
+        raise NotImplementedError(
+            "The predict method is not implemented in the base DartsModelAdapter class. "
+            "Please implement this method in the subclass."
+        )
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -170,48 +173,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         return target, known, observed, static
 
-    # def to_time_series(
-    #     self, ts: Union[DartsTimeSeries, List[DartsTimeSeries]]
-    # ) -> Union[TimeSeries, List[TimeSeries]]:
-    #     logger.info("Converting DartsTimeSeries to TimeSeries format.")
-    #     if self.isquantile:
-    #         if type(ts) == list:
-    #             timeseries = []
-    #             for id, darts_ts in enumerate(ts):
-    #                 t0 = self.last_time_stamps[id]
-    #                 darts_df = darts_ts.to_dataframe()
-    #                 ts_obj = TimeSeries(
-    #                     darts_df, representation="quantile", quantiles=self.quantiles
-    #                 )
-    #                 offset = (
-    #                     ts_obj.data.index.get_level_values("time_stamp") - t0
-    #                 )  # TODO Need to think about the logic of counting the offsets, and link to horizon of the dartsmodel
-    #                 new_index = pd.MultiIndex.from_arrays(
-    #                     [offset, [t0] * len(offset)],
-    #                     names=["offset", "time_stamp"],
-    #                 )
-    #                 ts_obj.data.index = new_index
-    #                 timeseries.append(ts_obj)
-    #             return timeseries
-    #         else:
-    #             t0 = self.last_time_stamps[0]
-    #             darts_df = ts.to_dataframe()
-    #             ts_obj = TimeSeries(
-    #                 darts_df, representation="quantile", quantiles=self.quantiles
-    #             )
-    #             offset = ts_obj.data.index.get_level_values("time_stamp") - t0
-    #             new_index = pd.MultiIndex.from_arrays(
-    #                 [offset, ts_obj.data.index.get_level_values("time_stamp")],
-    #                 names=["offset", "time_stamp"],
-    #             )
-    #             ts_obj.data.index = new_index
-    #             return ts_obj
-    #     logger.info("Not a quantile prediction, converting to TimeSeries format.")
-    #     raise NotImplementedError(
-    #         "Conversion to TimeSeries format is not implemented for non-quantile predictions."
-    #     )
-    #     return ts
-    
     @staticmethod
     def to_time_series(
         ts: Union[DartsTimeSeries, List[DartsTimeSeries]],
@@ -221,22 +182,30 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         Converts a DartsTimeSeries or a list of DartsTimeSeries into a pandas DataFrame (or list of DataFrames).
         """
+
         def convert_single_ts(darts_ts: DartsTimeSeries) -> pd.DataFrame:
             darts_df = darts_ts.to_dataframe()
-            ts_obj = TimeSeries(data=darts_df, representation=TimeSeries.QUANTILE_REP, quantiles=quantiles)
-            new_offsets = [pd.Timedelta(i, freq) for i in range(1,len(ts_obj.data.index.get_level_values(1))+1)]
+            ts_obj = TimeSeries(
+                data=darts_df,
+                representation=TimeSeries.QUANTILE_REP,
+                quantiles=quantiles,
+            )
+            new_offsets = [
+                pd.Timedelta(i, freq)
+                for i in range(1, len(ts_obj.data.index.get_level_values(1)) + 1)
+            ]
             ts_obj.data.index = pd.MultiIndex.from_arrays(
                 [new_offsets, ts_obj.data.index.get_level_values(1)],
                 names=ts_obj.data.index.names,
             )
-            return ts_obj.data
+            return ts_obj
 
         if isinstance(ts, list):
             ts_list = [convert_single_ts(darts_ts) for darts_ts in ts]
             return reduce(lambda x, y: x + y, ts_list)
         else:
             return convert_single_ts(ts)
-    
+
     @abstractmethod
     def tune(
         self,
@@ -265,12 +234,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         try:
             model = ForecastingModel.load(path)
-            # if not isinstance(model, ForecastingModel):
-            #     raise InvalidModelTypeError(
-            #         "The loaded model is not a valid Darts model."
-            #     )
-            # else:
-
             logging.info(f"Model loaded from {path}")
             return cls(model=model)
         except Exception as e:
