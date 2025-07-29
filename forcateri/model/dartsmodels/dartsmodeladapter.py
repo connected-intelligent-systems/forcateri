@@ -213,7 +213,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
     #     return ts
     
     @staticmethod
-    def to_time_series_df(
+    def to_time_series(
         ts: Union[DartsTimeSeries, List[DartsTimeSeries]],
         quantiles: Optional[List[float]] = None,
         freq: str = "h",
@@ -224,7 +224,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         def convert_single_ts(darts_ts: DartsTimeSeries) -> pd.DataFrame:
             darts_df = darts_ts.to_dataframe()
             ts_obj = TimeSeries(data=darts_df, representation=TimeSeries.QUANTILE_REP, quantiles=quantiles)
-            new_offsets = [pd.Timedelta(i, freq) for i in range(1,len(ts_obj.data.index)+1)]
+            new_offsets = [pd.Timedelta(i, freq) for i in range(1,len(ts_obj.data.index.get_level_values(1))+1)]
             ts_obj.data.index = pd.MultiIndex.from_arrays(
                 [new_offsets, ts_obj.data.index.get_level_values(1)],
                 names=ts_obj.data.index.names,
