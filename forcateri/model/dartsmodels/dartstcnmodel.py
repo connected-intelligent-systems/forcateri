@@ -1,6 +1,6 @@
 import logging
 from pathlib import Path
-from typing import List, Optional, Tuple,Union
+from typing import List, Optional, Tuple, Union
 
 import pandas as pd
 from darts import TimeSeries as DartsTimeSeries
@@ -11,7 +11,7 @@ from darts.utils.likelihood_models import QuantileRegression
 from ...data.adapterinput import AdapterInput
 from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
 from .dartsmodeladapter import DartsModelAdapter
-
+from forcateri.data.timeseries import TimeSeries
 
 class DartsTCNModel(DartsModelAdapter):
     def __init__(self, *args, model: Optional[TCNModel] = None, **kwargs):
@@ -128,32 +128,41 @@ class DartsTCNModel(DartsModelAdapter):
         observed = self.scaler_cov.fit_transform(observed)
         return target, known, observed, static
 
-    def predict(self, data: Union[AdapterInput,List[AdapterInput]], n: Optional[int] = 1, historical_forecast=True,predict_likelihood_parameters = True,forecast_horizon=5):
+    def predict(
+        self,
+        data: Union[AdapterInput, List[AdapterInput]],
+        n: Optional[int] = 1,
+        historical_forecast=True,
+        predict_likelihood_parameters=True,
+        forecast_horizon=5,
+    ) -> List[TimeSeries]:
         """
         Predict using the model and provided data.
         """
 
         super().prepare_predict_args(data=data)
-        self._predict_args.update({"predict_likelihood_parameters": predict_likelihood_parameters})
+        self._predict_args.update(
+            {"predict_likelihood_parameters": predict_likelihood_parameters}
+        )
         if historical_forecast:
             # If historical forecast is True, use the model's historical_forecast method
             last_points_only = False
             print(f"Last points_only:{last_points_only}")
             prediction = self.model.historical_forecasts(
-                **self._predict_args,forecast_horizon=forecast_horizon,last_points_only=last_points_only, retrain=False,
+                **self._predict_args,
+                forecast_horizon=forecast_horizon,
+                last_points_only=last_points_only,
+                retrain=False,
             )
         else:
             if n is not None:
                 self._predict_args["n"] = n
             prediction = self.model.predict(**self._predict_args)
         # self.isquantile = predict_likelihood_parameters
-        prediction_ts_format = DartsModelAdapter.to_time_series(
-            ts=prediction[0], quantiles=self.quantiles
-        )
-        # if isinstance(data,list):
-        #     prediction_ts_format = [DartsModelAdapter.to_time_series(ts=pred,quantiles=self.quantiles) for pred in prediction]
-        # else:
-        #     prediction_ts_format = DartsModelAdapter.to_time_series(ts=prediction, quantiles=self.quantiles)
+        if isinstance(data,list):
+            prediction_ts_format = [DartsModelAdapter.to_time_series(ts=pred,quantiles=self.quantiles) for pred in prediction]
+        else:
+            prediction_ts_format = DartsModelAdapter.to_time_series(ts=prediction, quantiles=self.quantiles)
         return prediction_ts_format
 
     def tune(
@@ -163,17 +172,17 @@ class DartsTCNModel(DartsModelAdapter):
         **kwargs,
     ):
         raise NotImplementedError("Tune method is not implemented yet.")
-    
+
     @classmethod
-    def load(cls,path: Union[Path, str]) -> "DartsTCNModel":
+    def load(cls, path: Union[Path, str]) -> "DartsTCNModel":
         try:
             model = TCNModel.load(path)
             # if not isinstance(model, ForecastingModel):
             #     raise InvalidModelTypeError(
             #         "The loaded model is not a valid Darts model."
             #     )
-            #else:
-                
+            # else:
+
             logging.info(f"Model loaded from {path}")
             return cls(model=model)
         except Exception as e:
