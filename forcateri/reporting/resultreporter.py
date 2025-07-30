@@ -1,6 +1,7 @@
 from typing import List
 import matplotlib.pyplot as plt
 import seaborn as sns
+import pandas as pd
 
 from .metric import Metric
 from ..data.adapterinput import AdapterInput
@@ -37,59 +38,64 @@ class ResultReporter:
 
         for model in self.models:
             predictions_ts_list = model.predict(self.test_data)  # List of TimeSeries objects
-            # predictions_ts_list = model.to_time_series(
-            #     predictions
-            # )  # 
-            for i, (adapter_input, pred_ts) in enumerate(
-                zip(self.test_data, predictions_ts_list)
-            ):
-                gt_ts = adapter_input.target  # Also a TimeSeries object
-
+            
+            for i, (adapter_input, pred_ts) in enumerate(zip(self.test_data, predictions_ts_list)):
+                gt_ts = adapter_input.target  # TimeSeries object
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
 
                 for offset in offsets:
-                    pred_df = pred_ts.by_time(offset)
-                    gt_df = gt_ts.by_time(horizon=0)
-                    gt_df = gt_df.loc[
-                        pred_df.index
-                    ]  # Align ground truth with prediction timestamps
+                    pred_df = pred_ts.by_time(offset).copy()
+                    gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]  # Align indices
+
+                    # Flatten MultiIndex columns if needed
+                    if isinstance(pred_df.columns, pd.MultiIndex):
+                        pred_df.columns = pred_df.columns.get_level_values(1).astype(str)
+
+                    quantiles = sorted(pred_df.columns.astype(float))
+                    lower_q = quantiles[0]
+                    upper_q = quantiles[-1]
+                    median_q = min(quantiles, key=lambda q: abs(q - 0.5))
 
                     fig, ax = plt.subplots(figsize=(12, 6))
-                    ax = pred_df.plot(
-                        title=f"Model: {type(model).__name__} Offset: {offset}",
-                        ylabel="Value",
-                        xlabel="Time",
-                        figsize=(12, 6),
-                    )
+                    
+                    # Plot median prediction
                     ax.plot(
                         pred_df.index,
-                        pred_df[(pred_df.columns[0][0], 0.5)],
-                        label="Median Prediction",
+                        pred_df[median_q],
+                        label=f"Forecast (q={median_q})",
                         color="blue",
-                        linewidth=2,
+                        linewidth=0.8,
                     )
-                    # ax.fill_between(
-                    #     pred_df.index,
-                    #     pred_df[pred_df.columns[0]],
-                    #     pred_df[pred_df.columns[-1]],
-                    #     color="blue",
-                    #     alpha=0.2,
-                    #     label="Confidence Interval (10%-90%)",
-                    # )
+
+                    # Plot confidence interval if exists
+                    if lower_q != upper_q:
+                        ax.fill_between(
+                            pred_df.index,
+                            pred_df[lower_q],
+                            pred_df[upper_q],
+                            color="blue",
+                            alpha=0.2,
+                            label=f"Confidence (q={lower_q}-{upper_q})"
+                        )
+
+                    gt_df.columns = ['Ground Truth']
+                    # Plot ground truth
                     ax.plot(
                         gt_df.index,
-                        gt_df.values,
+                        gt_df['Ground Truth'],
                         label="Ground Truth",
                         color="black",
                         linestyle="--",
-                        linewidth=1.5,
+                        linewidth=0.8,
                     )
+
+                    # Aesthetics
                     ax.set_title(f"{type(model).__name__} — Sample {i} — Offset: {offset}", fontsize=14)
-                    ax.set_xlabel("Time", fontsize=12)
+                    ax.set_xlabel("Time", fontsize=12, weight="bold")
                     ax.set_ylabel("Value", fontsize=12)
-                    ax.grid(True, linestyle="--", alpha=0.5)
-                    ax.legend(fontsize=10)
-                    plt.xticks(rotation=45)
+                    ax.grid(True, linestyle="--", alpha=0.4)
+                    ax.legend(loc="upper left", fontsize=12)
+                    plt.xticks(rotation=30)
                     plt.tight_layout()
                     plt.show()
 
