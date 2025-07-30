@@ -10,5 +10,6 @@ from .data.adapterinput import AdapterInput as AdapterInput
 from .data.dataprovider import DataProvider as DataProvider
 from .data.seriesrole import SeriesRole as SeriesRole
 from .data.timeseries import TimeSeries as TimeSeries
+from .reporting.resultreporter import ResultReporter as ResultReporter
 
 from .model.modeladapter import ModelAdapter as ModelAdapter
