@@ -4,7 +4,7 @@ import pandas as pd
 import logging
 
 from .metric import Metric
-from .metric_aggregations import quantile_metric
+#from .metric_aggregations import quantile_metric
 from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)

@@ -51,13 +51,12 @@ class DartsModelAdapter(ModelAdapter, ABC):
         return args
 
     def fit(
-        self, train_data: List[AdapterInput], val_data: Optional[List[AdapterInput]],pl_trainer_kwargs:Optional[dict]=None
+        self, train_data: List[AdapterInput], val_data: Optional[List[AdapterInput]]
     ) -> None:
         """
         Fits the model using the provided training and validation data.
         """
         target, known, observed, static = self.convert_input(train_data)
-        fit_args['pl_trainer_kwargs'] = pl_trainer_kwargs if pl_trainer_kwargs else None
         fit_args = {"series": target}
         fit_args.update(self._get_covariate_args(known, observed, static))
 
@@ -72,7 +71,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             # Prefix validation covariate keys with 'val_'
             for key, value in val_covariate_args.items():
                 fit_args[f"val_{key}"] = value
-
+        
         self.model.fit(**fit_args)
 
     def prepare_predict_args(

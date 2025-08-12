@@ -68,6 +68,7 @@ class DartsTCNModel(DartsModelAdapter):
                 likelihood=kwargs.get(
                     "likelihood", QuantileRegression(quantiles=self.quantiles)
                 ),
+                pl_trainer_kwargs={"limit_train_batches": 5, "limit_val_batches": 5}
             )
 
         self.scaler_target = Scaler()
@@ -96,8 +97,8 @@ class DartsTCNModel(DartsModelAdapter):
         """
 
         try:
-            trainer_kwargs = {"limit_train_batches": 5, "limit_val_batches":5} 
-            super().fit(train_data=train_data, val_data=val_data, pl_trainer_kwargs=trainer_kwargs, **kwargs)
+            
+            super().fit(train_data=train_data, val_data=val_data, **kwargs)
 
         except ModelAdapterError as e:
             logging.error("Failed to fit a model, check the model params")
