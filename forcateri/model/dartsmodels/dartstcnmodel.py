@@ -48,7 +48,7 @@ class DartsTCNModel(DartsModelAdapter):
         """
 
         super().__init__(*args, **kwargs)
-        self.quantiles = kwargs.get("quantiles", None)
+        self.quantiles = kwargs.get("quantiles", [0.1,0.5,0.9])
         if model is not None:
             self.model = model
         else:
@@ -68,7 +68,7 @@ class DartsTCNModel(DartsModelAdapter):
                 likelihood=kwargs.get(
                     "likelihood", QuantileRegression(quantiles=self.quantiles)
                 ),
-                pl_trainer_kwargs={"limit_train_batches": 5, "limit_val_batches": 5}
+                #pl_trainer_kwargs={"limit_train_batches": 25, "limit_val_batches": 25}
             )
 
         self.scaler_target = Scaler()
