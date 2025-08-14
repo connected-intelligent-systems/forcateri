@@ -4,6 +4,7 @@ from ..model.modeladapter import ModelAdapter
 from ..data.dataprovider import DataProvider
 from ..reporting.resultreporter import ResultReporter
 
+
 class Pipeline:
     """
     Main point of entry for running the pipeline
@@ -12,7 +13,13 @@ class Pipeline:
         mad (ModelAdapter): Adapter for training and inference of models.
         rep (ResultReporter): Handles reporting of evaluation results.
     """
-    def __init__(self, dp:DataProvider, mad:Union[ModelAdapter,List[ModelAdapter]], rep:Union[ResultReporter,List[ResultReporter]]):
+
+    def __init__(
+        self,
+        dp: DataProvider,
+        mad: Union[ModelAdapter, List[ModelAdapter]],
+        rep: Union[ResultReporter, List[ResultReporter]],
+    ):
         self.dp = dp
         self.mad = mad if isinstance(mad, list) else [mad]
         self.rep = rep if isinstance(rep, list) else [rep]
@@ -26,10 +33,7 @@ class Pipeline:
         """
         # Example training
         for model in self.mad:
-            model.fit(
-                self.dp.get_train_set(),
-                self.dp.get_val_set()
-            )
+            model.fit(self.dp.get_train_set(), self.dp.get_val_set())
 
         # Evaluate and report results
         for reporter in self.rep:

@@ -149,7 +149,6 @@ class DartsTCNModel(DartsModelAdapter):
         if historical_forecast:
             # If historical forecast is True, use the model's historical_forecast method
             last_points_only = False
-            print(f"Last points_only:{last_points_only}")
             prediction = self.model.historical_forecasts(
                 **self._predict_args,
                 forecast_horizon=forecast_horizon,

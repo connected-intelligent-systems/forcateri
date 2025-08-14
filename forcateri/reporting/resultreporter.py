@@ -98,8 +98,8 @@ class ResultReporter:
                 plt.xticks(rotation=30)
                 plt.tight_layout()
                 plt.show()
-                # plt.savefig(f"plot_sample_{i}_offset_{offset}.png")
-                # plt.close()
+                plt.savefig(f"plot_sample_{i}_offset_{offset}.png")
+                plt.close()
 
     def _report_plots():
         pass
