@@ -14,12 +14,12 @@ logger = logging.getLogger(__name__)
 
 
 class BaltBestAggregatedAPIData(BaltBestAPIData):
-    dataset_project: str = "ForeSightNEXT/BaltBest/Forcateri"
-    dataset_name: str = "BaltBestAggregatedAPIData"
-    file_name: str = "showcase_data.csv"
     # dataset_project: str = "ForeSightNEXT/BaltBest/Forcateri"
-    # dataset_name: str = "ForcateriPipelineTest"
-    # file_name = 'pipeline_test.csv'
+    # dataset_name: str = "BaltBestAggregatedAPIData"
+    # file_name: str = "showcase_data.csv"
+    dataset_project: str = "ForeSightNEXT/BaltBest/Forcateri"
+    dataset_name: str = "ForcateriPipelineTest"
+    file_name = 'pipeline_test.csv'
     
     def __init__(
         self,
@@ -54,8 +54,11 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         self.known: Union[str, List[str]] = known
         self.observed: Union[str, List[str]] = observed
         self.static: Union[str, List[str]] = static
+        # self.value_cols: List[str] = self._get_value_cols(
+        #     self.target, self.known, self.observed, self.static
+        # )
         self.value_cols: List[str] = self._get_value_cols(
-            self.target, self.known, self.observed, self.static
+            'target', self.known, self.observed, self.static
         )
         self.ts_dict = {}
 
@@ -92,6 +95,8 @@ class BaltBestAggregatedAPIData(BaltBestAPIData):
         """
         # print(f"Local copy set to: {self.local_copy}")
         df = pd.read_csv(Path(self.local_copy) / self.file_name)
+        #HERE ALIGNING THE COLUMN NAMES with prediction
+        df.rename(columns={self.target:'target'},inplace=True)
         df[self.time_col] = pd.to_datetime(df[self.time_col]).dt.tz_localize(None)
         df = (
             df.set_index(self.time_col)

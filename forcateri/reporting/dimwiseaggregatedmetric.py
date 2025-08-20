@@ -4,7 +4,7 @@ import pandas as pd
 import logging
 
 from .metric import Metric
-#from .metric_aggregations import quantile_metric
+from .metric_aggregations import column_wise_mae
 from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
@@ -16,7 +16,7 @@ class DimwiseAggregatedMetric(Metric):
     def __init__(
         self,
         axes: List[str],
-        reduction: Callable[[np.ndarray, np.ndarray], Union[np.ndarray, float]],
+        reduction: Callable[[np.ndarray, np.ndarray], Union[np.ndarray, float]] = column_wise_mae,
     ):
         self.axes = axes
         self.reduction = reduction
@@ -49,7 +49,7 @@ class DimwiseAggregatedMetric(Metric):
             )
         )
 
-        
+        print(group_by)
 
         if len(group_by) == 0:
             logger.info("No axes left for grouping. Reducing entire data frames.")
@@ -85,8 +85,9 @@ class DimwiseAggregatedMetric(Metric):
                 assert (
                     gt_label == pred_label
                 )  # due to the identical structure before grouping and the same group_by
-
-                reduced = self.reduction(flat_gt.values, flat_pred.values)
+                
+                
+                reduced = self.reduction(gt.values, pred.values)
                 reduced_df.loc[pred_label] = reduced
 
             return reduced_df

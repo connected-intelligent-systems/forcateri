@@ -14,4 +14,5 @@ if __name__ == "__main__":
         exit_process=True,
     )
     print("Test on remote")
-    main()
+    results = main()
+    Task.current_task().upload_artifact(name='results', artifact_object=results)

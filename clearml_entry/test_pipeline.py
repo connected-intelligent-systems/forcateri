@@ -5,7 +5,8 @@ from forcateri.data.dataprovider import DataProvider, SeriesRole
 # from darts.models import TCNModel
 # from darts.utils.likelihood_models import QuantileRegression
 from forcateri.data.timeseries import TimeSeries
-from forcateri.reporting.dimwise_aggregated_quantile_loss import DimwiseAggregatedQuantileLoss
+from forcateri.reporting.dimwiseaggregatedmetric import DimwiseAggregatedMetric
+from forcateri.reporting.dimwiseaggregatedquantileloss import DimwiseAggregatedQuantileLoss
 from forcateri.reporting.resultreporter import ResultReporter
 from forcateri.controls.pipeline import Pipeline
 
@@ -24,11 +25,16 @@ def main():
     dp = DataProvider(data_sources=[ds0], roles=roles)
 
     mad0 = DartsTCNModel()
-
-    met0 = DimwiseAggregatedQuantileLoss(axes=[OFFSET])
-
-    rep = ResultReporter(dp.get_test_set(),[mad0],[met0])
+    #met0 = DimwiseAggregatedQuantileLoss(axes=[OFFSET])
+    #met0 = DimwiseAggregatedMetric(axes=[OFFSET])
+    met1 = DimwiseAggregatedMetric(axes=[OFFSET])
+    test_set = dp.get_test_set()
+    rep = ResultReporter(test_set,[mad0],[met1])
     #rep.report_all()
 
     pipe = Pipeline(dp,mad=mad0,rep=rep)
-    pipe.run()
+    results = pipe.run()
+    return results
+
+if __name__ == "__main__":
+    main()

@@ -36,5 +36,8 @@ class Pipeline:
             model.fit(self.dp.get_train_set(), self.dp.get_val_set())
 
         # Evaluate and report results
+        results = []
         for reporter in self.rep:
-            reporter.report_all()
+            res = reporter.report_all()
+            results.append(res)
+        return results

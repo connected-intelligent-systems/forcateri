@@ -52,8 +52,9 @@ class DartsTCNModel(DartsModelAdapter):
         if model is not None:
             self.model = model
         else:
+            self.input_chunk_length=kwargs.get("input_chunk_length", 7)
             self.model = TCNModel(
-                input_chunk_length=kwargs.get("input_chunk_length", 7),
+                input_chunk_length=self.input_chunk_length,
                 output_chunk_length=kwargs.get("output_chunk_length", 5),
                 kernel_size=kwargs.get("kernel_size", 3),
                 num_filters=kwargs.get("num_filters", 32),
