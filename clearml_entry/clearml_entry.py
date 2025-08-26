@@ -7,6 +7,7 @@ my_task = Task.init(
 )
 
 if __name__ == "__main__":
+    
     print("test local")
     my_task.execute_remotely(
         queue_name="default",
