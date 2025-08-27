@@ -17,12 +17,12 @@ class Pipeline:
     def __init__(
         self,
         dp: DataProvider,
-        mad: Union[ModelAdapter, List[ModelAdapter]],
-        rep: Union[ResultReporter, List[ResultReporter]],
+        model_adapter: Union[ModelAdapter, List[ModelAdapter]],
+        reporter: Union[ResultReporter, List[ResultReporter]],
     ):
         self.dp = dp
-        self.mad = mad if isinstance(mad, list) else [mad]
-        self.rep = rep if isinstance(rep, list) else [rep]
+        self.mad = model_adapter if isinstance(model_adapter, list) else [model_adapter]
+        self.rep = reporter if isinstance(reporter, list) else [reporter]
 
     def run(self):
         """
@@ -36,8 +36,8 @@ class Pipeline:
             model.fit(self.dp.get_train_set(), self.dp.get_val_set())
 
         # Evaluate and report results
-        results = []
+        #results = []
         for reporter in self.rep:
-            res = reporter.report_all()
-            results.append(res)
-        return results
+            reporter.report_all()
+            #results.append(res)
+        #return results

@@ -27,12 +27,12 @@ def main():
     mad0 = DartsTCNModel()
     #met0 = DimwiseAggregatedQuantileLoss(axes=[OFFSET])
     #met0 = DimwiseAggregatedMetric(axes=[OFFSET])
-    met1 = DimwiseAggregatedMetric(axes=[OFFSET])
+    met1 = DimwiseAggregatedMetric(axes=[TIME_STEP])
     test_set = dp.get_test_set()
     rep = ResultReporter(test_set,[mad0],[met1])
     #rep.report_all()
 
-    pipe = Pipeline(dp,mad=mad0,rep=rep)
+    pipe = Pipeline(dp,model_adapter=mad0,reporter=rep)
     results = pipe.run()
     return results
 

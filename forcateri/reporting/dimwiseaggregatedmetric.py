@@ -82,6 +82,7 @@ class DimwiseAggregatedMetric(Metric):
                 (gt_label, gt),
                 (pred_label, pred),
             ) in zip(flat_gt.groupby(group_by), flat_pred.groupby(group_by)):
+                print(f"gt:{gt}, pred_label: {pred}")
                 assert (
                     gt_label == pred_label
                 )  # due to the identical structure before grouping and the same group_by

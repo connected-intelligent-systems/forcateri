@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import pickle
+from clearml import Task
 
 from .metric import Metric
 from ..data.adapterinput import AdapterInput
@@ -27,8 +28,9 @@ class ResultReporter:
         self._make_predictions()
         self.metric_results = self._compute_metrics()
         self._create_plots()
-        return self.metric_results
-
+        #return self.metric_results
+        #TODO UPLOAD THE RESULTS TO CLEARML
+        Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
     def _compute_metrics(self):
         results = []
 
