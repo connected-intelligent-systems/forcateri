@@ -163,7 +163,7 @@ class DartsTCNModel(DartsModelAdapter):
             prediction = self.model.predict(**self._predict_args)
         # self.isquantile = predict_likelihood_parameters
         if isinstance(data,list):
-            print(type(prediction[0]))
+            print(type(prediction[0][0]))
             prediction_ts_format = [DartsModelAdapter.to_time_series(ts=pred,quantiles=self.quantiles) for pred in prediction]
         else:
             prediction_ts_format = DartsModelAdapter.to_time_series(ts=prediction, quantiles=self.quantiles)
