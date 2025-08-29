@@ -33,8 +33,9 @@ def main():
     #rep.report_all()
 
     pipe = Pipeline(dp,model_adapter=mad0,reporter=rep)
-    results = pipe.run()
-    return results
+    #results = pipe.run()
+    pipe.run()
+    #return results
 
 if __name__ == "__main__":
     main()
