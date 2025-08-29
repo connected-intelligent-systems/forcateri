@@ -69,7 +69,7 @@ class ResultReporter:
         for model in self.models:
             predictions_ts_list = model.predict(self.test_data) 
             self.model_predictions.append(predictions_ts_list)
-
+        print(self.model_predictions[0][0].data)
     def _create_plots(self):
         for model_idx, prediction_ts_list in enumerate(self.model_predictions):   
             for i, (adapter_input, pred_ts) in enumerate(zip(self.test_data, prediction_ts_list)):

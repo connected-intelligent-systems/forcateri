@@ -13,6 +13,7 @@ from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
 from .dartsmodeladapter import DartsModelAdapter
 from forcateri.data.timeseries import TimeSeries
 
+
 class DartsTCNModel(DartsModelAdapter):
     def __init__(self, *args, model: Optional[TCNModel] = None, **kwargs):
         """

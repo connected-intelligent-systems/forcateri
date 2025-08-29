@@ -1,7 +1,9 @@
 from clearml import Task
 import os
+from dotenv import load_dotenv
 from .test_pipeline import main
 
+load_dotenv()
 def exec_remotely():
 
     my_task = Task.init(
