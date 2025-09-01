@@ -25,6 +25,7 @@ class TimeSeries:
         data: pd.DataFrame,
         representation=None,
         quantiles: Optional[List[float]] = None,
+        freq: Optional[str] = None
     ):
         self._features = []
         self._representations = []
@@ -81,6 +82,7 @@ class TimeSeries:
         self._timestamps = self.data.index.get_level_values(
             TimeSeries.ROW_INDEX_NAMES[1]
         ).unique()
+        self._check_freq_format(self.data.index.get_level_values(1),freq)
 
     @property
     def features(self):
@@ -103,6 +105,18 @@ class TimeSeries:
     def timestamps(self):
         "The timestamps property"
         return self._timestamps
+
+    def _check_freq_format(self,index:pd.Index, freq:Optional[str]=None) -> None:
+        inferred_freq = pd.infer_freq(index)
+        if freq: 
+            if freq != inferred_freq:
+                raise ValueError(f"Provided freq {freq} is different from inferred freq")
+            self.freq = freq 
+        else:
+            if inferred_freq is None:
+                raise ValueError("Could not infer frequency from index, cannot validate provided freq")
+            self.freq = inferred_freq
+
 
     @staticmethod
     def _check_column_levels(
