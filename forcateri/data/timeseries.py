@@ -82,7 +82,7 @@ class TimeSeries:
         self._timestamps = self.data.index.get_level_values(
             TimeSeries.ROW_INDEX_NAMES[1]
         ).unique()
-        self._check_freq_format(self.data.index.get_level_values(1),freq)
+        #self._check_freq_format(self.data.index.get_level_values(1),freq)
 
     @property
     def features(self):
