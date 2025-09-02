@@ -25,7 +25,7 @@ class TimeSeries:
         data: pd.DataFrame,
         representation=None,
         quantiles: Optional[List[float]] = None,
-        freq: Optional[str] = None
+        freq: Optional[str] = 'h' #TODO remove hardcoded 'h' after
     ):
         self._features = []
         self._representations = []
