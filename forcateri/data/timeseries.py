@@ -446,6 +446,66 @@ class TimeSeries:
         # TODO from quantiles to samples, This method is not really applicable
         raise NotImplementedError()
 
+    def shift_to_horizon(self, horizon: int = 1, in_place: bool = False):
+        """
+        Create shifted versions of the ground truth DataFrame for all horizons
+        from 1 up to the given horizon. Each shifted version gets its own offset
+        in the MultiIndex.
+
+        Parameters
+        ----------
+        horizon : int, default=1
+            Maximum horizon to shift forward.
+        in_place : bool, default=False
+            If True, modifies the object in place. Otherwise, returns a new TimeSeries.
+
+        Returns
+        -------
+        TimeSeries
+            Concatenated TimeSeries with offsets for all horizons from 1..horizon.
+
+        Raises
+        ------
+        ValueError
+            If multiple offsets exist or frequency is missing.
+        """
+        if self.freq is None:
+            raise ValueError(
+                "A regular frequency must be defined in the TimeSeries instance."
+            )
+
+        offsets = self.data.index.get_level_values("offset").unique()
+        if len(offsets) > 1:
+            raise ValueError("Ground truth must have a single offset (0 days).")
+
+        step = pd.tseries.frequencies.to_offset(self.freq).delta
+        shifted_dfs = []
+
+        for h in range(1, horizon + 1):
+            shifted = self.data.iloc[h:].copy()  # drop first h rows
+            new_offset = step * h
+
+            new_index = pd.MultiIndex.from_arrays(
+                [
+                    [new_offset] * len(shifted),
+                    shifted.index.get_level_values("time_stamp"),
+                ],
+                names=self.data.index.names,
+            )
+            shifted.index = new_index
+            shifted_dfs.append(shifted)
+
+        result = pd.concat(shifted_dfs)
+
+        if in_place:
+            self.data = result
+            return self
+        else:
+            return TimeSeries(result, freq=self.freq)
+
+    def shift_to_repeat_to_multihorizon(horizon: int = 1, in_place: bool = False):
+        pass
+
     def to_quantiles(self, quantiles: List[float] = [0.1, 0.5, 0.9]) -> pd.DataFrame:
         """
         Compute empirical quantiles from the time series data.
