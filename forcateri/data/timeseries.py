@@ -25,7 +25,7 @@ class TimeSeries:
         data: pd.DataFrame,
         representation=None,
         quantiles: Optional[List[float]] = None,
-        freq: Optional[str] = 'h' #TODO remove hardcoded 'h' after
+        freq: Optional[str] = None,
     ):
         self._features = []
         self._representations = []
@@ -82,7 +82,7 @@ class TimeSeries:
         self._timestamps = self.data.index.get_level_values(
             TimeSeries.ROW_INDEX_NAMES[1]
         ).unique()
-        #self._check_freq_format(self.data.index.get_level_values(1),freq)
+        self._check_freq_format(self.data.index.get_level_values(1), freq)
 
     @property
     def features(self):
@@ -94,29 +94,85 @@ class TimeSeries:
         "The representation property"
         return self._representations
 
-
     @property
     def offsets(self):
         "The offsets property"
         return self._offsets
-
 
     @property
     def timestamps(self):
         "The timestamps property"
         return self._timestamps
 
-    def _check_freq_format(self,index:pd.Index, freq:Optional[str]=None) -> None:
+    def _check_freq_format(self, index: pd.Index, freq: Optional[str] = None) -> None:
+        """
+        Check and validate the frequency of a pandas DatetimeIndex.
+
+        This method attempts to infer the frequency of the index using pandas'
+        built-in `infer_freq`. If that fails, it manually computes the most
+        common difference between consecutive timestamps. It then validates the
+        inferred frequency against a user-provided frequency, if given.
+
+        Parameters
+        ----------
+        index : pd.Index
+            A pandas DatetimeIndex whose frequency needs to be checked.
+        freq : str, optional
+            Expected frequency string (e.g., 'D', 'H', '15min'). If provided,
+            the method validates the index against this frequency.
+
+        Raises
+        ------
+        TypeError
+            If the index is not a pandas DatetimeIndex.
+        ValueError
+            If the inferred frequency does not match the provided `freq` or if
+            the frequency cannot be inferred.
+        """
+        if not isinstance(index, pd.DatetimeIndex):
+            raise TypeError("Index must be a pandas.DatetimeIndex")
+
+        logger.info("Checking the frequency format of the DataFrame")
+
+        # Try pandas frequency inference first
         inferred_freq = pd.infer_freq(index)
-        if freq: 
-            if freq != inferred_freq:
-                raise ValueError(f"Provided freq {freq} is different from inferred freq")
-            self.freq = freq 
+
+        # Frequency inference logic if pandas fails
+        if inferred_freq is None:
+            logger.info("Pandas infer_freq failed, inferring manually")
+            diffs = index[1:] - index[:-1]
+            # Filter out zero or negative deltas (duplicates or non-monotonic index)
+            diffs = diffs[diffs > pd.Timedelta(0)]
+
+            if len(diffs) > 0:
+                most_common_delta = diffs.value_counts().idxmax()
+                logger.info(
+                    f"Most common delta between timestamps: {most_common_delta}"
+                )
+                try:
+                    inferred_freq = pd.tseries.frequencies.to_offset(
+                        most_common_delta
+                    ).freqstr
+                    logger.info(f"Inferred frequency manually: {inferred_freq}")
+                except ValueError:
+                    logger.warning(
+                        "Could not convert most common delta to frequency string"
+                    )
+                    inferred_freq = None
+
+        # Validation logic
+        if freq:
+            logger.info(f"Validating provided frequency: {freq}")
+            if inferred_freq and freq != inferred_freq:
+                raise ValueError(
+                    f"Provided freq {freq} is different from inferred freq {inferred_freq}"
+                )
+            self.freq = freq
         else:
             if inferred_freq is None:
-                raise ValueError("Could not infer frequency from index, cannot validate provided freq")
+                raise ValueError("Could not infer the frequency from the data")
+            logger.info(f"Frequency set to inferred value: {inferred_freq}")
             self.freq = inferred_freq
-
 
     @staticmethod
     def _check_column_levels(
