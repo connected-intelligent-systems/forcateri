@@ -48,8 +48,10 @@ class ResultReporter:
 
                     # adjust ground truth length to match pred_ts
 
-                    input_chunk = getattr(self.models[model_idx], "input_chunk_length", 1)
-                    reduced_df = met(gt_ts[input_chunk:], pred_ts)
+                    #input_chunk = getattr(self.models[model_idx], "input_chunk_length", 1)
+                    horizon = getattr(self.models[model_idx],"forecast_horizon",1)
+                    gt_shifted = gt_ts.shift_to_horizon(horizon=horizon)
+                    reduced_df = met(gt_shifted, pred_ts)
                     met_results.append(reduced_df)
 
                 model_results[met.__class__.__name__] = met_results

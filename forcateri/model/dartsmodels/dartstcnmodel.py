@@ -72,7 +72,7 @@ class DartsTCNModel(DartsModelAdapter):
                 ),
                 #pl_trainer_kwargs={"limit_train_batches": 25, "limit_val_batches": 25}
             )
-
+        self.forecast_horizon = kwargs.get("forecast_horizon",5)
         self.scaler_target = Scaler()
         self.scaler_cov = Scaler()
 
