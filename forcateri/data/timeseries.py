@@ -476,7 +476,7 @@ class TimeSeries:
 
         offsets = self.data.index.get_level_values("offset").unique()
         if len(offsets) > 1:
-            raise ValueError("Ground truth must have a single offset (0 days).")
+            raise ValueError("Shifting is not supported for TimeSeries with offsets other than 0.")
 
         step = pd.tseries.frequencies.to_offset(self.freq).delta
         shifted_dfs = []

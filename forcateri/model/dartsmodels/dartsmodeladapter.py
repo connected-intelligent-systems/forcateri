@@ -194,8 +194,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 pd.Timedelta(i, freq)
                 for i in range(1, len(ts_obj.data.index.get_level_values(1)) + 1)
             ]
+            adjusted_times = ts_obj.data.index.get_level_values(1)- pd.to_timedelta(new_offsets)
             ts_obj.data.index = pd.MultiIndex.from_arrays(
-                [new_offsets, ts_obj.data.index.get_level_values(1)],
+                [new_offsets, adjusted_times],
                 names=ts_obj.data.index.names,
             )
             return ts_obj
