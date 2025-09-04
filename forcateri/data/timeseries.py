@@ -448,61 +448,58 @@ class TimeSeries:
 
     def shift_to_horizon(self, horizon: int = 1, in_place: bool = False):
         """
-        Create shifted versions of the ground truth DataFrame for all horizons
-        from 1 up to the given horizon. Each shifted version gets its own offset
-        in the MultiIndex.
+        Shifts the time series data forward by a specified horizon.
+
+        This method moves the values in the time series `horizon` steps forward,
+        effectively aligning each timestamp with the value that occurs `horizon`
+        steps ahead. The index offsets are adjusted accordingly to reflect the shift.
 
         Parameters
         ----------
         horizon : int, default=1
-            Maximum horizon to shift forward.
+            The number of steps to shift the time series forward. Positive values
+            move the series forward in time.
         in_place : bool, default=False
-            If True, modifies the object in place. Otherwise, returns a new TimeSeries.
+            If True, modifies the current TimeSeries object and returns `self`.
+            If False, returns a new TimeSeries instance with the shifted data.
 
         Returns
         -------
         TimeSeries
-            Concatenated TimeSeries with offsets for all horizons from 1..horizon.
+            The shifted TimeSeries. If `in_place=True`, returns the current instance.
+            Otherwise, returns a new TimeSeries object with shifted data.
 
-        Raises
-        ------
-        ValueError
-            If multiple offsets exist or frequency is missing.
+        Notes
+        -----
+        - The shifting operation fills the vacated positions with NaNs.
+        - The MultiIndex of the DataFrame is updated so that the first level (offsets)
+        is incremented by `horizon * freq`, while the second level (original timestamps)
+        remains unchanged.
         """
         if self.freq is None:
             raise ValueError(
                 "A regular frequency must be defined in the TimeSeries instance."
             )
-
-        offsets = self.data.index.get_level_values("offset").unique()
-        if len(offsets) > 1:
+        
+        if len(self._offsets) > 1:
             raise ValueError("Shifting is not supported for TimeSeries with offsets other than 0.")
-
-        step = pd.tseries.frequencies.to_offset(self.freq).delta
-        shifted_dfs = []
-
-        for h in range(1, horizon + 1):
-            shifted = self.data.iloc[h:].copy()  # drop first h rows
-            new_offset = step * h
-
-            new_index = pd.MultiIndex.from_arrays(
-                [
-                    [new_offset] * len(shifted),
-                    shifted.index.get_level_values("time_stamp"),
-                ],
-                names=self.data.index.names,
-            )
-            shifted.index = new_index
-            shifted_dfs.append(shifted)
-
-        result = pd.concat(shifted_dfs)
-
+        
+        offset_delta = pd.Timedelta(horizon,self.freq)
+        shifted_data = self.data.shift(-horizon)
+        shifted_index = pd.MultiIndex.from_arrays(
+            [
+                shifted_data.index.get_level_values(0) + offset_delta,
+                shifted_data.index.get_level_values(1),
+            ],
+            names=TimeSeries.ROW_INDEX_NAMES
+        )
+        shifted_data.set_index(shifted_index,inplace=True)
         if in_place:
-            self.data = result
+            self.data = shifted_data
             return self
         else:
-            return TimeSeries(result, freq=self.freq)
-
+            return TimeSeries(shifted_data)
+        
     def shift_to_repeat_to_multihorizon(horizon: int = 1, in_place: bool = False):
         pass
 
