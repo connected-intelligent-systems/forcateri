@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
 from functools import reduce
 
+
 import pandas as pd
 from darts import TimeSeries as DartsTimeSeries
 from darts.dataprocessing.transformers import Scaler
@@ -71,7 +72,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             # Prefix validation covariate keys with 'val_'
             for key, value in val_covariate_args.items():
                 fit_args[f"val_{key}"] = value
-        
+
         self.model.fit(**fit_args)
 
     def prepare_predict_args(
@@ -87,7 +88,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self._predict_args = predict_args
 
     @abstractmethod
-    def predict(self, *args,**kwargs) -> Union[TimeSeries, List[TimeSeries]]:
+    def predict(self, *args, **kwargs) -> Union[TimeSeries, List[TimeSeries]]:
         raise NotImplementedError(
             "The predict method is not implemented in the base DartsModelAdapter class. "
             "Please implement this method in the subclass."
@@ -178,32 +179,39 @@ class DartsModelAdapter(ModelAdapter, ABC):
         ts: Union[DartsTimeSeries, List[DartsTimeSeries]],
         quantiles: Optional[List[float]] = None,
         freq: str = "h",
-    ) -> Union[pd.DataFrame, List[pd.DataFrame]]:
+    ) -> TimeSeries:
         """
         Converts a DartsTimeSeries or a list of DartsTimeSeries into a pandas DataFrame (or list of DataFrames).
         """
 
-        def convert_single_ts(darts_ts: DartsTimeSeries) -> pd.DataFrame:
+        def convert_single_ts(darts_ts: DartsTimeSeries) -> TimeSeries:
+
             darts_df = darts_ts.to_dataframe()
+
+            new_offsets = [
+                pd.Timedelta(i, freq) for i in range(1, len(darts_df.index) + 1)
+            ]
+            adjusted_times = darts_df.index - pd.to_timedelta(new_offsets)
+            darts_df.index = pd.MultiIndex.from_arrays(
+                [new_offsets, adjusted_times],
+                names=TimeSeries.ROW_INDEX_NAMES,
+            )
+
             ts_obj = TimeSeries(
                 data=darts_df,
                 representation=TimeSeries.QUANTILE_REP,
                 quantiles=quantiles,
             )
-            new_offsets = [
-                pd.Timedelta(i, freq)
-                for i in range(1, len(ts_obj.data.index.get_level_values(1)) + 1)
-            ]
-            adjusted_times = ts_obj.data.index.get_level_values(1)- pd.to_timedelta(new_offsets)
-            ts_obj.data.index = pd.MultiIndex.from_arrays(
-                [new_offsets, adjusted_times],
-                names=ts_obj.data.index.names,
-            )
             return ts_obj
 
         if isinstance(ts, list):
-            ts_list = [convert_single_ts(darts_ts) for darts_ts in ts]
-            return reduce(lambda x, y: x + y, ts_list)
+            df = pd.concat(
+                [convert_single_ts(darts_ts).data for darts_ts in ts], axis=0
+            )
+            return TimeSeries(
+                data=df, representation=TimeSeries.QUANTILE_REP, quantiles=quantiles
+            )
+
         else:
             return convert_single_ts(ts)
 

@@ -49,11 +49,11 @@ class DartsTCNModel(DartsModelAdapter):
         """
 
         super().__init__(*args, **kwargs)
-        self.quantiles = kwargs.get("quantiles", [0.1,0.5,0.9])
+        self.quantiles = kwargs.get("quantiles", [0.1, 0.5, 0.9])
         if model is not None:
             self.model = model
         else:
-            self.input_chunk_length=kwargs.get("input_chunk_length", 7)
+            self.input_chunk_length = kwargs.get("input_chunk_length", 7)
             self.model = TCNModel(
                 input_chunk_length=self.input_chunk_length,
                 output_chunk_length=kwargs.get("output_chunk_length", 5),
@@ -70,9 +70,9 @@ class DartsTCNModel(DartsModelAdapter):
                 likelihood=kwargs.get(
                     "likelihood", QuantileRegression(quantiles=self.quantiles)
                 ),
-                #pl_trainer_kwargs={"limit_train_batches": 25, "limit_val_batches": 25}
+                # pl_trainer_kwargs={"limit_train_batches": 25, "limit_val_batches": 25}
             )
-        self.forecast_horizon = kwargs.get("forecast_horizon",5)
+        self.forecast_horizon = kwargs.get("forecast_horizon", 5)
         self.scaler_target = Scaler()
         self.scaler_cov = Scaler()
 
@@ -99,7 +99,7 @@ class DartsTCNModel(DartsModelAdapter):
         """
 
         try:
-            
+
             super().fit(train_data=train_data, val_data=val_data, **kwargs)
 
         except ModelAdapterError as e:
@@ -162,11 +162,16 @@ class DartsTCNModel(DartsModelAdapter):
                 self._predict_args["n"] = n
             prediction = self.model.predict(**self._predict_args)
         # self.isquantile = predict_likelihood_parameters
-        if isinstance(data,list):
-            print(type(prediction[0][0]))
-            prediction_ts_format = [DartsModelAdapter.to_time_series(ts=pred,quantiles=self.quantiles) for pred in prediction]
+        if isinstance(data, list):
+            # print(type(prediction[0][0]))
+            prediction_ts_format = [
+                DartsModelAdapter.to_time_series(ts=pred, quantiles=self.quantiles)
+                for pred in prediction
+            ]
         else:
-            prediction_ts_format = DartsModelAdapter.to_time_series(ts=prediction, quantiles=self.quantiles)
+            prediction_ts_format = DartsModelAdapter.to_time_series(
+                ts=prediction, quantiles=self.quantiles
+            )
         return prediction_ts_format
 
     def tune(
