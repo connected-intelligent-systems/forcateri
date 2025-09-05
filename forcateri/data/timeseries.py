@@ -82,7 +82,7 @@ class TimeSeries:
         self._timestamps = self.data.index.get_level_values(
             TimeSeries.ROW_INDEX_NAMES[1]
         ).unique()
-        self._check_freq_format(self.data.index.get_level_values(1), freq)
+        self._check_freq_format(self.data.index.get_level_values(0) + self.data.index.get_level_values(1), freq)
 
     @property
     def features(self):
@@ -812,7 +812,10 @@ class TimeSeries:
             raise ValueError(
                 "TimeSeries objects must have the same index and column names to perform this operation."
             )
-
+        if not self.data.index.equals(other.data.index):
+            raise ValueError(f"TimeSeries indices do not match:\n"
+            f"self.index = {self.data.index}\n"
+            f"other.index = {other.data.index}")
     def __neg__(self) -> TimeSeries:
         """
         Return a new TimeSeries instance with all values negated.
