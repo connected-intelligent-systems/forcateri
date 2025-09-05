@@ -503,10 +503,49 @@ class TimeSeries:
             self.data = shifted_data
             return self
         else:
-            return TimeSeries(shifted_data)
+            return TimeSeries(data=shifted_data)
 
-    def shift_to_repeat_to_multihorizon(horizon: int = 1, in_place: bool = False):
-        pass
+    def shift_to_repeat_to_multihorizon(self, horizon: int = 1, in_place: bool = False):
+        """
+        Creates a multi-horizon version of the time series by repeatedly applying
+        `shift_to_horizon` for horizons 1 through `horizon`, and concatenating
+        the results along the offset axis.
+
+        Parameters
+        ----------
+        horizon : int, default=1
+            The maximum forecast horizon to generate. All intermediate horizons
+            from 1 up to `horizon` are included.
+        in_place : bool, default=False
+            If True, replaces the current TimeSeries data with the multi-horizon
+            concatenated result and returns self. If False, returns a new
+            TimeSeries instance.
+
+        Returns
+        -------
+        TimeSeries
+            A multi-horizon TimeSeries where the first index level ("offset")
+            distinguishes between different forecast horizons. If `in_place=True`,
+            returns the modified TimeSeries instance.
+
+        Notes
+        -----
+        - This method reuses `shift_to_horizon` for each horizon step.
+        - NaN values may be introduced by the shifting operation (as in
+        `shift_to_horizon`).
+        - The resulting DataFrame contains stacked horizons, with offset values
+        increasing from 1 to `horizon`.
+        """
+        ts_list = []
+        for h in range(1, horizon + 1):
+            ts_shifted = self.shift_to_horizon(h)
+            ts_list.append(ts_shifted)
+        shifted_data = pd.concat([ts.data for ts in ts_list], axis=0)
+        if in_place:
+            self.data = shifted_data
+            return self
+        else:
+            return TimeSeries(data=shifted_data)
 
     def to_quantiles(self, quantiles: List[float] = [0.1, 0.5, 0.9]) -> pd.DataFrame:
         """
