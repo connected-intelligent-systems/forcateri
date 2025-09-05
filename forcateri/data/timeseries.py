@@ -82,7 +82,10 @@ class TimeSeries:
         self._timestamps = self.data.index.get_level_values(
             TimeSeries.ROW_INDEX_NAMES[1]
         ).unique()
-        self._check_freq_format(self.data.index.get_level_values(0) + self.data.index.get_level_values(1), freq)
+        self._check_freq_format(
+            self.data.index.get_level_values(0) + self.data.index.get_level_values(1),
+            freq,
+        )
 
     @property
     def features(self):
@@ -480,26 +483,28 @@ class TimeSeries:
             raise ValueError(
                 "A regular frequency must be defined in the TimeSeries instance."
             )
-        
+
         if len(self._offsets) > 1:
-            raise ValueError("Shifting is not supported for TimeSeries with offsets other than 0.")
-        
-        offset_delta = pd.Timedelta(horizon,self.freq)
+            raise ValueError(
+                "Shifting is not supported for TimeSeries with offsets other than 0."
+            )
+
+        offset_delta = pd.Timedelta(horizon, self.freq)
         shifted_data = self.data.shift(-horizon)
         shifted_index = pd.MultiIndex.from_arrays(
             [
                 shifted_data.index.get_level_values(0) + offset_delta,
                 shifted_data.index.get_level_values(1),
             ],
-            names=TimeSeries.ROW_INDEX_NAMES
+            names=TimeSeries.ROW_INDEX_NAMES,
         )
-        shifted_data.set_index(shifted_index,inplace=True)
+        shifted_data.set_index(shifted_index, inplace=True)
         if in_place:
             self.data = shifted_data
             return self
         else:
             return TimeSeries(shifted_data)
-        
+
     def shift_to_repeat_to_multihorizon(horizon: int = 1, in_place: bool = False):
         pass
 
@@ -813,9 +818,12 @@ class TimeSeries:
                 "TimeSeries objects must have the same index and column names to perform this operation."
             )
         if not self.data.index.equals(other.data.index):
-            raise ValueError(f"TimeSeries indices do not match:\n"
-            f"self.index = {self.data.index}\n"
-            f"other.index = {other.data.index}")
+            raise ValueError(
+                f"TimeSeries indices do not match:\n"
+                f"self.index = {self.data.index}\n"
+                f"other.index = {other.data.index}"
+            )
+
     def __neg__(self) -> TimeSeries:
         """
         Return a new TimeSeries instance with all values negated.
@@ -875,7 +883,8 @@ class TimeSeries:
             )
 
         # Handle same representations (or other combinations with direct pandas add)
-        new_data = self.data.add(other.data, fill_value=0)
+        # new_data = self.data.add(other.data, fill_value=0)
+        new_data = self.data + other.data
         ts_kwargs = {
             "data": new_data,
             "representation": self.representation,
