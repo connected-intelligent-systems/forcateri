@@ -55,6 +55,6 @@ if __name__ == "__main__":
     with open(config_path.joinpath(args.config + '.yaml'),"r") as infile:
             parsed_config = yaml.safe_load(infile)
     print(parsed_config.keys())
-    #exec_taskenq(**parsed_config)
+    exec_taskenq(**parsed_config)
     
     

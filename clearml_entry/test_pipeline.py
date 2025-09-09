@@ -25,7 +25,7 @@ def main(**kwargs):
     #     'temperature_room_avg':SeriesRole.OBSERVED,}
     dp = DataProvider(data_sources=[ds0], roles=roles)
 
-    mad0 = DartsTCNModel(kwargs=kwargs['model_params'])
+    mad0 = DartsTCNModel(kwargs=kwargs)
     #met0 = DimwiseAggregatedQuantileLoss(axes=[OFFSET])
     #met0 = DimwiseAggregatedMetric(axes=[OFFSET])
     met1 = DimwiseAggregatedMetric(axes=[TIME_STEP])
