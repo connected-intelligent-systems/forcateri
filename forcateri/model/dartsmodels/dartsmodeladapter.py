@@ -3,7 +3,6 @@ import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, List, Optional, Tuple, Union
-from functools import reduce
 
 
 import pandas as pd
@@ -47,8 +46,17 @@ class DartsModelAdapter(ModelAdapter, ABC):
         }
         args = {}
         for key, (supports, value) in covariate_map.items():
-            if supports and value is not None:
-                args[key] = value
+            if not supports or value is None:
+                continue
+
+            # if value is a list, skip if all elements are None or empty
+            if isinstance(value, list):
+                if all(v is None or (hasattr(v, '__len__') and len(v) == 0) for v in value):
+                    continue
+           
+            
+            args[key] = value
+        
         return args
 
     def fit(
@@ -58,6 +66,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         Fits the model using the provided training and validation data.
         """
         target, known, observed, static = self.convert_input(train_data)
+        print(static)
         fit_args = {"series": target}
         fit_args.update(self._get_covariate_args(known, observed, static))
 

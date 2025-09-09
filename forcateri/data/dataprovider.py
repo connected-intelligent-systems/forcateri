@@ -49,7 +49,7 @@ class DataProvider:
         self.target = []
         self.known = []
         self.observed = []
-        self.static = Dict[str, float]
+        self.static: Dict[str, float] = None
         # self.roles_reversed = dict(zip(roles.values(), roles.keys()))
         self._separate_ts()
 

@@ -1,6 +1,8 @@
 from forcateri.model.dartsmodels.dartstcnmodel import DartsTCNModel
+from forcateri.model.dartsmodels.dartstftmodel import DartsTFTModel
 from forcateri.baltbestapi.baltbestaggregatedapidata import BaltBestAggregatedAPIData
 import pandas as pd
+import yaml
 from forcateri.data.dataprovider import DataProvider, SeriesRole
 # from darts.models import TCNModel
 # from darts.utils.likelihood_models import QuantileRegression
@@ -9,6 +11,7 @@ from forcateri.reporting.dimwiseaggregatedmetric import DimwiseAggregatedMetric
 from forcateri.reporting.dimwiseaggregatedquantileloss import DimwiseAggregatedQuantileLoss
 from forcateri.reporting.resultreporter import ResultReporter
 from forcateri.controls.pipeline import Pipeline
+from pathlib import Path
 
 
 OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
@@ -23,20 +26,28 @@ def main(**kwargs):
         'temperature_1_max':SeriesRole.OBSERVED, 
         'temperature_2_max':SeriesRole.OBSERVED,
         'temperature_room_avg':SeriesRole.OBSERVED,}
+    
     dp = DataProvider(data_sources=[ds0], roles=roles)
 
     mad0 = DartsTCNModel(kwargs=kwargs)
+    mad1 = DartsTFTModel(kwargs=kwargs)
     #met0 = DimwiseAggregatedQuantileLoss(axes=[OFFSET])
     #met0 = DimwiseAggregatedMetric(axes=[OFFSET])
     met1 = DimwiseAggregatedMetric(axes=[TIME_STEP])
     test_set = dp.get_test_set()
-    rep = ResultReporter(test_set,[mad0],[met1])
+    rep = ResultReporter(test_set,[mad0,mad1],[met1])
     #rep.report_all()
-
-    pipe = Pipeline(dp,model_adapter=mad0,reporter=rep)
+    print(test_set[0].static)
+    pipe = Pipeline(dp,model_adapter=[mad0,mad1],reporter=rep)
     #results = pipe.run()
     pipe.run()
     #return results
 
 if __name__ == "__main__":
-    main()
+
+    project_root=Path(__file__).parent.parent
+    config_path = project_root.joinpath("configs")
+    config_name = 'tft_pipeline'
+    with open(config_path.joinpath(config_name + '.yaml'),"r") as infile:
+            parsed_config = yaml.safe_load(infile)
+    main(**parsed_config)
