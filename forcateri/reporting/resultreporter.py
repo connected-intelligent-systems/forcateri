@@ -51,6 +51,10 @@ class ResultReporter:
                     #input_chunk = getattr(self.models[model_idx], "input_chunk_length", 1)
                     horizon = getattr(self.models[model_idx],"forecast_horizon",1)
                     gt_shifted = gt_ts.shift_to_repeat_to_multihorizon(horizon=horizon)
+                    common_index = gt_shifted.data.index.intersection(pred_ts.data.index)
+
+                    gt_shifted.data = gt_shifted.data.loc[common_index]
+                    pred_ts.data = pred_ts.data.loc[common_index]
                     reduced_df = met(gt_shifted, pred_ts)
                     met_results.append(reduced_df)
 

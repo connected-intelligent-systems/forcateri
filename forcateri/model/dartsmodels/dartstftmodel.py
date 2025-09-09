@@ -46,7 +46,7 @@ class DartsTFTModel(DartsModelAdapter):
                 dropout=kwargs.get("dropout", 0.1),
                 lstm_layers=kwargs.get("lstm_layers",2),
                 batch_size=kwargs.get("batch_size",32),
-                n_epochs=kwargs.get("n_epochs",50),
+                n_epochs=kwargs.get("n_epochs",5),
                 random_state=kwargs.get("random_state",42),
                 likelihood=QuantileRegression(self.quantiles),
                 pl_trainer_kwargs=trainer_kwargs,

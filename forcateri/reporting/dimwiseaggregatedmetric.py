@@ -86,14 +86,8 @@ class DimwiseAggregatedMetric(Metric):
                 assert (
                     gt_label == pred_label
                 )  # due to the identical structure before grouping and the same group_by
-                common_index = gt.index.intersection(pred.index)
-                if common_index.empty:
-                    logger.warning(f"No overlapping index for group {gt_label}, skipping.")
-                    continue
-                gt_aligned = gt.loc[common_index]
-                pred_aligned = pred.loc[common_index]
-                reduced = self.reduction(gt_aligned.values, pred_aligned.values)
+                reduced = self.reduction(gt.values, pred.values)
                 reduced_df.loc[pred_label] = reduced
-                print(gt_aligned, pred_aligned)
+                print(gt, pred)
                 print(f"Reduced:{reduced}")
             return reduced_df
