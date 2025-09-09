@@ -32,10 +32,10 @@ class ResultReporter:
         #TODO UPLOAD THE RESULTS TO CLEARML
         Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
     def _compute_metrics(self):
-        results = []
+        results = {}
 
         # loop over each model's predictions
-        for model_idx, prediction_ts_list in enumerate(self.model_predictions):
+        for model, prediction_ts_list in self.model_predictions.items():
             model_results = {}
 
             # loop over each metric
@@ -49,7 +49,7 @@ class ResultReporter:
                     # adjust ground truth length to match pred_ts
 
                     #input_chunk = getattr(self.models[model_idx], "input_chunk_length", 1)
-                    horizon = getattr(self.models[model_idx],"forecast_horizon",1)
+                    horizon = getattr(model,"forecast_horizon",1)
                     gt_shifted = gt_ts.shift_to_repeat_to_multihorizon(horizon=horizon)
                     common_index = gt_shifted.data.index.intersection(pred_ts.data.index)
 
@@ -60,7 +60,7 @@ class ResultReporter:
 
                 model_results[met.__class__.__name__] = met_results
 
-            results.append(model_results)
+            results[model.__class__.__name__] = model_results
 
         return results
     
@@ -71,14 +71,14 @@ class ResultReporter:
         pass
     
     def _make_predictions(self):
-        self.model_predictions = []
+        self.model_predictions = {}
         for model in self.models:
             predictions_ts_list = model.predict(self.test_data) 
-            self.model_predictions.append(predictions_ts_list)
-        print(self.model_predictions[0][0].data)
+            self.model_predictions[model]=predictions_ts_list
+        #print(self.model_predictions[0][0].data)
 
     def _create_plots(self):
-        for model_idx, prediction_ts_list in enumerate(self.model_predictions):   
+        for model, prediction_ts_list in self.model_predictions.items():   
             for i, (adapter_input, pred_ts) in enumerate(zip(self.test_data, prediction_ts_list)):
                 gt_ts = adapter_input.target  # TimeSeries object
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
@@ -129,7 +129,7 @@ class ResultReporter:
                     )
 
                     # Aesthetics
-                    ax.set_title(f"Model {model_idx} — Sample {i} — Offset: {offset}", fontsize=14)
+                    ax.set_title(f"Model {model} — Sample {i} — Offset: {offset}", fontsize=14)
                     ax.set_xlabel("Time", fontsize=12, weight="bold")
                     ax.set_ylabel("Value", fontsize=12)
                     ax.grid(True, linestyle="--", alpha=0.4)
@@ -138,9 +138,9 @@ class ResultReporter:
                     plt.tight_layout()
 
               
-                    safe_offset = str(offset).replace(" ", "_").replace(":", "-")
+                    
                     #plt.savefig(f"plot_model_{model_idx}_sample_{i}_offset_{safe_offset}.png")
-                    plt.show()
+                    #plt.show()
                     #plt.close()
 
     def _report_plots():
