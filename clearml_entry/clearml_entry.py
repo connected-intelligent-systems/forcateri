@@ -2,6 +2,9 @@ from clearml import Task
 import os
 from dotenv import load_dotenv
 from .test_pipeline import main
+from pathlib import Path
+import argparse
+import yaml
 
 load_dotenv()
 def exec_remotely():
@@ -19,7 +22,7 @@ def exec_remotely():
     print("Test on remote")
     results = main()
     Task.current_task().upload_artifact(name='results', artifact_object=results)
-def exec_taskenq():
+def exec_taskenq(**kwargs):
     token = os.environ["GIT_OAUTH_TOKEN"]
     task = Task.create(
         project_name="ForeSightNEXT/BaltBest",
@@ -32,12 +35,26 @@ def exec_taskenq():
         docker_args=(
             f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token}"
         ),
-        #argparse_args=list(kwargs.items()),
+        argparse_args=list(kwargs.items()),
     )
     Task.enqueue(task=task, queue_name="default")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Pipeline config parser")
+    parser.add_argument(
+        '--config',
+        type = str,
+        #required = True,
+        default = 'tcn_pipeline',
+        help = 'Specify the config for the training process'
+    )
+    args = parser.parse_args()
+    project_root=Path(__file__).parent.parent
+    config_path = project_root.joinpath("configs")
 
-    exec_taskenq()
+    with open(config_path.joinpath(args.config + '.yaml'),"r") as infile:
+            parsed_config = yaml.safe_load(infile)
+    print(parsed_config.keys())
+    #exec_taskenq(**parsed_config)
     
     

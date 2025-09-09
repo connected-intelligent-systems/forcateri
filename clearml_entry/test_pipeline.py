@@ -14,17 +14,18 @@ from forcateri.controls.pipeline import Pipeline
 OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
 FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
-def main():
+def main(**kwargs):
     ds0 = BaltBestAggregatedAPIData()
-    roles = {
-        'q_hca': SeriesRole.TARGET, 
-        'temperature_outdoor_avg':SeriesRole.KNOWN, 
-        'temperature_1_max':SeriesRole.OBSERVED, 
-        'temperature_2_max':SeriesRole.OBSERVED,
-        'temperature_room_avg':SeriesRole.OBSERVED,}
+    roles = kwargs['roles']
+    # roles = {
+    #     'q_hca': SeriesRole.TARGET, 
+    #     'temperature_outdoor_avg':SeriesRole.KNOWN, 
+    #     'temperature_1_max':SeriesRole.OBSERVED, 
+    #     'temperature_2_max':SeriesRole.OBSERVED,
+    #     'temperature_room_avg':SeriesRole.OBSERVED,}
     dp = DataProvider(data_sources=[ds0], roles=roles)
 
-    mad0 = DartsTCNModel()
+    mad0 = DartsTCNModel(kwargs=kwargs['model_params'])
     #met0 = DimwiseAggregatedQuantileLoss(axes=[OFFSET])
     #met0 = DimwiseAggregatedMetric(axes=[OFFSET])
     met1 = DimwiseAggregatedMetric(axes=[TIME_STEP])
