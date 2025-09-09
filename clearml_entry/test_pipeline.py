@@ -16,13 +16,13 @@ FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
 def main(**kwargs):
     ds0 = BaltBestAggregatedAPIData()
-    roles = kwargs['roles']
-    # roles = {
-    #     'q_hca': SeriesRole.TARGET, 
-    #     'temperature_outdoor_avg':SeriesRole.KNOWN, 
-    #     'temperature_1_max':SeriesRole.OBSERVED, 
-    #     'temperature_2_max':SeriesRole.OBSERVED,
-    #     'temperature_room_avg':SeriesRole.OBSERVED,}
+    #roles = kwargs['roles']
+    roles = {
+        'q_hca': SeriesRole.TARGET, 
+        'temperature_outdoor_avg':SeriesRole.KNOWN, 
+        'temperature_1_max':SeriesRole.OBSERVED, 
+        'temperature_2_max':SeriesRole.OBSERVED,
+        'temperature_room_avg':SeriesRole.OBSERVED,}
     dp = DataProvider(data_sources=[ds0], roles=roles)
 
     mad0 = DartsTCNModel(kwargs=kwargs)
