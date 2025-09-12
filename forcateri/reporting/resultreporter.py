@@ -26,7 +26,7 @@ class ResultReporter:
         self,
     ):  # dont forget to remove predictions after testing
         self._make_predictions()
-        self.metric_results = self._compute_metrics()
+        self.metric_results = self._report_metrics()
         self._plot_predictions()
         
 
@@ -72,20 +72,32 @@ class ResultReporter:
 
         for model_name, model_metrics in metric_results.items():
             for metric_name, metric_list in model_metrics.items():
-                # Each metric_list contains one DataFrame per test sample
                 fig, ax = plt.subplots(figsize=(10, 5))
                 for i, df in enumerate(metric_list):
-                    # If the metric returns a DataFrame, plot its values
                     if isinstance(df, pd.DataFrame):
+                        # Dynamically select the first index level for x-axis
+                        if isinstance(df.index, pd.MultiIndex):
+                            x = df.index.get_level_values(df.index.names[0])
+                            xlabel = df.index.names[0]
+                        else:
+                            x = df.index
+                            xlabel = "Index"
                         for col in df.columns:
-                            ax.plot(df.index, df[col], label=f"Sample {i} - {col}")
+                            ax.plot(x, df[col], label=f"Sample {i} - {col}")
                     elif isinstance(df, pd.Series):
-                        ax.plot(df.index, df.values, label=f"Sample {i}")
+                        if isinstance(df.index, pd.MultiIndex):
+                            x = df.index.get_level_values(df.index.names[0])
+                            xlabel = df.index.names[0]
+                        else:
+                            x = df.index
+                            xlabel = "Index"
+                        ax.plot(x, df.values, label=f"Sample {i}")
                     else:
                         ax.plot([i], [df], marker='o', label=f"Sample {i}")
+                        xlabel = "Sample"
 
                 ax.set_title(f"{metric_name} for {model_name}")
-                ax.set_xlabel("Index")
+                ax.set_xlabel(xlabel)
                 ax.set_ylabel("Metric Value")
                 ax.legend()
                 plt.tight_layout()
