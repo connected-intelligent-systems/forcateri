@@ -29,8 +29,7 @@ Models:
 Dataset: 
   Baltbestapi:
     roles:
-      q_hca: SeriesRole.TARGET 
-      temperature_outdoor_avg: SeriesRole.KNOWN 
-      temperature_1_max: SeriesRole.OBSERVED
-      temperature_2_max: SeriesRole.OBSERVED
-      temperature_room_avg: SeriesRole.OBSERVED
+      SeriesRole.TARGET: q_hca
+      SeriesRole.KNOWN: temperature_outdoor_avg
+      SeriesRole.OBSERVED: ['temperature_1_max', 'temperature_2_max','temperature_room_avg']
+

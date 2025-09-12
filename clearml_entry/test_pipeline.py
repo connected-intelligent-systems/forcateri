@@ -23,7 +23,6 @@ FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
 def extract_config(config: dict) -> list[tuple]:
     args = []
-    role_args = {}
 
     for section, section_content in config.items():
         if section == "Models":
@@ -31,47 +30,41 @@ def extract_config(config: dict) -> list[tuple]:
                 for param_name, param_value in params.items():
                     arg_key = f"model_{model_name}_{param_name}"
                     args.append((arg_key, param_value))
-
         elif section == "Dataset":
             for dataset_name, dataset_content in section_content.items():
                 if isinstance(dataset_content, dict):
                     for subkey, subcontent in dataset_content.items():
                         if subkey == "roles":
-                            for feature, role in subcontent.items():
+                            for role, features in subcontent.items():
                                 arg_key = f"Dataset_{dataset_name}_{role}"
-                                role_args.setdefault(arg_key, []).append(feature)
+                                # If features is a list, join as comma-separated string
+                                if isinstance(features, list):
+                                    args.append((arg_key, ",".join(features)))
+                                else:
+                                    args.append((arg_key, features))
                         else:
                             arg_key = f"{dataset_name}_{subkey}"
                             args.append((arg_key, subcontent))
-    # Add aggregated role arguments
-    for k, v in role_args.items():
-        args.append((k, ",".join(v)))
     return args
 
 def from_args_to_kwargs(*args) -> dict:
-    """
-    Convert list of tuples (from extract_config) back into structured kwargs.
-    Example input:
-      ('DartsTFTModel_input_chunk_length', 7)
-      ('DartsTCNModel_kernel_size', 3)
-      ('Baltbestapi_TARGET', 'q_hca')
-    """
-    kwargs = {"Models": {},  "Dataset": {}}
+    kwargs = {"Models": {}, "Dataset": {}}
     for key, value in args:
-        #print(key)
-        if key.startswith("model"):  # Model config
-            keysplit = key.split("_",2)
+        if key.startswith("model"):
+            keysplit = key.split("_", 2)
             model_name, param = keysplit[1], keysplit[2]
-            
             kwargs["Models"].setdefault(model_name, {})[param] = value
-
-        elif key.startswith("Dataset"):  # Dataset or role
-            _, dataset_name, subkey = key.split("_", 2)
-            print(subkey)
-            kwargs['Dataset'].setdefault(dataset_name,{"roles":{}})
-            if subkey in ["SeriesRole.TARGET", "SeriesRole.KNOWN", "SeriesRole.OBSERVED"]:
-                kwargs["Dataset"][dataset_name]["roles"][value] = subkey
-
+        elif key.startswith("Dataset"):
+            _, dataset_name, role_key = key.split("_", 2)
+            kwargs["Dataset"].setdefault(dataset_name, {"roles": {}})
+            # If value is a comma-separated string, split to list
+            if "," in value:
+                features = value.split(",")
+            else:
+                features = [value]
+            role_enum = getattr(SeriesRole, role_key.split(".")[-1])
+            for f in features:
+                kwargs["Dataset"][dataset_name]["roles"][f] = role_enum
     return kwargs
 
 def arg_parser():
@@ -111,12 +104,9 @@ def main(*args):
     #     'temperature_2_max':SeriesRole.OBSERVED,
     #     'temperature_room_avg':SeriesRole.OBSERVED,}
     roles = kwargs['Dataset']['Baltbestapi']['roles']
-    roles_enum = {
-        feature: getattr(SeriesRole, role_str.split('.')[-1])
-        for feature, role_str in roles.items()
-    }
+    print(roles)
     
-    dp = DataProvider(data_sources=[ds0], roles=roles_enum)
+    dp = DataProvider(data_sources=[ds0], roles=roles)
     #print(kwargs['Models'].keys())
     mad0 = DartsTCNModel(kwargs=kwargs['Models']['DartsTCNModel'])
     mad1 = DartsTFTModel(kwargs=kwargs['Models']['DartsTFTModel'])
