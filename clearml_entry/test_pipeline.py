@@ -87,14 +87,16 @@ if __name__ == "__main__":
     
     parser = argparse.ArgumentParser()
 
-    # Add arguments to the parser dynamically based on the command-line arguments
+    # Add arguments dynamically if you don’t know them in advance
     for arg in sys.argv[1:]:
-        if arg.startswith('--'):
-            # Get the argument name and add it to the parser
-            arg_name = arg[2:]
-            parser.add_argument(arg, dest=arg_name)
+        if arg.startswith("--"):
+            name = arg.split("=")[0][2:]  # strip leading --
+            parser.add_argument(f"--{name}")
+
+    cli_args = parser.parse_args()
+    print(cli_args)
 
     # Parse the command-line arguments
-    args = parser.parse_args()
+
     
-    main(*args)
+    main(*cli_args)
