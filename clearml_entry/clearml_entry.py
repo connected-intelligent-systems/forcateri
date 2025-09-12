@@ -33,7 +33,8 @@ def exec_taskenq(*args):
         branch="main",
         repo="git@github.com:connected-intelligent-systems/forcateri.git",
         script="clearml_entry/test_pipeline.py",
-        docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
+        #docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
+        docker="dior00002/forcateri:v1",
         docker_args=(
             f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token}"
         ),
