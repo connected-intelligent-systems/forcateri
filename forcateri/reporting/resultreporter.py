@@ -105,7 +105,7 @@ class ResultReporter:
                 plt.close()
 
     def _report_metrics(self):
-        self.results = self._compute_metrics()
+        self.metric_results = self._compute_metrics()
         self._plot_metrics(self.results)
         Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
 
