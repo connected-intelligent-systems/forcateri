@@ -27,10 +27,9 @@ class ResultReporter:
     ):  # dont forget to remove predictions after testing
         self._make_predictions()
         self.metric_results = self._compute_metrics()
-        self._create_plots()
-        #return self.metric_results
-        #TODO UPLOAD THE RESULTS TO CLEARML
-        Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
+        self._plot_predictions()
+        
+
     def _compute_metrics(self):
         results = {}
 
@@ -66,10 +65,38 @@ class ResultReporter:
     
     def _select_debug_samples():
         pass
-
-    def _report_metrics():
-        pass
     
+    def _plot_metrics(self, metric_results=None):
+        if metric_results is None:
+            metric_results = self.metric_results
+
+        for model_name, model_metrics in metric_results.items():
+            for metric_name, metric_list in model_metrics.items():
+                # Each metric_list contains one DataFrame per test sample
+                fig, ax = plt.subplots(figsize=(10, 5))
+                for i, df in enumerate(metric_list):
+                    # If the metric returns a DataFrame, plot its values
+                    if isinstance(df, pd.DataFrame):
+                        for col in df.columns:
+                            ax.plot(df.index, df[col], label=f"Sample {i} - {col}")
+                    elif isinstance(df, pd.Series):
+                        ax.plot(df.index, df.values, label=f"Sample {i}")
+                    else:
+                        ax.plot([i], [df], marker='o', label=f"Sample {i}")
+
+                ax.set_title(f"{metric_name} for {model_name}")
+                ax.set_xlabel("Index")
+                ax.set_ylabel("Metric Value")
+                ax.legend()
+                plt.tight_layout()
+                plt.show()
+                plt.close()
+
+    def _report_metrics(self):
+        self.results = self._compute_metrics()
+        self._plot_metrics(self.results)
+        Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
+
     def _make_predictions(self):
         self.model_predictions = {}
         for model in self.models:
@@ -77,7 +104,7 @@ class ResultReporter:
             self.model_predictions[model]=predictions_ts_list
         #print(self.model_predictions[0][0].data)
 
-    def _create_plots(self):
+    def _plot_predictions(self):
         for model, prediction_ts_list in self.model_predictions.items():   
             for i, (adapter_input, pred_ts) in enumerate(zip(self.test_data, prediction_ts_list)):
                 gt_ts = adapter_input.target  # TimeSeries object
