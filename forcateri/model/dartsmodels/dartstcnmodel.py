@@ -199,3 +199,6 @@ class DartsTCNModel(DartsModelAdapter):
         except Exception as e:
             logging.error(f"Failed to load the model from {path}, check the model path")
             raise ModelAdapterError("Failed to load the model.") from e
+
+    def __repr__(self):
+        return "DartsTCNModel"
