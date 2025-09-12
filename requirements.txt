@@ -146,7 +146,7 @@ rfc3339-validator==0.1.4
 rfc3986-validator==0.1.1
 rpds-py==0.19.1
 seaborn==0.13.2
-scikit-learn==1.5.1
+scikit-learn==1.6.1
 scipy==1.14.0
 Send2Trash==1.8.3
 shap==0.46.0
