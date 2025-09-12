@@ -21,6 +21,29 @@ OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
 FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
 
+def extract_config(config: dict) -> list[tuple]:
+    args = []
+
+    for section, section_content in config.items():
+        if section == "Models":
+            for model_name, params in section_content.items():
+                for param_name, param_value in params.items():
+                    arg_key = f"model_{model_name}_{param_name}"
+                    args.append((arg_key, param_value))
+
+        elif section == "Dataset":
+            for dataset_name, dataset_content in section_content.items():
+                if isinstance(dataset_content, dict):
+                    for subkey, subcontent in dataset_content.items():
+                        # For roles
+                        if subkey == "roles":
+                            for feature, role in subcontent.items():
+                                arg_key = f"Dataset_{dataset_name}_{role}"#_{feature}"
+                                args.append((arg_key, feature))  # roles have no value
+                        else:
+                            arg_key = f"{dataset_name}_{subkey}"
+                            args.append((arg_key, subcontent))
+    return args
 
 def from_args_to_kwargs(*args) -> dict:
     """
@@ -47,6 +70,27 @@ def from_args_to_kwargs(*args) -> dict:
                 kwargs["Dataset"][dataset_name]["roles"][value] = subkey
 
     return kwargs
+
+def arg_parser():
+    parser = argparse.ArgumentParser()
+    project_root=Path(__file__).parent.parent
+    config_path = project_root.joinpath("configs")
+    parser.add_argument(
+        '--config',
+        type=str,
+        required=True,
+        help="Configuration file name without .yaml extension"
+    )
+    with open(config_path.joinpath(args.config + '.yaml'),"r") as infile:
+            parsed_config = yaml.safe_load(infile)
+    args = extract_config(parsed_config)
+    for k, v in args:
+        if isinstance(v, list):
+            v = ",".join(map(str, v))
+        elif v is None:
+            v = "None"
+        parser.add_argument(f"--{k}", default=v)
+    return parser
 
 def main(*args):
 
@@ -85,18 +129,13 @@ def main(*args):
 
 if __name__ == "__main__":
     
-    parser = argparse.ArgumentParser()
+    parser = arg_parser()
+    args = parser.parse_args()
+    print(args)
 
-    # Add arguments dynamically if you don’t know them in advance
-    for arg in sys.argv[1:]:
-        if arg.startswith("--"):
-            name = arg.split("=")[0][2:]  # strip leading --
-            parser.add_argument(f"--{name}")
 
-    cli_args = parser.parse_args()
-    print(cli_args)
 
     # Parse the command-line arguments
 
-    
-    main(*cli_args)
+
+    main(*args)
