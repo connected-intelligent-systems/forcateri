@@ -81,6 +81,7 @@ def arg_parser():
         required=True,
         help="Configuration file name without .yaml extension"
     )
+    args,remaining_args = parser.parse_known_args()
     with open(config_path.joinpath(args.config + '.yaml'),"r") as infile:
             parsed_config = yaml.safe_load(infile)
     args = extract_config(parsed_config)
