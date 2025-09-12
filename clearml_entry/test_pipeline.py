@@ -132,6 +132,7 @@ if __name__ == "__main__":
     
     parser = arg_parser()
     args = parser.parse_args()
+    print("pipeline args\n\n")
     print(args)
 
 
