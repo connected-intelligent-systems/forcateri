@@ -20,22 +20,38 @@ OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
 FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
 def parse_dynamic_args():
-    """
-    Parse arbitrary --key value pairs.
-    Returns list of (key, value) tuples matching extract_config output.
-    """
-    # Accept everything, defer structure handling
     parser = argparse.ArgumentParser(add_help=False)
-    # We don't know keys beforehand, so read raw
-    known, unknown = parser.parse_known_args()
-    # unknown like ['--k1','v1','--k2','v2', ...]
-    pairs = []
+    _, unknown = parser.parse_known_args()
     it = iter(unknown)
-    for token in it:
-        if token.startswith("--"):
-            key = token[2:]
-            value = next(it, None)
-            pairs.append((key, value))
+    pairs = []
+    for tok in it:
+        if tok.startswith("--"):
+            key = tok[2:]
+            val = next(it, None)
+            if val is None or val.startswith("--"):
+                pairs.append((key, "True"))
+                if val and val.startswith("--"):
+                    it = iter([val] + list(it))
+            else:
+                # restore lists
+                if "," in val and not any(c in val for c in "{}[]"):
+                    parts = val.split(",")
+                    try_cast = []
+                    for p in parts:
+                        if p == "None":
+                            try_cast.append(None)
+                        else:
+                            try:
+                                try_cast.append(int(p))
+                            except:
+                                try:
+                                    try_cast.append(float(p))
+                                except:
+                                    try_cast.append(p)
+                    val = try_cast
+                elif val == "None":
+                    val = None
+                pairs.append((key, val))
     return pairs
 
 def from_args_to_kwargs(*args) -> dict:
@@ -65,7 +81,7 @@ def from_args_to_kwargs(*args) -> dict:
     return kwargs
 
 def main(*args):
-    
+
     if not args:
         # Running under ClearML: pull from sys.argv
         raw_pairs = parse_dynamic_args()
@@ -114,4 +130,4 @@ if __name__ == "__main__":
     #         parsed_config = yaml.safe_load(infile)
     # args = extract_config(parsed_config)
     
-    main(*args)
+    main()
