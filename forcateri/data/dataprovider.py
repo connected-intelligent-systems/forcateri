@@ -22,7 +22,7 @@ class DataProvider:
     def __init__(
         self,
         data_sources: List[DataSource],
-        roles: Dict[str, SeriesRole],
+        roles: List[Dict[str, SeriesRole]],
         splits: Union[Cutoff, List[Cutoff]] = (1.0 / 3.0, 2.0 / 3.0),
     ):
         """
@@ -50,7 +50,6 @@ class DataProvider:
         self.known = []
         self.observed = []
         self.static: Dict[str, float] = None
-        # self.roles_reversed = dict(zip(roles.values(), roles.keys()))
         self._separate_ts()
 
     def _separate_ts(self):
@@ -76,19 +75,19 @@ class DataProvider:
             AttributeError: If `roles` or `data_sources` is not properly defined.
         """
 
-        columns_observed = [
-            col for col, role in self.roles.items() if role == SeriesRole.OBSERVED
-        ]
-        columns_known = [
-            col for col, role in self.roles.items() if role == SeriesRole.KNOWN
-        ]
-        columns_target = [
-            col for col, role in self.roles.items() if role == SeriesRole.TARGET
-        ]
-        for data_source in self.data_sources:
+        for data_source, role in zip(self.data_sources, self.roles):
+            columns_observed = [
+                col for col, role in role.items() if role == SeriesRole.OBSERVED
+            ]
+            columns_known = [
+                col for col, role in role.items() if role == SeriesRole.KNOWN
+            ]
+            columns_target = [
+                col for col, role in role.items() if role == SeriesRole.TARGET
+            ]
             data_list = data_source.get_data()
             for ts_obj in data_list:
-                self.target.append(ts_obj.get_feature_slice(index=['target']))
+                self.target.append(ts_obj.get_feature_slice(index=["target"]))
                 self.known.append(ts_obj.get_feature_slice(index=columns_known))
                 self.observed.append(ts_obj.get_feature_slice(index=columns_observed))
 

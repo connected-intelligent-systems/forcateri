@@ -44,7 +44,6 @@ def exec_taskenq(*args):
 
 def extract_config(config: dict) -> list[tuple]:
     args = []
-
     for section, section_content in config.items():
         if section == "Models":
             for model_name, params in section_content.items():
@@ -58,7 +57,6 @@ def extract_config(config: dict) -> list[tuple]:
                         if subkey == "roles":
                             for role, features in subcontent.items():
                                 arg_key = f"Dataset_{dataset_name}_{role}"
-                                # If features is a list, join as comma-separated string
                                 if isinstance(features, list):
                                     args.append((arg_key, ",".join(features)))
                                 else:
@@ -66,6 +64,14 @@ def extract_config(config: dict) -> list[tuple]:
                         else:
                             arg_key = f"{dataset_name}_{subkey}"
                             args.append((arg_key, subcontent))
+        elif section == "Metrics":
+            for metric_name, params in section_content.items():
+                for param_name, param_value in params.items():
+                    arg_key = f"Metric_{metric_name}_{param_name}"
+                    if isinstance(param_value, list):
+                        args.append((arg_key, ",".join(map(str, param_value))))
+                    else:
+                        args.append((arg_key, param_value))
     return args
 
 
