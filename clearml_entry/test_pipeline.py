@@ -12,11 +12,31 @@ from forcateri.reporting.dimwiseaggregatedquantileloss import DimwiseAggregatedQ
 from forcateri.reporting.resultreporter import ResultReporter
 from forcateri.controls.pipeline import Pipeline
 from pathlib import Path
+import argparse
 #from .clearml_entry import extract_config
 
 
 OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
 FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
+
+def parse_dynamic_args():
+    """
+    Parse arbitrary --key value pairs.
+    Returns list of (key, value) tuples matching extract_config output.
+    """
+    # Accept everything, defer structure handling
+    parser = argparse.ArgumentParser(add_help=False)
+    # We don't know keys beforehand, so read raw
+    known, unknown = parser.parse_known_args()
+    # unknown like ['--k1','v1','--k2','v2', ...]
+    pairs = []
+    it = iter(unknown)
+    for token in it:
+        if token.startswith("--"):
+            key = token[2:]
+            value = next(it, None)
+            pairs.append((key, value))
+    return pairs
 
 def from_args_to_kwargs(*args) -> dict:
     """
@@ -45,9 +65,15 @@ def from_args_to_kwargs(*args) -> dict:
     return kwargs
 
 def main(*args):
-
-    kwargs = from_args_to_kwargs(*args)
     
+    if not args:
+        # Running under ClearML: pull from sys.argv
+        raw_pairs = parse_dynamic_args()
+    else:
+        # Direct python call with tuples passed in
+        raw_pairs = args
+    kwargs = from_args_to_kwargs(*raw_pairs)
+
     ds0 = BaltBestAggregatedAPIData()
 
     #roles = kwargs['roles']
@@ -80,7 +106,7 @@ def main(*args):
     #return results
 
 if __name__ == "__main__":
-    pass
+    
     # project_root=Path(__file__).parent.parent
     # config_path = project_root.joinpath("configs")
     # config_name = 'tft_pipeline'
@@ -88,4 +114,4 @@ if __name__ == "__main__":
     #         parsed_config = yaml.safe_load(infile)
     # args = extract_config(parsed_config)
     
-    # main(*args)
+    main(*args)
