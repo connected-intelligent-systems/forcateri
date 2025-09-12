@@ -23,6 +23,7 @@ FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
 def extract_config(config: dict) -> list[tuple]:
     args = []
+    role_args = {}
 
     for section, section_content in config.items():
         if section == "Models":
@@ -35,14 +36,16 @@ def extract_config(config: dict) -> list[tuple]:
             for dataset_name, dataset_content in section_content.items():
                 if isinstance(dataset_content, dict):
                     for subkey, subcontent in dataset_content.items():
-                        # For roles
                         if subkey == "roles":
                             for feature, role in subcontent.items():
-                                arg_key = f"Dataset_{dataset_name}_{role}"#_{feature}"
-                                args.append((arg_key, feature))  # roles have no value
+                                arg_key = f"Dataset_{dataset_name}_{role}"
+                                role_args.setdefault(arg_key, []).append(feature)
                         else:
                             arg_key = f"{dataset_name}_{subkey}"
                             args.append((arg_key, subcontent))
+    # Add aggregated role arguments
+    for k, v in role_args.items():
+        args.append((k, ",".join(v)))
     return args
 
 def from_args_to_kwargs(*args) -> dict:
