@@ -128,7 +128,8 @@ if __name__ == "__main__":
     print("pipeline args\n\n")
     print(args)
 
-
+    print("\n\n")
+    print(*list(vars(args).items()))
 
     # Parse the command-line arguments
 
