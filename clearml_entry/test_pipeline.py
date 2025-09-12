@@ -80,12 +80,12 @@ def main(*args):
     #return results
 
 if __name__ == "__main__":
-    #pass
-    project_root=Path(__file__).parent.parent
-    config_path = project_root.joinpath("configs")
-    config_name = 'tft_pipeline'
-    with open(config_path.joinpath(config_name + '.yaml'),"r") as infile:
-            parsed_config = yaml.safe_load(infile)
-    args = extract_config(parsed_config)
+    pass
+    # project_root=Path(__file__).parent.parent
+    # config_path = project_root.joinpath("configs")
+    # config_name = 'tft_pipeline'
+    # with open(config_path.joinpath(config_name + '.yaml'),"r") as infile:
+    #         parsed_config = yaml.safe_load(infile)
+    # args = extract_config(parsed_config)
     
-    main(*args)
+    # main(*args)

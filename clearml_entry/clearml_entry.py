@@ -23,7 +23,7 @@ def exec_remotely():
     print("Test on remote")
     results = main()
     Task.current_task().upload_artifact(name='results', artifact_object=results)
-def exec_taskenq(**kwargs):
+def exec_taskenq(*args):
     token = os.environ["GIT_OAUTH_TOKEN"]
     task = Task.create(
         project_name="ForeSightNEXT/BaltBest",
@@ -36,7 +36,7 @@ def exec_taskenq(**kwargs):
         docker_args=(
             f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token}"
         ),
-        argparse_args=list(kwargs.items()),
+        argparse_args=args,
     )
     Task.enqueue(task=task, queue_name="default")
 
