@@ -140,8 +140,8 @@ class ResultReporter:
               
                     
                     #plt.savefig(f"plot_model_{model_idx}_sample_{i}_offset_{safe_offset}.png")
-                    #plt.show()
-                    #plt.close()
+                    plt.show()
+                    plt.close()
 
     def _report_plots():
         pass
