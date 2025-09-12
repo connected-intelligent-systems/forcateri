@@ -143,4 +143,4 @@ if __name__ == "__main__":
     # Parse the command-line arguments
 
 
-    main(*args)
+    main(*list(vars(args).items()))
