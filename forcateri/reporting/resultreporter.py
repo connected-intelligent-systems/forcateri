@@ -75,8 +75,14 @@ class ResultReporter:
                 fig, ax = plt.subplots(figsize=(10, 5))
                 for i, df in enumerate(metric_list):
                     if isinstance(df, pd.DataFrame):
-                        # Dynamically select the first index level for x-axis
-                        if isinstance(df.index, pd.MultiIndex):
+                        # Skip single-point DataFrames
+                        if len(df) <= 1:
+                            continue
+                        # Dynamically select the second index level for x-axis if possible
+                        if isinstance(df.index, pd.MultiIndex) and len(df.index.names) > 1:
+                            x = df.index.get_level_values(df.index.names[1])
+                            xlabel = df.index.names[1]
+                        elif isinstance(df.index, pd.MultiIndex):
                             x = df.index.get_level_values(df.index.names[0])
                             xlabel = df.index.names[0]
                         else:
@@ -84,17 +90,9 @@ class ResultReporter:
                             xlabel = "Index"
                         for col in df.columns:
                             ax.plot(x, df[col], label=f"Sample {i} - {col}")
-                    elif isinstance(df, pd.Series):
-                        if isinstance(df.index, pd.MultiIndex):
-                            x = df.index.get_level_values(df.index.names[0])
-                            xlabel = df.index.names[0]
-                        else:
-                            x = df.index
-                            xlabel = "Index"
-                        ax.plot(x, df.values, label=f"Sample {i}")
                     else:
-                        ax.plot([i], [df], marker='o', label=f"Sample {i}")
-                        xlabel = "Sample"
+                        # Skip plotting for non-DataFrame objects
+                        continue
 
                 ax.set_title(f"{metric_name} for {model_name}")
                 ax.set_xlabel(xlabel)
