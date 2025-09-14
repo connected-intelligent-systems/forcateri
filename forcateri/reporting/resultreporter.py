@@ -26,11 +26,10 @@ class ResultReporter:
         self,
     ):  # dont forget to remove predictions after testing
         self._make_predictions()
-        self.metric_results = self._compute_metrics()
-        self._create_plots()
-        #return self.metric_results
-        #TODO UPLOAD THE RESULTS TO CLEARML
-        Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
+        self.metric_results = self._report_metrics()
+        self._plot_predictions()
+        
+
     def _compute_metrics(self):
         results = {}
 
@@ -66,10 +65,48 @@ class ResultReporter:
     
     def _select_debug_samples():
         pass
-
-    def _report_metrics():
-        pass
     
+    def _plot_metrics(self, metric_results=None):
+        if metric_results is None:
+            metric_results = self.metric_results
+
+        for model_name, model_metrics in metric_results.items():
+            for metric_name, metric_list in model_metrics.items():
+                fig, ax = plt.subplots(figsize=(10, 5))
+                for i, df in enumerate(metric_list):
+                    if isinstance(df, pd.DataFrame):
+                        # Skip single-point DataFrames
+                        if len(df) <= 1:
+                            continue
+                        # Dynamically select the second index level for x-axis if possible
+                        if isinstance(df.index, pd.MultiIndex) and len(df.index.names) > 1:
+                            x = df.index.get_level_values(df.index.names[1])
+                            xlabel = df.index.names[1]
+                        elif isinstance(df.index, pd.MultiIndex):
+                            x = df.index.get_level_values(df.index.names[0])
+                            xlabel = df.index.names[0]
+                        else:
+                            x = df.index
+                            xlabel = "Index"
+                        for col in df.columns:
+                            ax.plot(x, df[col], label=f"Sample {i} - {col}")
+                    else:
+                        # Skip plotting for non-DataFrame objects
+                        continue
+
+                ax.set_title(f"{metric_name} for {model_name}")
+                ax.set_xlabel(xlabel)
+                ax.set_ylabel("Metric Value")
+                ax.legend()
+                plt.tight_layout()
+                plt.show()
+                plt.close()
+
+    def _report_metrics(self):
+        self.metric_results = self._compute_metrics()
+        self._plot_metrics(self.metric_results)
+        Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
+
     def _make_predictions(self):
         self.model_predictions = {}
         for model in self.models:
@@ -77,7 +114,7 @@ class ResultReporter:
             self.model_predictions[model]=predictions_ts_list
         #print(self.model_predictions[0][0].data)
 
-    def _create_plots(self):
+    def _plot_predictions(self):
         for model, prediction_ts_list in self.model_predictions.items():   
             for i, (adapter_input, pred_ts) in enumerate(zip(self.test_data, prediction_ts_list)):
                 gt_ts = adapter_input.target  # TimeSeries object
