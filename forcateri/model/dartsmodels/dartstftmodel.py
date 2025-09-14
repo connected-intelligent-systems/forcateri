@@ -41,19 +41,19 @@ class DartsTFTModel(DartsModelAdapter):
             trainer_kwargs["callbacks"] = [my_stopper]
             self.model = TFTModel(
                 input_chunk_length=kwargs.get("input_chunk_length", 7),
-                output_chunk_length=kwargs.get("output_chunk_length",  5),
+                output_chunk_length=kwargs.get("output_chunk_length", 5),
                 hidden_size=kwargs.get("hidden_size", 32),
                 dropout=kwargs.get("dropout", 0.1),
-                lstm_layers=kwargs.get("lstm_layers",2),
-                batch_size=kwargs.get("batch_size",32),
-                n_epochs=kwargs.get("n_epochs",5),
-                random_state=kwargs.get("random_state",42),
+                lstm_layers=kwargs.get("lstm_layers", 2),
+                batch_size=kwargs.get("batch_size", 32),
+                n_epochs=kwargs.get("n_epochs", 5),
+                random_state=kwargs.get("random_state", 42),
                 likelihood=QuantileRegression(self.quantiles),
                 pl_trainer_kwargs=trainer_kwargs,
             )
         self.forecast_horizon = kwargs.get("forecast_horizon", 5)
         self.scaler_target = Scaler()
-        self.scaler_cov = Scaler()   
+        self.scaler_cov = Scaler()
 
     def convert_input(self, input: List[AdapterInput]) -> Tuple[
         List[DartsTimeSeries],
@@ -80,7 +80,7 @@ class DartsTFTModel(DartsModelAdapter):
         target = self.scaler_target.fit_transform(target)
         observed = self.scaler_cov.fit_transform(observed)
         return target, known, observed, static
-    
+
     def fit(
         self,
         train_data: List[AdapterInput],
@@ -165,5 +165,4 @@ class DartsTFTModel(DartsModelAdapter):
             raise ModelAdapterError("Failed to load the model.") from e
 
     def __repr__(self):
-            return "DartsTFTModel"
-
+        return "DartsTFTModel"

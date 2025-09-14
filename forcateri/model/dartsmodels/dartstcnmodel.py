@@ -8,12 +8,13 @@ from darts.dataprocessing.transformers import Scaler
 from darts.models import TCNModel
 from darts.utils.likelihood_models import QuantileRegression
 from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
-
+from datetime import datetime
 from ...data.adapterinput import AdapterInput
 from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
 from .dartsmodeladapter import DartsModelAdapter
 from forcateri.data.timeseries import TimeSeries
 from forcateri import project_root
+
 
 class DartsTCNModel(DartsModelAdapter):
     def __init__(self, *args, model: Optional[TCNModel] = None, **kwargs):
@@ -56,7 +57,7 @@ class DartsTCNModel(DartsModelAdapter):
         else:
             self.input_chunk_length = kwargs.get("input_chunk_length", 7)
             log_dir = project_root.joinpath(
-                f"logs/dartstcn/{logging.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+                f"logs/dartstcn/{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
             )
             logger = TensorBoardLogger(save_dir=log_dir)
             trainer_kwargs = dict(logger=[logger])
