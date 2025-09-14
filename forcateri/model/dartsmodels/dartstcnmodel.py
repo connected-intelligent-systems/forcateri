@@ -7,12 +7,13 @@ from darts import TimeSeries as DartsTimeSeries
 from darts.dataprocessing.transformers import Scaler
 from darts.models import TCNModel
 from darts.utils.likelihood_models import QuantileRegression
+from pytorch_lightning.loggers.tensorboard import TensorBoardLogger
 
 from ...data.adapterinput import AdapterInput
 from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
 from .dartsmodeladapter import DartsModelAdapter
 from forcateri.data.timeseries import TimeSeries
-
+from forcateri import project_root
 
 class DartsTCNModel(DartsModelAdapter):
     def __init__(self, *args, model: Optional[TCNModel] = None, **kwargs):
@@ -54,6 +55,11 @@ class DartsTCNModel(DartsModelAdapter):
             self.model = model
         else:
             self.input_chunk_length = kwargs.get("input_chunk_length", 7)
+            log_dir = project_root.joinpath(
+                f"logs/dartstcn/{logging.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+            )
+            logger = TensorBoardLogger(save_dir=log_dir)
+            trainer_kwargs = dict(logger=[logger])
             self.model = TCNModel(
                 input_chunk_length=self.input_chunk_length,
                 output_chunk_length=kwargs.get("output_chunk_length", 5),
@@ -70,7 +76,7 @@ class DartsTCNModel(DartsModelAdapter):
                 likelihood=kwargs.get(
                     "likelihood", QuantileRegression(quantiles=self.quantiles)
                 ),
-                # pl_trainer_kwargs={"limit_train_batches": 25, "limit_val_batches": 25}
+                pl_trainer_kwargs=trainer_kwargs,
             )
         self.forecast_horizon = kwargs.get("forecast_horizon", 1)
         self.scaler_target = Scaler()

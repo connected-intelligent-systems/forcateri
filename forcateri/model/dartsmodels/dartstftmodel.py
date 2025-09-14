@@ -29,7 +29,7 @@ class DartsTFTModel(DartsModelAdapter):
         else:
             self.input_chunk_length = kwargs.get("input_chunk_length", 7)
             log_dir = project_root.joinpath(
-                f'logs/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
+                f'logs/darts_tft/{datetime.now().strftime("%Y-%m-%d_%H-%M-%S")}'
             )
             logger = TensorBoardLogger(save_dir=log_dir)
             my_stopper = EarlyStopping(
