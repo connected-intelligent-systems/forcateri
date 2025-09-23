@@ -1,6 +1,6 @@
 from forcateri.data.dataprovider import SeriesRole
 from forcateri.data.timeseries import TimeSeries
-from forcateri import project_root
+#from forcateri import project_root
 import argparse
 import yaml
 from pathlib import Path
@@ -65,7 +65,7 @@ def from_args_to_kwargs(*args) -> dict:
             kwargs["Metrics"].setdefault(metric_name, {})[param] = value
     return kwargs
 
-def arg_parser():
+def arg_parser(project_root):
     parser = argparse.ArgumentParser()
     #project_root=Path(__file__).parent.parent
     config_path = project_root.joinpath("configs")
@@ -87,7 +87,7 @@ def arg_parser():
         parser.add_argument(f"--{k}", default=v)
     return parser
 
-def load_config(config_name: str) -> dict:
+def load_config(config_name: str,project_root) -> dict:
     """
     Parse command line args and load YAML config file from configs/ directory.
     Returns: (config_name: str, parsed_config: dict)
