@@ -7,10 +7,10 @@ from forcateri.utils.config_utils import extract_config, load_config
 
 class ClearMLReporter:
 
-    def __init__(self, config_name:str):
+    def __init__(self, config_name:str, project_root:Path):
         load_dotenv()
         self.config_name = config_name
-        self.config = load_config(config_name)
+        self.config = load_config(config_name, project_root)
         self.args = extract_config(self.config)
 
 
