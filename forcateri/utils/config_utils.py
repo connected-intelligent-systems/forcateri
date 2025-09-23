@@ -1,38 +1,16 @@
-from src.dartsmodels.dartstcnmodel import DartsTCNModel
-from src.dartsmodels.dartstftmodel import DartsTFTModel
-from src.baltbestapi.baltbestaggregatedapidata import BaltBestAggregatedAPIData
-import pandas as pd
-import yaml
-from forcateri.data.dataprovider import DataProvider, SeriesRole
-# from darts.models import TCNModel
-# from darts.utils.likelihood_models import QuantileRegression
+from forcateri.data.dataprovider import SeriesRole
 from forcateri.data.timeseries import TimeSeries
-from forcateri.reporting.dimwiseaggregatedmetric import DimwiseAggregatedMetric
-from forcateri.reporting.dimwiseaggregatedquantileloss import DimwiseAggregatedQuantileLoss
-from forcateri.reporting.resultreporter import ResultReporter
-from forcateri.controls.pipeline import Pipeline
-from pathlib import Path
+from forcateri import project_root
 import argparse
-import sys
-#from .clearml_entry import extract_config
-
-
-OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
-FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
-DATASET_CLASSES = {
-    "BaltBestAggregatedAPIData": BaltBestAggregatedAPIData,
-    #Other datasets to be added here
-}
-METRIC_CLASSES = {
-    "DimwiseAggregatedQuantileLoss": DimwiseAggregatedQuantileLoss,
-    "DimwiseAggregatedMetric": DimwiseAggregatedMetric,
-    # Other metrics to be added here
-}
+import yaml
+from pathlib import Path
 
 def extract_config(config: dict) -> list[tuple]:
     args = []
     for section, section_content in config.items():
-        if section == "Models":
+        if section == "ClearML":
+            continue
+        elif section == "Models":
             for model_name, params in section_content.items():
                 for param_name, param_value in params.items():
                     arg_key = f"model_{model_name}_{param_name}"
@@ -89,7 +67,7 @@ def from_args_to_kwargs(*args) -> dict:
 
 def arg_parser():
     parser = argparse.ArgumentParser()
-    project_root=Path(__file__).parent.parent
+    #project_root=Path(__file__).parent.parent
     config_path = project_root.joinpath("configs")
     parser.add_argument(
         '--config',
@@ -109,57 +87,24 @@ def arg_parser():
         parser.add_argument(f"--{k}", default=v)
     return parser
 
-def main(*args):
-
-    kwargs = from_args_to_kwargs(*args)
-    dataset_names = list(kwargs['Dataset'].keys())
-    data_sources = []
-    roles = []
-    for dataset_name in dataset_names:
-        dataset_class = DATASET_CLASSES.get(dataset_name)
-        if dataset_class is None:
-            raise ValueError(f"Dataset class '{dataset_name}' not found in DATASET_CLASSES.")
-        ds = dataset_class()
-        data_sources.append(ds)
-        roles = kwargs['Dataset'][dataset_name]['roles']
-    
-    
-    dp = DataProvider(data_sources=data_sources, roles=[roles])
-
-    model_adapters = []
-    for model_name, params in kwargs['Models'].items():
-        model_class = globals().get(model_name)
-        if model_class is None:
-            raise ValueError(f"Model class '{model_name}' not found in global namespace.")
-        model_adapters.append(model_class(kwargs=params))
-    metrics = []
-    for metric_name, params in kwargs['Metrics'].items():
-        metric_class = METRIC_CLASSES.get(metric_name)
-        if metric_class is None:
-            raise ValueError(f"Metric class '{metric_name}' not found in METRIC_CLASSES.")
-        # Convert axes strings to actual values
-        axes = [OFFSET if ax == "OFFSET" else TIME_STEP for ax in params.get("axes", [])]
-        metrics.append(metric_class(axes=axes))
-
-    test_set = dp.get_test_set()
-    rep = ResultReporter(test_set,models=model_adapters,metrics=metrics)
-    #rep.report_all()
-    pipe = Pipeline(dp,model_adapter=model_adapters,reporter=rep)
-    #results = pipe.run()
-    pipe.run()
-    #return results
-
-if __name__ == "__main__":
-    
-    parser = arg_parser()
+def load_config(config_name: str) -> dict:
+    """
+    Parse command line args and load YAML config file from configs/ directory.
+    Returns: (config_name: str, parsed_config: dict)
+    """
+    parser = argparse.ArgumentParser(description="Pipeline config parser")
+    parser.add_argument(
+        '--config',
+        type=str,
+        default='pipeline',
+        help='Specify the config name (without .yaml) from configs/ directory'
+    )
     args = parser.parse_args()
-    print("pipeline args\n\n")
-    print(args)
 
-    print("\n\n")
-    print(*list(vars(args).items()))
+    #project_root = Path(__file__).parent.parent
+    config_path = project_root / "configs" / f"{config_name}.yaml"
 
-    # Parse the command-line arguments
+    with open(config_path, "r") as infile:
+        parsed_config = yaml.safe_load(infile)
 
-
-    main(*list(vars(args).items()))
+    return parsed_config
