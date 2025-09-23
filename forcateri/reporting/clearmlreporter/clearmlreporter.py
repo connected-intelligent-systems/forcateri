@@ -10,15 +10,9 @@ class ClearMLReporter:
     def __init__(self, config_name:str):
         load_dotenv()
         self.config_name = config_name
-        #self.task_name = task_name
-        # self.task = Task.init(
-        #     project_name="ForeSightNEXT/BaltBest",
-        #     task_name="Forcateri Pipeline Test",
-        # )
         self.config = load_config(config_name)
         self.args = extract_config(self.config)
-        # for arg_key, arg_value in self.args:
-        #     self.task.connect({arg_key: arg_value})
+
 
     def execute_remotely(self):
         token = os.environ["GIT_TOKEN"]
