@@ -39,7 +39,7 @@ class ClearMLReporter:
             #docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
             docker=self.config['ClearML']['task']['docker'],
             docker_args=(
-                f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token}"
+                f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token} -e CLEARML_AGENT_SKIP_PYTHON_ENV_INSTALL=1"
             ),
             argparse_args=self.args,
         )
