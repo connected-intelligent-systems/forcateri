@@ -12,7 +12,7 @@ class ClearMLReporter:
         self.config_name = config_name
         self.config = load_config(config_name, project_root)
         self.args = extract_config(self.config)
-
+        self.args.append(("config", config_name))
 
     def execute_remotely(self):
         token = os.environ["GIT_TOKEN"]
