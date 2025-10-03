@@ -57,7 +57,7 @@ def from_args_to_kwargs(*args) -> dict:
             for f in features:
                 kwargs["Dataset"][dataset_name]["roles"][f] = role_enum
         elif key.startswith("Metric"):
-            keysplit = key.split("_", 2)
+            keysplit = key.split(".", 2)
             metric_name, param = keysplit[1], keysplit[2]
             # If value is a comma-separated string, split to list
             if isinstance(value, str) and "," in value:
