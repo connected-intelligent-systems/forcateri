@@ -21,7 +21,7 @@ def extract_config(config: dict) -> list[tuple]:
                     for subkey, subcontent in dataset_content.items():
                         if subkey == "roles":
                             for role, features in subcontent.items():
-                                arg_key = f"Dataset_{dataset_name}.{role}"
+                                arg_key = f"Dataset.{dataset_name}.{role}"
                                 if isinstance(features, list):
                                     args.append((arg_key, ",".join(features)))
                                 else:
