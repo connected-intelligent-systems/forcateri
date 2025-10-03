@@ -10,10 +10,10 @@ from darts import TimeSeries as DartsTimeSeries
 from darts.dataprocessing.transformers import Scaler
 from darts.models.forecasting.forecasting_model import ForecastingModel
 
-from ...data.adapterinput import AdapterInput
-from ...data.timeseries import TimeSeries
-from ..modeladapter import ModelAdapter
-from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
+from ..data.adapterinput import AdapterInput
+from ..data.timeseries import TimeSeries
+from .modeladapter import ModelAdapter
+from .modelexceptions import InvalidModelTypeError, ModelAdapterError
 
 logger = logging.getLogger(__name__)
 
