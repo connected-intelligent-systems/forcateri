@@ -13,7 +13,7 @@ def extract_config(config: dict) -> list[tuple]:
         elif section == "Models":
             for model_name, params in section_content.items():
                 for param_name, param_value in params.items():
-                    arg_key = f"model_{model_name}_{param_name}"
+                    arg_key = f"model.{model_name}.{param_name}"
                     args.append((arg_key, param_value))
         elif section == "Dataset":
             for dataset_name, dataset_content in section_content.items():
@@ -21,18 +21,18 @@ def extract_config(config: dict) -> list[tuple]:
                     for subkey, subcontent in dataset_content.items():
                         if subkey == "roles":
                             for role, features in subcontent.items():
-                                arg_key = f"Dataset_{dataset_name}_{role}"
+                                arg_key = f"Dataset_{dataset_name}.{role}"
                                 if isinstance(features, list):
                                     args.append((arg_key, ",".join(features)))
                                 else:
                                     args.append((arg_key, features))
                         else:
-                            arg_key = f"{dataset_name}_{subkey}"
+                            arg_key = f"{dataset_name}.{subkey}"
                             args.append((arg_key, subcontent))
         elif section == "Metrics":
             for metric_name, params in section_content.items():
                 for param_name, param_value in params.items():
-                    arg_key = f"Metric_{metric_name}_{param_name}"
+                    arg_key = f"Metric.{metric_name}.{param_name}"
                     if isinstance(param_value, list):
                         args.append((arg_key, ",".join(map(str, param_value))))
                     else:
@@ -43,17 +43,17 @@ def from_args_to_kwargs(*args) -> dict:
     kwargs = {"Models": {}, "Dataset": {}, "Metrics": {}}
     for key, value in args:
         if key.startswith("model"):
-            keysplit = key.split("_", 2)
+            keysplit = key.split(".", 2)
             model_name, param = keysplit[1], keysplit[2]
             kwargs["Models"].setdefault(model_name, {})[param] = value
         elif key.startswith("Dataset"):
-            _, dataset_name, role_key = key.split("_", 2)
+            _, dataset_name, role_key = key.split(".", 2)
             kwargs["Dataset"].setdefault(dataset_name, {"roles": {}})
             if "," in value:
                 features = value.split(",")
             else:
                 features = [value]
-            role_enum = getattr(SeriesRole, role_key.split(".")[-1])
+            role_enum = getattr(SeriesRole, role_key)
             for f in features:
                 kwargs["Dataset"][dataset_name]["roles"][f] = role_enum
         elif key.startswith("Metric"):
