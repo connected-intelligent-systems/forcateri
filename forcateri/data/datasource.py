@@ -11,10 +11,6 @@ class DataSource(ABC):
     """
 
     @abstractmethod
-    def __init__(self, source_type: str):
-        self.source_type: str = source_type
-
-    @abstractmethod
     def get_data(self) -> List[TimeSeries]:
         """Retrieve the data as a list of TimeSeries objects."""
         pass
