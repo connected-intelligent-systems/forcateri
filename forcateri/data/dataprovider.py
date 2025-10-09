@@ -87,7 +87,7 @@ class DataProvider:
             ]
             data_list = data_source.get_data()
             for ts_obj in data_list:
-                self.target.append(ts_obj.get_feature_slice(index=["target"]))
+                self.target.append(ts_obj.get_feature_slice(index=columns_target))
                 self.known.append(ts_obj.get_feature_slice(index=columns_known))
                 self.observed.append(ts_obj.get_feature_slice(index=columns_observed))
 
