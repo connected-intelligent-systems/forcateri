@@ -107,6 +107,21 @@ class TimeSeries:
         "The timestamps property"
         return self._timestamps
 
+    @property
+    def is_deterministic(self):
+        """
+        Whether the series is deterministic.
+        True if the feature representation is neither quantile nor sampled
+        """
+        return self.representation == TimeSeries.DETERM_REP
+
+    @property
+    def is_offset(self):
+        """
+        Whether the series has offsets other than 0.
+        """
+        return (len(self.offsets) != 1) or (self.offsets[0] != pd.Timedelta(0))
+
     def _check_freq_format(self, index: pd.Index, freq: Optional[str] = None) -> None:
         """
         Check and validate the frequency of a pandas DatetimeIndex.
