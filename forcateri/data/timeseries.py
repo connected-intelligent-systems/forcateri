@@ -664,7 +664,10 @@ class TimeSeries:
         if (not isinstance(index, List)) or (
             not all([isinstance(i, str) for i in index])
         ):
-            raise TypeError("feature must be a list of strings")
+            raise TypeError("Cannot slice TimeSeries: Index must be a list of strings.")
+
+        if len(index) == 0:
+            raise ValueError("Cannot slice TimeSeries: Index is empty.")
 
         new_data = self.data[index]
         return TimeSeries(data=new_data.copy() if copy else new_data)
