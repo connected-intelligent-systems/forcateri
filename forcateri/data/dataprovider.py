@@ -88,8 +88,16 @@ class DataProvider:
             data_list = data_source.get_data()
             for ts_obj in data_list:
                 self.target.append(ts_obj.get_feature_slice(index=columns_target))
-                self.known.append(ts_obj.get_feature_slice(index=columns_known))
-                self.observed.append(ts_obj.get_feature_slice(index=columns_observed))
+                self.known.append(
+                    ts_obj.get_feature_slice(index=columns_known)
+                    if len(columns_known) > 0
+                    else None
+                )
+                self.observed.append(
+                    ts_obj.get_feature_slice(index=columns_observed)
+                    if len(columns_observed) > 0
+                    else None
+                )
 
     def _get_split_set(self, split_type: str) -> List[AdapterInput]:
         """
@@ -111,27 +119,31 @@ class DataProvider:
             if split_type == "train":
                 list_of_tuples.append(
                     AdapterInput(
-                        target=target_ts[:start],
-                        known=known_ts[:start],
-                        observed=observed_ts[:start],
+                        target=target_ts[:start] if target_ts is not None else None,
+                        known=known_ts[:start] if known_ts is not None else None,
+                        observed=(
+                            observed_ts[:start] if observed_ts is not None else None
+                        ),
                         static=self.static,
                     )
                 )
             elif split_type == "val":
                 list_of_tuples.append(
                     AdapterInput(
-                        target=target_ts[start:end],
-                        known=known_ts[start:end],
-                        observed=observed_ts[start:end],
+                        target=target_ts[start:end] if target_ts is not None else None,
+                        known=known_ts[start:end] if known_ts is not None else None,
+                        observed=(
+                            observed_ts[start:end] if observed_ts is not None else None
+                        ),
                         static=self.static,
                     )
                 )
             elif split_type == "test":
                 list_of_tuples.append(
                     AdapterInput(
-                        target=target_ts[end:],
-                        known=known_ts[end:],
-                        observed=observed_ts[end:],
+                        target=target_ts[end:] if target_ts is not None else None,
+                        known=known_ts[end:] if known_ts is not None else None,
+                        observed=observed_ts[end:] if observed_ts is not None else None,
                         static=self.static,
                     )
                 )
