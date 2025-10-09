@@ -51,19 +51,27 @@ class ModelAdapter(ABC):
             "Method not overridden in concrete adapter implementation"
         )
 
-    def convert_input(self, input: List[AdapterInput]) -> Any:
+    def convert_input(self, input: List[AdapterInput]) -> List[Any]:
         """
-        Converts the input data into the standardized format.
+        Converts the input data into the format required by the model.
         """
         return [
             AdapterInput(
                 target=self.to_model_format(i.target),
-                known=self.to_model_format(i.known),
-                observed=self.to_model_format(i.observed),
+                known=self.to_model_format(i.known) if i.known is not None else None,
+                observed=(
+                    self.to_model_format(i.observed) if i.observed is not None else None
+                ),
                 static=i.static,
             )
             for i in input
         ]
+
+    def convert_output(self, output: List[Any]) -> List[TimeSeries]:
+        """
+        Converts the output data into the standardized format.
+        """
+        return [self.to_time_series(o) for o in output]
 
     def to_time_series(self, ts: Any) -> TimeSeries:
         """
