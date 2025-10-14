@@ -27,11 +27,6 @@ class TimeSeries:
         quantiles: Optional[List[float]] = None,
         freq: Optional[str] = None,
     ):
-        self._features = []
-        self._representations = []
-        self._offsets = pd.TimedeltaIndex([])
-        self._timestamps = pd.DatetimeIndex([])
-
         if representation is None:
             if quantiles is None:
                 representation = TimeSeries.DETERM_REP
@@ -70,18 +65,6 @@ class TimeSeries:
                 f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
-        self._representations = list(
-            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique()
-        )
-        self._features = list(
-            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
-        )
-        self._offsets = self.data.index.get_level_values(
-            TimeSeries.ROW_INDEX_NAMES[0]
-        ).unique()
-        self._timestamps = self.data.index.get_level_values(
-            TimeSeries.ROW_INDEX_NAMES[1]
-        ).unique()
         self._check_freq_format(
             self.data.index.get_level_values(0) + self.data.index.get_level_values(1),
             freq,
@@ -90,22 +73,26 @@ class TimeSeries:
     @property
     def features(self):
         "The features property"
-        return self._features
+        return list(
+            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
+        )
 
     @property
     def representations(self):
         "The representation property"
-        return self._representations
+        return list(
+            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique()
+        )
 
     @property
     def offsets(self):
         "The offsets property"
-        return self._offsets
+        return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0]).unique()
 
     @property
     def timestamps(self):
         "The timestamps property"
-        return self._timestamps
+        return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).unique()
 
     @property
     def is_deterministic(self):
@@ -499,7 +486,7 @@ class TimeSeries:
                 "A regular frequency must be defined in the TimeSeries instance."
             )
 
-        if len(self._offsets) > 1:
+        if len(self.offsets) > 1:
             raise ValueError(
                 "Shifting is not supported for TimeSeries with offsets other than 0."
             )
@@ -616,7 +603,7 @@ class TimeSeries:
         """
         if horizon is not None:
             if isinstance(horizon, int):
-                horizon = self._offsets[horizon]
+                horizon = self.offsets[horizon]
             elif not isinstance(horizon, pd.Timedelta):
                 raise ValueError("Horizon must be an int or pd.Timedelta.")
 
