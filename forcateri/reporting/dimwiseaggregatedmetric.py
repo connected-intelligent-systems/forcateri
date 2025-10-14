@@ -90,6 +90,6 @@ class DimwiseAggregatedMetric(Metric):
                 )  # due to the identical structure before grouping and the same group_by
                 reduced = self.reduction(gt.values, pred.values)
                 reduced_df.loc[pred_label] = reduced
-                logger.debug(gt, pred)
+                logger.debug(f"\ngt:\n{gt}\npred:\n{pred}")
                 logger.debug(f"Reduced:{reduced}")
             return reduced_df
