@@ -2,18 +2,17 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 
 import pandas as pd
 from darts import TimeSeries as DartsTimeSeries
-from darts.dataprocessing.transformers import Scaler
 from darts.models.forecasting.forecasting_model import ForecastingModel
 
-from ...data.adapterinput import AdapterInput
-from ...data.timeseries import TimeSeries
-from ..modeladapter import ModelAdapter
-from ..modelexceptions import InvalidModelTypeError, ModelAdapterError
+from ..data.adapterinput import AdapterInput
+from ..data.timeseries import TimeSeries
+from .modeladapter import ModelAdapter
+from .modelexceptions import ModelAdapterError
 
 logger = logging.getLogger(__name__)
 
@@ -51,12 +50,13 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
             # if value is a list, skip if all elements are None or empty
             if isinstance(value, list):
-                if all(v is None or (hasattr(v, '__len__') and len(v) == 0) for v in value):
+                if all(
+                    v is None or (hasattr(v, "__len__") and len(v) == 0) for v in value
+                ):
                     continue
-           
-            
+
             args[key] = value
-        
+
         return args
 
     def fit(
