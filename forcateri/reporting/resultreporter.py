@@ -1,4 +1,6 @@
 from typing import List
+import logging
+
 import matplotlib.pyplot as plt
 import pandas as pd
 from clearml import Task
@@ -6,6 +8,9 @@ from clearml import Task
 from .metric import Metric
 from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
+
+
+logger = logging.getLogger(__name__)
 
 
 class ResultReporter:
@@ -28,6 +33,7 @@ class ResultReporter:
         self._plot_predictions()
 
     def _compute_metrics(self):
+        logger.debug("Computing merics...")
         results = {}
 
         # loop over each model's predictions
@@ -39,20 +45,49 @@ class ResultReporter:
                 met_results = []
 
                 # loop over test data & predictions
-                for adapter_input, pred_ts in zip(self.test_data, prediction_ts_list):
-                    gt_ts = adapter_input.target
+                for i, (adapter_input, pred_ts) in enumerate(
+                    zip(self.test_data, prediction_ts_list)
+                ):
+                    logger.debug(
+                        f"Computing metrics for model {model.__class__.__name__} on test series {i}."
+                    )
 
+                    gt_ts = adapter_input.target
                     # adjust ground truth length to match pred_ts
 
-                    # input_chunk = getattr(self.models[model_idx], "input_chunk_length", 1)
-                    horizon = getattr(model, "forecast_horizon", 1)
+                    # reading the max horizon from the model series prediction
+                    horizon = pred_ts.offsets.max() // pd.Timedelta(1, pred_ts.freq)
+                    logger.debug(f"Horizon determined to be: {horizon}")
+
+                    if horizon < 1:
+                        raise ValueError(
+                            f"Invalid model adapter output. "
+                            f"Horizon is expected to be 1 or greater but was {horizon}."
+                        )
+
+                    logger.debug("Aligning predictions and ground truth...")
                     gt_shifted = gt_ts.shift_to_repeat_to_multihorizon(horizon=horizon)
                     common_index = gt_shifted.data.index.intersection(
                         pred_ts.data.index
                     )
-
                     gt_shifted.data = gt_shifted.data.loc[common_index]
+                    old_pred_len = len(pred_ts)
                     pred_ts.data = pred_ts.data.loc[common_index]
+                    dropped_gt_steps = len(gt_ts) - len(gt_shifted)
+                    dropped_pred_steps = old_pred_len - len(pred_ts)
+                    if (dropped_gt_steps, dropped_pred_steps) != (0, 0):
+                        logger.warning(
+                            f"Alignment dropped {dropped_gt_steps} time steps ftom the ground truth "
+                            f"and {dropped_pred_steps} time steps from the prediction."
+                        )
+                    else:
+                        logger.debug("No time steps were dropped during alignment.")
+
+                    logger.debug(
+                        f"Computing metric {met.__class__.__name__} "
+                        f"for model {model.__class__.__name__} "
+                        f"on test series {i}..."
+                    )
                     reduced_df = met(gt_shifted, pred_ts)
                     met_results.append(reduced_df)
 
@@ -61,9 +96,6 @@ class ResultReporter:
             results[model.__class__.__name__] = model_results
 
         return results
-
-    def _select_debug_samples(self):
-        pass
 
     def _plot_metrics(self, metric_results=None):
         if metric_results is None:
@@ -112,11 +144,17 @@ class ResultReporter:
         )
 
     def _make_predictions(self):
+        logger.debug("Making predictions...")
         self.model_predictions = {}
         for model in self.models:
+            logger.debug(
+                f"Applying model {model.__class__.__name__} to the test data..."
+            )
             predictions_ts_list = model.predict(self.test_data)
+            logger.debug(
+                f"Model {model.__class__.__name__} generated the following predictions:\n{predictions_ts_list}"
+            )
             self.model_predictions[model] = predictions_ts_list
-        # print(self.model_predictions[0][0].data)
 
     def _plot_predictions(self):
         for model, prediction_ts_list in self.model_predictions.items():
@@ -189,10 +227,13 @@ class ResultReporter:
                     plt.close()
 
     def _report_plots(self):
-        pass
-
-    def _report_debug_samples(self):
-        pass
+        logger.error("Function _report_plots not implemented.")
 
     def _persist_artifacts(self):
-        pass
+        logger.error("Function _persist_artifacts not implemented.")
+
+    def _select_debug_samples(self):
+        logger.error("Function _select_debug_samples not implemented.")
+
+    def _report_debug_samples(self):
+        logger.error("Function _report_debug_samples not implemented.")
