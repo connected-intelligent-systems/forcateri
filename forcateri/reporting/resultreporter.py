@@ -67,9 +67,11 @@ class ResultReporter:
 
                     logger.debug("Aligning predictions and ground truth...")
                     gt_shifted = gt_ts.shift_to_repeat_to_multihorizon(horizon=horizon)
+                    logger.debug(f"\ngt_shifted:\n{gt_shifted}")
                     common_index = gt_shifted.data.index.intersection(
                         pred_ts.data.index
                     )
+                    logger.debug(f"Common index determined to be\n{common_index}")
                     gt_shifted.data = gt_shifted.data.loc[common_index]
                     old_pred_len = len(pred_ts)
                     pred_ts.data = pred_ts.data.loc[common_index]
