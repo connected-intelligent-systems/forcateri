@@ -1,8 +1,6 @@
 from typing import List
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
-import pickle
 from clearml import Task
 
 from .metric import Metric
@@ -28,7 +26,6 @@ class ResultReporter:
         self._make_predictions()
         self.metric_results = self._report_metrics()
         self._plot_predictions()
-        
 
     def _compute_metrics(self):
         results = {}
@@ -47,10 +44,12 @@ class ResultReporter:
 
                     # adjust ground truth length to match pred_ts
 
-                    #input_chunk = getattr(self.models[model_idx], "input_chunk_length", 1)
-                    horizon = getattr(model,"forecast_horizon",1)
+                    # input_chunk = getattr(self.models[model_idx], "input_chunk_length", 1)
+                    horizon = getattr(model, "forecast_horizon", 1)
                     gt_shifted = gt_ts.shift_to_repeat_to_multihorizon(horizon=horizon)
-                    common_index = gt_shifted.data.index.intersection(pred_ts.data.index)
+                    common_index = gt_shifted.data.index.intersection(
+                        pred_ts.data.index
+                    )
 
                     gt_shifted.data = gt_shifted.data.loc[common_index]
                     pred_ts.data = pred_ts.data.loc[common_index]
@@ -62,10 +61,10 @@ class ResultReporter:
             results[model.__class__.__name__] = model_results
 
         return results
-    
-    def _select_debug_samples():
+
+    def _select_debug_samples(self):
         pass
-    
+
     def _plot_metrics(self, metric_results=None):
         if metric_results is None:
             metric_results = self.metric_results
@@ -79,7 +78,10 @@ class ResultReporter:
                         if len(df) <= 1:
                             continue
                         # Dynamically select the second index level for x-axis if possible
-                        if isinstance(df.index, pd.MultiIndex) and len(df.index.names) > 1:
+                        if (
+                            isinstance(df.index, pd.MultiIndex)
+                            and len(df.index.names) > 1
+                        ):
                             x = df.index.get_level_values(df.index.names[1])
                             xlabel = df.index.names[1]
                         elif isinstance(df.index, pd.MultiIndex):
@@ -105,35 +107,41 @@ class ResultReporter:
     def _report_metrics(self):
         self.metric_results = self._compute_metrics()
         self._plot_metrics(self.metric_results)
-        Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
+        Task.current_task().upload_artifact(
+            name="Report", artifact_object=self.metric_results
+        )
 
     def _make_predictions(self):
         self.model_predictions = {}
         for model in self.models:
-            predictions_ts_list = model.predict(self.test_data) 
-            self.model_predictions[model]=predictions_ts_list
-        #print(self.model_predictions[0][0].data)
+            predictions_ts_list = model.predict(self.test_data)
+            self.model_predictions[model] = predictions_ts_list
+        # print(self.model_predictions[0][0].data)
 
     def _plot_predictions(self):
-        for model, prediction_ts_list in self.model_predictions.items():   
-            for i, (adapter_input, pred_ts) in enumerate(zip(self.test_data, prediction_ts_list)):
+        for model, prediction_ts_list in self.model_predictions.items():
+            for i, (adapter_input, pred_ts) in enumerate(
+                zip(self.test_data, prediction_ts_list)
+            ):
                 gt_ts = adapter_input.target  # TimeSeries object
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
                 for offset in offsets:
                     pred_df = pred_ts.by_time(offset).copy()
-                    
+
                     gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]  # Align indices
                     # Flatten MultiIndex columns if needed
                     if isinstance(pred_df.columns, pd.MultiIndex):
-                        pred_df.columns = pred_df.columns.get_level_values(1).astype(float)
+                        pred_df.columns = pred_df.columns.get_level_values(1).astype(
+                            float
+                        )
 
                     quantiles = sorted(pred_df.columns.astype(float))
                     lower_q = quantiles[0]
                     upper_q = quantiles[-1]
                     median_q = min(quantiles, key=lambda q: abs(q - 0.5))
-                    
+
                     fig, ax = plt.subplots(figsize=(12, 6))
-                    
+
                     # Plot median prediction
                     ax.plot(
                         pred_df.index,
@@ -151,14 +159,14 @@ class ResultReporter:
                             pred_df[upper_q],
                             color="blue",
                             alpha=0.2,
-                            label=f"Confidence (q={lower_q}-{upper_q})"
+                            label=f"Confidence (q={lower_q}-{upper_q})",
                         )
 
-                    gt_df.columns = ['Ground Truth']
+                    gt_df.columns = ["Ground Truth"]
                     # Plot ground truth
                     ax.plot(
                         gt_df.index,
-                        gt_df['Ground Truth'],
+                        gt_df["Ground Truth"],
                         label="Ground Truth",
                         color="black",
                         linestyle="--",
@@ -166,7 +174,9 @@ class ResultReporter:
                     )
 
                     # Aesthetics
-                    ax.set_title(f"Model {model} — Sample {i} — Offset: {offset}", fontsize=14)
+                    ax.set_title(
+                        f"Model {model} — Sample {i} — Offset: {offset}", fontsize=14
+                    )
                     ax.set_xlabel("Time", fontsize=12, weight="bold")
                     ax.set_ylabel("Value", fontsize=12)
                     ax.grid(True, linestyle="--", alpha=0.4)
@@ -174,17 +184,15 @@ class ResultReporter:
                     plt.xticks(rotation=30)
                     plt.tight_layout()
 
-              
-                    
-                    #plt.savefig(f"plot_model_{model_idx}_sample_{i}_offset_{safe_offset}.png")
+                    # plt.savefig(f"plot_model_{model_idx}_sample_{i}_offset_{safe_offset}.png")
                     plt.show()
                     plt.close()
 
-    def _report_plots():
+    def _report_plots(self):
         pass
 
-    def _report_debug_samples():
+    def _report_debug_samples(self):
         pass
 
-    def _persist_artifacts():
+    def _persist_artifacts(self):
         pass
