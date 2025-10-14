@@ -501,6 +501,7 @@ class TimeSeries:
             names=TimeSeries.ROW_INDEX_NAMES,
         )
         shifted_data.set_index(shifted_index, inplace=True)
+        shifted_data = shifted_data.iloc[:-horizon, :]
         if in_place:
             self.data = shifted_data
             return self
