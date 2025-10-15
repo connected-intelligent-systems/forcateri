@@ -71,7 +71,9 @@ class ResultReporter:
                     common_index = gt_shifted.data.index.intersection(
                         pred_ts.data.index
                     )
-                    logger.debug(f"Common index determined to be\n{common_index}")
+                    logger.debug(
+                        f"Common index determined to be\n{common_index.to_frame(index=False)}"
+                    )
                     gt_shifted.data = gt_shifted.data.loc[common_index]
                     old_pred_len = len(pred_ts)
                     pred_ts.data = pred_ts.data.loc[common_index]
