@@ -732,6 +732,13 @@ class TimeSeries:
         # adjust index format so that the data frame structure is preserved upon access
         if not isinstance(index, slice):
             index = [index]
+        # If the end of the slice hits an index, move it half a step
+        # back to imitate the behavior of range() in excluding the upper bound.
+        # One step back should also work but it depends heavier on the implementation of pandas.
+        elif index.stop in self.data.index.get_level_values(1):
+            index = slice(
+                index.start, index.stop - pd.Timedelta(1, unit=self.freq) * 0.5
+            )
 
         # slice the underlying data
         new_data = (
