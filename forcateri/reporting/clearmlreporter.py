@@ -1,0 +1,23 @@
+import os
+from clearml import Task
+
+from forcateri.reporting.resultreporter import ResultReporter
+from .metric import Metric
+from ..data.adapterinput import AdapterInput
+from ..model.modeladapter import ModelAdapter
+from typing import List
+
+
+class ClearMLReporter(ResultReporter):
+
+    def __init__(
+        self,
+        test_data: List[AdapterInput],
+        models: List[ModelAdapter],
+        metrics: List[Metric],
+    ):
+        super().__init__(test_data, models, metrics)
+
+    def upload_report(self):
+        self.report_all()
+        Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
