@@ -18,6 +18,6 @@ class ClearMLReporter(ResultReporter):
     ):
         super().__init__(test_data, models, metrics)
 
-    def upload_report(self):
-        self.report_all()
+    def report_all(self):
+        super().report_all()
         Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
