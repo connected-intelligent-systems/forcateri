@@ -18,6 +18,8 @@ class ClearMlSingleTaskPipeline(Pipeline):
         reporter: Union[ResultReporter, List[ResultReporter]],
         config_name: Optional[str] = None,
         project_root: Optional[Path] = None,
+        project_name: Optional[str] = None,
+        task_name: Optional[str] = None,
     ):
         # self.task_name = task_name
         super().__init__(dp, model_adapter, reporter)
@@ -27,15 +29,15 @@ class ClearMlSingleTaskPipeline(Pipeline):
             self.config = load_config(config_name, project_root)
             self.args = extract_config(self.config)
             self.args.append(("config", config_name))
-        #     self.task = Task.create(
-        #     project_name=self.config["ClearML"]["task"]["project_name"],
-        #     task_name=self.config["ClearML"]["task"]["task_name"],
-        #     add_task_init_call=True,
-        #     branch=self.config["ClearML"]["task"]["branch"],
-        #     repo=self.config["ClearML"]["task"]["repo"],
-        #     script=self.config["ClearML"]["task"]["script"],
-        #     # docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
-        #     docker=self.config["ClearML"]["task"]["docker"],
+            #     self.task = Task.create(
+            self.project_name = (self.config["ClearML"]["task"]["project_name"],)
+            self.task_name = (self.config["ClearML"]["task"]["task_name"],)
+            #     add_task_init_call=True,
+            self.branch = (self.config["ClearML"]["task"]["branch"],)
+            self.repo = (self.config["ClearML"]["task"]["repo"],)
+            self.script = (self.config["ClearML"]["task"]["script"],)
+            #     # docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
+            self.docker = (self.config["ClearML"]["task"]["docker"],)
         #     docker_args=(
         #         f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token} -e CLEARML_AGENT_SKIP_PYTHON_ENV_INSTALL={self.config['ClearML']['task']['skip_env_install']}"
         #     ),
@@ -53,25 +55,31 @@ class ClearMlSingleTaskPipeline(Pipeline):
                 f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token}"
             ),
         )
-    def create_function_task(func):
-        pass
-    def run(self):
-        self.create_function_task(func = super().run, kwargs={})
-    # def execute_task_enq(self,project_name,task_name,script,branch="main",repo="",docker=""):
-    #     token = os.environ["GIT_TOKEN"]
 
-    #     self.task = Task.create(
-    #         project_name=project_name,
-    #         task_name=task_name,
-    #         add_task_init_call=True,
-    #         branch=branch,
-    #         repo=repo,
-    #         script=script,
-    #         # docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
-    #         docker=docker,
-    #         docker_args=(
-    #             f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token} -e CLEARML_AGENT_SKIP_PYTHON_ENV_INSTALL={self.config['ClearML']['task']['skip_env_install']}"
-    #         ),
-    #         argparse_args=self.args,
-    #     )
-    #     Task.enqueue(task=self.task, queue_name="default")
+
+        
+
+    def run(self):
+        self.task = Task.init(project_name=self.project_name, task_name=self.task_name)
+        self.task.create_function_task(func=super().run,kwargs={})
+        Task.enqueue(task=self.task, queue_name="default")
+        #self.create_function_task(func=super().run)
+
+    def execute_task_enq(self,project_name,task_name,script,branch="main",repo="",docker=""):
+        token = os.environ["GIT_TOKEN"]
+
+        self.task = Task.create(
+            project_name=project_name,
+            task_name=task_name,
+            add_task_init_call=True,
+            branch=branch,
+            repo=repo,
+            script=script,
+            # docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
+            docker=docker,
+            docker_args=(
+                f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token} -e CLEARML_AGENT_SKIP_PYTHON_ENV_INSTALL={self.config['ClearML']['task']['skip_env_install']}"
+            ),
+            argparse_args=self.args,
+        )
+        Task.enqueue(task=self.task, queue_name="default")
