@@ -29,20 +29,16 @@ class ClearMlSingleTaskPipeline(Pipeline):
             self.config = load_config(config_name, project_root)
             self.args = extract_config(self.config)
             self.args.append(("config", config_name))
-            #     self.task = Task.create(
+
             self.project_name = (self.config["ClearML"]["task"]["project_name"],)
             self.task_name = (self.config["ClearML"]["task"]["task_name"],)
-            #     add_task_init_call=True,
+
             self.branch = (self.config["ClearML"]["task"]["branch"],)
             self.repo = (self.config["ClearML"]["task"]["repo"],)
             self.script = (self.config["ClearML"]["task"]["script"],)
             #     # docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
             self.docker = (self.config["ClearML"]["task"]["docker"],)
-        #     docker_args=(
-        #         f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={token} -e CLEARML_AGENT_SKIP_PYTHON_ENV_INSTALL={self.config['ClearML']['task']['skip_env_install']}"
-        #     ),
-        #     argparse_args=self.args,
-        # )
+
 
     def execute_remotely(self):
         token = os.environ["GIT_TOKEN"]
