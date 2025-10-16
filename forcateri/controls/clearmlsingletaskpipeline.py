@@ -3,12 +3,24 @@ from dotenv import load_dotenv
 from pathlib import Path
 import os
 from clearml import Task
+from typing import List, Union
+from .pipeline import Pipeline
+from ..model.modeladapter import ModelAdapter
+from ..data.dataprovider import DataProvider
+from ..reporting.resultreporter import ResultReporter
 
 
-class ClearMlSingleTaskPipeline:
-    def __init__(self, config_name: str, project_root: Path):
+class ClearMlSingleTaskPipeline(Pipeline):
+    def __init__(
+        self,
+        config_name: str,
+        project_root: Path,
+        dp: DataProvider,
+        model_adapter: Union[ModelAdapter, List[ModelAdapter]],
+        reporter: Union[ResultReporter, List[ResultReporter]],
+    ):
         # self.task_name = task_name
-
+        super().__init__(dp, model_adapter, reporter)
         load_dotenv()
         self.config_name = config_name
         self.config = load_config(config_name, project_root)
