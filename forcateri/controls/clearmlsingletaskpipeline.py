@@ -22,7 +22,7 @@ class ClearMlSingleTaskPipeline(Pipeline):
         task_name: Optional[str] = None,
         param_kwargs: dict = {},
         param_args: List = [],
-        requirements: List[str] = [],
+        requirements: str = None,
     ):
         # self.task_name = task_name
         super().__init__(dp, model_adapter, reporter)
