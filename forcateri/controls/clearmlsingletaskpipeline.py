@@ -20,10 +20,16 @@ class ClearMlSingleTaskPipeline(Pipeline):
         project_root: Optional[Path] = None,
         project_name: Optional[str] = None,
         task_name: Optional[str] = None,
+        param_kwargs: dict = {},
+        param_args: List = [],
+        requirements: List[str] = [],
     ):
         # self.task_name = task_name
         super().__init__(dp, model_adapter, reporter)
         load_dotenv()
+        self.param_kwargs = param_kwargs
+        self.param_args = param_args
+        self.requirements = requirements
         if config_name and project_root:
             self.config_name = config_name
             self.config = load_config(config_name, project_root)
@@ -58,6 +64,9 @@ class ClearMlSingleTaskPipeline(Pipeline):
     def run(self):
         self.task = Task.init(project_name=self.project_name, task_name=self.task_name)
         function_task = self.task.create_function_task(func=super().run)
+        #function_task.set_base_docker(docker_image=self.docker)
+        function_task.set_packages(self.requirements)
+        function_task.connect(self.param_args)
         Task.enqueue(task=function_task, queue_name="default")
 
     def execute_task_enq(self,project_name,task_name,script,branch="main",repo="",docker=""):
