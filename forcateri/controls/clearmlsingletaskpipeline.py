@@ -66,7 +66,7 @@ class ClearMlSingleTaskPipeline(Pipeline):
         function_task = self.task.create_function_task(func=super().run)
         #function_task.set_base_docker(docker_image=self.docker)
         function_task.set_packages(self.requirements)
-        function_task.connect(self.param_args)
+        function_task.connect_configuration(self.param_args)
         Task.enqueue(task=function_task, queue_name="default")
 
     def execute_task_enq(self,project_name,task_name,script,branch="main",repo="",docker=""):
