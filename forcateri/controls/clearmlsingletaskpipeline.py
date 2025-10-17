@@ -30,14 +30,14 @@ class ClearMlSingleTaskPipeline(Pipeline):
             self.args = extract_config(self.config)
             self.args.append(("config", config_name))
 
-            self.project_name = (self.config["ClearML"]["task"]["project_name"],)
-            self.task_name = (self.config["ClearML"]["task"]["task_name"],)
+            self.project_name = self.config["ClearML"]["task"]["project_name"]
+            self.task_name = self.config["ClearML"]["task"]["task_name"]
 
-            self.branch = (self.config["ClearML"]["task"]["branch"],)
-            self.repo = (self.config["ClearML"]["task"]["repo"],)
-            self.script = (self.config["ClearML"]["task"]["script"],)
+            self.branch = self.config["ClearML"]["task"]["branch"]
+            self.repo = self.config["ClearML"]["task"]["repo"]
+            self.script = self.config["ClearML"]["task"]["script"]
             #     # docker = "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04",
-            self.docker = (self.config["ClearML"]["task"]["docker"],)
+            self.docker = self.config["ClearML"]["task"]["docker"]
 
 
     def execute_remotely(self):
@@ -57,9 +57,8 @@ class ClearMlSingleTaskPipeline(Pipeline):
 
     def run(self):
         self.task = Task.init(project_name=self.project_name, task_name=self.task_name)
-        self.task.create_function_task(func=super().run,kwargs={})
-        Task.enqueue(task=self.task, queue_name="default")
-        #self.create_function_task(func=super().run)
+        function_task = self.task.create_function_task(func=super().run)
+        Task.enqueue(task=function_task, queue_name="default")
 
     def execute_task_enq(self,project_name,task_name,script,branch="main",repo="",docker=""):
         token = os.environ["GIT_TOKEN"]
