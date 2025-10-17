@@ -34,7 +34,7 @@ class ClearMlSingleTaskPipeline(Pipeline):
             self.config_name = config_name
             self.config = load_config(config_name, project_root)
             self.args = extract_config(self.config)
-            self.args.append(("config", config_name))
+            #self.args.append(("config", config_name))
 
             self.project_name = self.config["ClearML"]["task"]["project_name"]
             self.task_name = self.config["ClearML"]["task"]["task_name"]
