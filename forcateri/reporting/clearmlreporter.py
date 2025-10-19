@@ -20,4 +20,5 @@ class ClearMLReporter(ResultReporter):
 
     def report_all(self):
         super().report_all()
+        print(f"Test of the metric results {self.metric_results}")
         Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
