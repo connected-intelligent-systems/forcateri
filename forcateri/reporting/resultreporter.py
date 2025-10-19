@@ -26,7 +26,8 @@ class ResultReporter:
         self,
     ):  # dont forget to remove predictions after testing
         self._make_predictions()
-        self.metric_results = self._report_metrics()
+        #self.metric_results = self._report_metrics()
+        self._report_metrics()
         self._plot_predictions()
         
 
@@ -106,6 +107,7 @@ class ResultReporter:
         self.metric_results = self._compute_metrics()
         self._plot_metrics(self.metric_results)
         print(self.metric_results)
+        #return self.metric_results 
 
     def _make_predictions(self):
         self.model_predictions = {}
