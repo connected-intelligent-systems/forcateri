@@ -68,12 +68,12 @@ def from_args_to_kwargs(*args) -> dict:
 
 def arg_parser(config_path):
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--config',
-        type=str,
-        required=True,
-        help="Configuration file name without .yaml extension"
-    )
+    # parser.add_argument(
+    #     '--config',
+    #     type=str,
+    #     required=True,
+    #     help="Configuration file name without .yaml extension"
+    # )
     args, remaining_args = parser.parse_known_args()
     with open(config_path.joinpath(args.config + '.yaml'), "r") as infile:
         parsed_config = yaml.safe_load(infile)
