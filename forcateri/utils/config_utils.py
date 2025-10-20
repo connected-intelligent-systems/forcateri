@@ -56,6 +56,9 @@ def from_args_to_kwargs(*args) -> dict:
             role_enum = getattr(SeriesRole, role_key)
             for f in features:
                 kwargs["Dataset"][dataset_name]["roles"][f] = role_enum
+        # elif key.startswith("DataProvider"):
+        #     _, param = key.split(".", 1)
+        #     kwargs["DataProvider"][param] = value
         elif key.startswith("Metric"):
             keysplit = key.split(".", 2)
             metric_name, param = keysplit[1], keysplit[2]
@@ -87,7 +90,7 @@ def arg_parser(project_root):
         parser.add_argument(f"--{k}", default=v)
     return parser
 
-def load_config(config_name: str,project_root) -> dict:
+def load_config(config_path: Path) -> dict:
     """
     Parse command line args and load YAML config file from configs/ directory.
     Returns: (config_name: str, parsed_config: dict)
@@ -102,7 +105,7 @@ def load_config(config_name: str,project_root) -> dict:
     args = parser.parse_args()
 
     #project_root = Path(__file__).parent.parent
-    config_path = project_root / "configs" / f"{config_name}.yaml"
+    #config_path = project_root / "configs" / f"{config_name}.yaml"
 
     with open(config_path, "r") as infile:
         parsed_config = yaml.safe_load(infile)
