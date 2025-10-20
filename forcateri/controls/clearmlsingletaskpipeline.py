@@ -50,7 +50,8 @@ class ClearMLSingleTaskPipeline(Pipeline):
         
         self.project_name = project_name if project_name else self.config["ClearML"]["task"]["project_name"]
         self.task_name = task_name if task_name else self.config["ClearML"]["task"]["task_name"]
-        self.docker = docker if docker else self.config["ClearML"]["task"]["docker"]
+        self.docker = docker if docker else self.config["ClearML"]["task"]["docker"] or "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04"
+
 
 
 
