@@ -66,9 +66,8 @@ def from_args_to_kwargs(*args) -> dict:
             kwargs["Metrics"].setdefault(metric_name, {})[param] = value
     return kwargs
 
-def arg_parser(project_root):
+def arg_parser(config_path):
     parser = argparse.ArgumentParser()
-    config_path = project_root.joinpath("configs")
     parser.add_argument(
         '--config',
         type=str,
