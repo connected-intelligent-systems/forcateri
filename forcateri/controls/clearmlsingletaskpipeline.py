@@ -47,10 +47,14 @@ class ClearMLSingleTaskPipeline(Pipeline):
         else:
             self.args = self.param_args
             
-        
-        self.project_name = project_name if project_name else self.config["ClearML"]["task"]["project_name"]
-        self.task_name = task_name if task_name else self.config["ClearML"]["task"]["task_name"]
-        self.docker = docker if docker else self.config["ClearML"]["task"]["docker"] or "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04"
+        clearml_cfg = self.config.get("ClearML", {}).get("task", {}) if isinstance(self.config, dict) else {}
+        self.project_name = project_name or clearml_cfg.get("project_name")
+        self.task_name = task_name or clearml_cfg.get("task_name")
+        self.docker = (
+            docker
+            or clearml_cfg.get("docker")
+            or "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04"
+        )
 
 
 
@@ -60,7 +64,7 @@ class ClearMLSingleTaskPipeline(Pipeline):
     def run(self):
         self.task = Task.init(project_name=self.project_name, task_name=self.task_name)
         function_task = self.task.create_function_task(func=super().run)
-        #function_task.set_base_docker(docker_image=self.docker)
+        function_task.set_base_docker(docker_image=self.docker)
         function_task.set_packages(self.requirements)
         function_task.connect_configuration(self.args)
         Task.enqueue(task=function_task, queue_name="default")
