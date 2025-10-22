@@ -20,16 +20,18 @@ class ClearMLSingleTaskPipeline(Pipeline):
         config_path: Optional[str] = None,
         project_name: Optional[str] = None,
         task_name: Optional[str] = None,
-        param_args: Optional[List] = None,
+        init_args: Optional[List] = None,
         requirements: str = None,
         docker: Optional[str] = None,
+        repo: Optional[str] = None,
+        branch: Optional[str] = None,
     ):
         # self.task_name = task_name
 
         super().__init__(dp, model_adapter, reporter)
 
-        
-        self.param_args = param_args or []
+
+        self.init_args = init_args or []
         self.requirements = requirements
         self.config = {}
         if config_path and os.path.exists(config_path):
@@ -37,25 +39,27 @@ class ClearMLSingleTaskPipeline(Pipeline):
             self.config = load_config(config_path)
             #upd config based on param_args and project_name and task_name. Param args have priority
             
-            self.args = extract_config(self.config)
+            self.parsed_cfg_args = extract_config(self.config)
             #self.args.append(("config", config_name))
-            if self.param_args:
-                for k, v in self.param_args:
+            #update parsed_cfg_args with init_args
+            if self.init_args:
+                for k, v in self.init_args:
                     #remove existing arg with same key
-                    self.args = [arg for arg in self.args if arg[0] != k]
-                    self.args.append((k, v))
+                    
+                    self.parsed_cfg_args = [arg for arg in self.parsed_cfg_args if arg[0] != k]
+                    self.parsed_cfg_args.append((k, v))
         else:
-            self.args = self.param_args
-            
+            self.parsed_cfg_args = self.param_args
+
         clearml_cfg = self.config.get("ClearML", {}).get("task", {}) if isinstance(self.config, dict) else {}
         self.project_name = project_name or clearml_cfg.get("project_name")
         self.task_name = task_name or clearml_cfg.get("task_name")
         self.docker = (
             docker
             or clearml_cfg.get("docker")
-            or "nvidia/cuda:11.8.0-cudnn8-devel-ubuntu22.04"
         )
-
+        self.repo = repo or clearml_cfg.get("repo")
+        self.branch = branch or clearml_cfg.get("branch")
 
 
 
@@ -67,6 +71,7 @@ class ClearMLSingleTaskPipeline(Pipeline):
         function_task.set_base_docker(docker_image=self.docker)
         function_task.set_packages(self.requirements)
         function_task.connect_configuration(self.args)
+        function_task.set_repo(repo=self.repo, branch=self.branch)
         Task.enqueue(task=function_task, queue_name="default")
 
 
