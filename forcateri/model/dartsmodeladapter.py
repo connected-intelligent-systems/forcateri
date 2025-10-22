@@ -22,7 +22,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
     def __init__(self, freq: str = "60min", *args, **kwargs):
         self.freq = freq
-        super().__init__(*args, **kwargs)
         self.model = None
         self.quantiles = kwargs.get("quantiles", None)
 
