@@ -3,7 +3,8 @@ import logging
 
 import matplotlib.pyplot as plt
 import pandas as pd
-from clearml import Task
+import pickle
+
 
 from .metric import Metric
 from ..data.adapterinput import AdapterInput
@@ -29,7 +30,8 @@ class ResultReporter:
         self,
     ):  # dont forget to remove predictions after testing
         self._make_predictions()
-        self.metric_results = self._report_metrics()
+        #self.metric_results = self._report_metrics()
+        self._report_metrics()
         self._plot_predictions()
 
     def _compute_metrics(self):
@@ -143,9 +145,8 @@ class ResultReporter:
     def _report_metrics(self):
         self.metric_results = self._compute_metrics()
         self._plot_metrics(self.metric_results)
-        Task.current_task().upload_artifact(
-            name="Report", artifact_object=self.metric_results
-        )
+        print(self.metric_results)
+        #return self.metric_results 
 
     def _make_predictions(self):
         logger.debug("Making predictions...")
