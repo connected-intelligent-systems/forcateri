@@ -27,11 +27,6 @@ class TimeSeries:
         quantiles: Optional[List[float]] = None,
         freq: Optional[str] = None,
     ):
-        self._features = []
-        self._representations = []
-        self._offsets = pd.TimedeltaIndex([])
-        self._timestamps = pd.DatetimeIndex([])
-
         if representation is None:
             if quantiles is None:
                 representation = TimeSeries.DETERM_REP
@@ -70,18 +65,6 @@ class TimeSeries:
                 f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
-        self._representations = list(
-            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique()
-        )
-        self._features = list(
-            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
-        )
-        self._offsets = self.data.index.get_level_values(
-            TimeSeries.ROW_INDEX_NAMES[0]
-        ).unique()
-        self._timestamps = self.data.index.get_level_values(
-            TimeSeries.ROW_INDEX_NAMES[1]
-        ).unique()
         self._check_freq_format(
             self.data.index.get_level_values(0) + self.data.index.get_level_values(1),
             freq,
@@ -90,22 +73,41 @@ class TimeSeries:
     @property
     def features(self):
         "The features property"
-        return self._features
+        return list(
+            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
+        )
 
     @property
     def representations(self):
         "The representation property"
-        return self._representations
+        return list(
+            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique()
+        )
 
     @property
     def offsets(self):
         "The offsets property"
-        return self._offsets
+        return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0]).unique()
 
     @property
     def timestamps(self):
         "The timestamps property"
-        return self._timestamps
+        return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).unique()
+
+    @property
+    def is_deterministic(self):
+        """
+        Whether the series is deterministic.
+        True if the feature representation is neither quantile nor sampled
+        """
+        return self.representation == TimeSeries.DETERM_REP
+
+    @property
+    def is_offset(self):
+        """
+        Whether the series has offsets other than 0.
+        """
+        return (len(self.offsets) != 1) or (self.offsets[0] != pd.Timedelta(0))
 
     def _check_freq_format(self, index: pd.Index, freq: Optional[str] = None) -> None:
         """
@@ -484,7 +486,7 @@ class TimeSeries:
                 "A regular frequency must be defined in the TimeSeries instance."
             )
 
-        if len(self._offsets) > 1:
+        if len(self.offsets) > 1:
             raise ValueError(
                 "Shifting is not supported for TimeSeries with offsets other than 0."
             )
@@ -499,6 +501,7 @@ class TimeSeries:
             names=TimeSeries.ROW_INDEX_NAMES,
         )
         shifted_data.set_index(shifted_index, inplace=True)
+        shifted_data = shifted_data.iloc[:-horizon, :]
         if in_place:
             self.data = shifted_data
             return self
@@ -601,7 +604,7 @@ class TimeSeries:
         """
         if horizon is not None:
             if isinstance(horizon, int):
-                horizon = self._offsets[horizon]
+                horizon = self.offsets[horizon]
             elif not isinstance(horizon, pd.Timedelta):
                 raise ValueError("Horizon must be an int or pd.Timedelta.")
 
@@ -664,7 +667,10 @@ class TimeSeries:
         if (not isinstance(index, List)) or (
             not all([isinstance(i, str) for i in index])
         ):
-            raise TypeError("feature must be a list of strings")
+            raise TypeError("Cannot slice TimeSeries: Index must be a list of strings.")
+
+        if len(index) == 0:
+            raise ValueError("Cannot slice TimeSeries: Index is empty.")
 
         new_data = self.data[index]
         return TimeSeries(data=new_data.copy() if copy else new_data)
@@ -726,6 +732,13 @@ class TimeSeries:
         # adjust index format so that the data frame structure is preserved upon access
         if not isinstance(index, slice):
             index = [index]
+        # If the end of the slice hits an index, move it half a step
+        # back to imitate the behavior of range() in excluding the upper bound.
+        # One step back should also work but it depends heavier on the implementation of pandas.
+        elif index.stop in self.data.index.get_level_values(1):
+            index = slice(
+                index.start, index.stop - pd.Timedelta(1, unit=self.freq) * 0.5
+            )
 
         # slice the underlying data
         new_data = (

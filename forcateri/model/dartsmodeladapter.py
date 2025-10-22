@@ -1,19 +1,18 @@
 import logging
 import os
-from abc import ABC, abstractmethod
+from abc import ABC
 from pathlib import Path
-from typing import Any, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 
 import pandas as pd
 from darts import TimeSeries as DartsTimeSeries
-from darts.dataprocessing.transformers import Scaler
 from darts.models.forecasting.forecasting_model import ForecastingModel
 
 from ..data.adapterinput import AdapterInput
 from ..data.timeseries import TimeSeries
 from .modeladapter import ModelAdapter
-from .modelexceptions import InvalidModelTypeError, ModelAdapterError
+from .modelexceptions import ModelAdapterError
 
 logger = logging.getLogger(__name__)
 
@@ -51,16 +50,19 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
             # if value is a list, skip if all elements are None or empty
             if isinstance(value, list):
-                if all(v is None or (hasattr(v, '__len__') and len(v) == 0) for v in value):
+                if all(
+                    v is None or (hasattr(v, "__len__") and len(v) == 0) for v in value
+                ):
                     continue
-           
-            
+
             args[key] = value
-        
+
         return args
 
     def fit(
-        self, train_data: List[AdapterInput], val_data: Optional[List[AdapterInput]]
+        self,
+        train_data: List[AdapterInput],
+        val_data: Optional[List[AdapterInput]] = None,
     ) -> None:
         """
         Fits the model using the provided training and validation data.
@@ -70,7 +72,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         fit_args = {"series": target}
         fit_args.update(self._get_covariate_args(known, observed, static))
 
-        if val_data:
+        if val_data is not None:
             val_target, val_known, val_observed, val_static = self.convert_input(
                 val_data
             )
@@ -96,7 +98,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         self._predict_args = predict_args
 
-    @abstractmethod
     def predict(self, *args, **kwargs) -> Union[TimeSeries, List[TimeSeries]]:
         raise NotImplementedError(
             "The predict method is not implemented in the base DartsModelAdapter class. "
@@ -224,7 +225,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         else:
             return convert_single_ts(ts)
 
-    @abstractmethod
     def tune(
         self,
         train_data: List[AdapterInput],

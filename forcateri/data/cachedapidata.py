@@ -1,5 +1,4 @@
 from abc import abstractmethod
-from datetime import datetime
 from pathlib import Path
 from typing import List
 
@@ -11,7 +10,7 @@ class CachedAPIData(DataSource):
 
     @abstractmethod
     def __init__(self):
-        super().__init__(source_type="cached_api")
+        super().__init__()
         # local_copy to be dynamically updated after the download.
         self.local_copy: Path = None
 
@@ -30,7 +29,6 @@ class CachedAPIData(DataSource):
     @abstractmethod
     def get_data(self) -> List[TimeSeries]:
         pass
-
 
     @abstractmethod
     def _fetch_data_from_api(self):
