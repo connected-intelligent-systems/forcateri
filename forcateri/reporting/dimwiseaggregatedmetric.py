@@ -1,4 +1,4 @@
-from typing import Callable, List, OrderedDict, Union
+from typing import Callable, List, Union
 import numpy as np
 import pandas as pd
 import logging
@@ -9,6 +9,7 @@ from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
 
+
 class DimwiseAggregatedMetric(Metric):
     OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
     FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
@@ -16,11 +17,12 @@ class DimwiseAggregatedMetric(Metric):
     def __init__(
         self,
         axes: List[str],
-        reduction: Callable[[np.ndarray, np.ndarray], Union[np.ndarray, float]] = column_wise_mae,
+        reduction: Callable[
+            [np.ndarray, np.ndarray], Union[np.ndarray, float]
+        ] = column_wise_mae,
     ):
         self.axes = axes
         self.reduction = reduction
-        
 
     @staticmethod
     def get_level_values(df, axis):
@@ -49,7 +51,7 @@ class DimwiseAggregatedMetric(Metric):
             )
         )
 
-        print(group_by)
+        logger.debug(f"Grouping by {group_by}")
 
         if len(group_by) == 0:
             logger.info("No axes left for grouping. Reducing entire data frames.")
@@ -82,12 +84,12 @@ class DimwiseAggregatedMetric(Metric):
                 (gt_label, gt),
                 (pred_label, pred),
             ) in zip(flat_gt.groupby(group_by), flat_pred.groupby(group_by)):
-                print(f"gt:{gt_label}, pred_label: {pred_label}")
+                logger.debug(f"gt:{gt_label}, pred_label: {pred_label}")
                 assert (
                     gt_label == pred_label
                 )  # due to the identical structure before grouping and the same group_by
                 reduced = self.reduction(gt.values, pred.values)
                 reduced_df.loc[pred_label] = reduced
-                print(gt, pred)
-                print(f"Reduced:{reduced}")
+                logger.debug(f"\ngt:\n{gt}\npred:\n{pred}")
+                logger.debug(f"Reduced:{reduced}")
             return reduced_df

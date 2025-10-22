@@ -1,4 +1,4 @@
-from forcateri import TimeSeries
+from ..data.timeseries import TimeSeries
 
 
 class Metric:
