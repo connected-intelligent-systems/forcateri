@@ -49,7 +49,7 @@ class ClearMLSingleTaskPipeline(Pipeline):
                     self.parsed_cfg_args = [arg for arg in self.parsed_cfg_args if arg[0] != k]
                     self.parsed_cfg_args.append((k, v))
         else:
-            self.parsed_cfg_args = self.param_args
+            self.parsed_cfg_args = self.init_args
 
         clearml_cfg = self.config.get("ClearML", {}).get("task", {}) if isinstance(self.config, dict) else {}
         self.project_name = project_name or clearml_cfg.get("project_name")

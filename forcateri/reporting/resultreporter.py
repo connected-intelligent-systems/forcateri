@@ -129,7 +129,7 @@ class ResultReporter:
                             x = df.index
                             xlabel = "Index"
                         for col in df.columns:
-                            ax.plot(x, df[col], label=f"Sample {i} - {col}")
+                            ax.plot(x, df[col], label=f"Test series id: {i} - {col}")
                     else:
                         # Skip plotting for non-DataFrame objects
                         continue
@@ -218,7 +218,7 @@ class ResultReporter:
 
                     # Aesthetics
                     ax.set_title(
-                        f"Model {model} — Sample {i} — Offset: {offset}", fontsize=14
+                        f"Model {model} — Test series id: {i} — Offset: {offset}", fontsize=14
                     )
                     ax.set_xlabel("Time", fontsize=12, weight="bold")
                     ax.set_ylabel("Value", fontsize=12)
