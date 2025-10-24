@@ -59,6 +59,7 @@ class TimeSeries:
             logger.info("TimeSeries initialized from compatible-format DataFrame.")
         else:
             logger.info(f"Raw DataFrame with {representation} cannot be aligned")
+
             raise InvalidDataFrameFormat(
                 f"Cannot build TimeSeries from the provided DataFrame: "
                 f"DataFrame is not in a matching or compatible format for representation '{representation}'. "
@@ -292,6 +293,12 @@ class TimeSeries:
                 if index_names_set == set(TimeSeries.ROW_INDEX_NAMES) and has_datetime:
                     logger.info("Index is MultiIndex with datetime values.")
                     return True
+            else:
+                has_datetime = isinstance(
+                    df.index.get_level_values(0), pd.DatetimeIndex
+                ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
+                has_delta = isinstance(df.index.get_level_values(0), pd.TimedeltaIndex) or isinstance(df.index.get_level_values(1), pd.TimedeltaIndex)
+                return has_datetime and has_delta
 
             # Check full MultiIndex structure
         if isinstance(df.columns, pd.MultiIndex):
@@ -307,48 +314,16 @@ class TimeSeries:
             )
 
         return False
+    
+    def __align_column_level(self,df:pd.DataFrame):
+        """Ensure columns follow the correct MultiIndex order."""
+        if set(TimeSeries.COL_INDEX_NAMES) == set(df.columns.names) and df.columns.names != TimeSeries.COL_INDEX_NAMES:
+            logger.info("Reordering column levels to match expected format.")
+            order = [df.columns.names.index(name) for name in TimeSeries.COL_INDEX_NAMES]
+            df.columns = df.columns.reorder_levels(order)
 
-    def align_format(self, df: pd.DataFrame):
-
-        if (
-            set(TimeSeries.COL_INDEX_NAMES) == set(df.columns.names)
-            and TimeSeries.COL_INDEX_NAMES != df.columns.names
-        ):
-            logger.info("Reordering column names to match expected format.")
-            df.columns = df.columns.reorder_levels(
-                [df.columns.names.index(name) for name in TimeSeries.COL_INDEX_NAMES]
-            )
-        if (
-            set(TimeSeries.ROW_INDEX_NAMES) == set(df.index.names)
-            and TimeSeries.ROW_INDEX_NAMES != df.index.names
-        ):
-            logger.info("Reordering index names to match expected format.")
-            df.index = df.index.reorder_levels(
-                [df.index.names.index(name) for name in TimeSeries.ROW_INDEX_NAMES]
-            )
-        # Casting the index to datetime format if it is a MultiIndex with 'time_stamp'
-        if isinstance(df.index, pd.MultiIndex) and "time_stamp" in df.index.names:
-            logger.info("Casting the index to datetime format")
-            try:
-                df.index = pd.MultiIndex.from_arrays(
-                    [
-                        df.index.get_level_values("offset"),
-                        pd.to_datetime(df.index.get_level_values("time_stamp")),
-                    ],
-                    names=TimeSeries.ROW_INDEX_NAMES,
-                )
-            except Exception as e:
-                logger.error(f"Failed to convert 'time_stamp' to datetime: {e}")
-                raise ValueError(
-                    f"Cannot convert index level 'time_stamp' to datetime: {e}"
-                )
-        # Creating multiindex if needed
-        if not isinstance(df.index, pd.MultiIndex):
-            df.index = pd.MultiIndex.from_product(
-                [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
-            )
         if self.representation == TimeSeries.DETERM_REP:
-
+            
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
@@ -413,6 +388,60 @@ class TimeSeries:
                     raise ValueError(
                         "Cannot map inner column levels to samples: mismatched length."
                     )
+        
+
+
+    def _align_index_level(self,df:pd.DataFrame):
+        """Ensure index follows the correct MultiIndex order."""
+
+        if not isinstance(df.index, pd.MultiIndex):
+            logger.info("Creating MultiIndex for the index.")
+            df.index = pd.to_datetime(df.index)
+            df.index = pd.MultiIndex.from_product(
+                [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
+            )
+            return 
+       
+        if "time_stamp" in df.index.names:
+            logger.info("Casting the index to datetime format")
+            try:
+                df.index = pd.MultiIndex.from_arrays(
+                    [
+                        df.index.get_level_values("offset"),
+                        pd.to_datetime(df.index.get_level_values("time_stamp")),
+                    ],
+                    names=TimeSeries.ROW_INDEX_NAMES,
+                )
+            except Exception as e:
+                logger.error(f"Failed to convert 'time_stamp' to datetime: {e}")
+                raise ValueError(
+                    f"Cannot convert index level 'time_stamp' to datetime: {e}"
+                )
+        level0 = df.index.get_level_values(0)
+        level1 = df.index.get_level_values(1)
+        if isinstance(level0, pd.TimedeltaIndex) and isinstance(level1, pd.DatetimeIndex):
+            logger.info("Index levels are in correct order.")
+            df.index.names = TimeSeries.ROW_INDEX_NAMES
+        elif isinstance(level0, pd.DatetimeIndex) and isinstance(level1, pd.TimedeltaIndex):
+            logger.info("Swapping index levels to match expected format.")
+            df.index = df.index.reorder_levels([1, 0])
+            df.index.names = TimeSeries.ROW_INDEX_NAMES
+        else:
+            logger.warning("Index levels do not match expected types. Cannot align.")
+
+        
+
+    def align_format(self, df: pd.DataFrame):
+
+        self._align_index_level(df)
+        self.__align_column_level(df)
+        
+
+
+        
+        
+
+        
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
