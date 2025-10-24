@@ -141,6 +141,75 @@ class ResultReporter:
                 plt.tight_layout()
                 plt.show()
                 plt.close()
+    
+    def _plot_predictions(self):
+        for model, prediction_ts_list in self.model_predictions.items():
+            for i, (adapter_input, pred_ts) in enumerate(
+                zip(self.test_data, prediction_ts_list)
+            ):
+                gt_ts = adapter_input.target
+                offsets = pred_ts.data.index.get_level_values("offset").unique()
+                
+                # Create one plot per offset (similar to how _plot_metrics creates one plot per metric)
+                for offset in offsets:
+                    pred_df = pred_ts.by_time(offset).copy()
+                    gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
+                    
+                    # Skip if no data
+                    if len(pred_df) <= 1:
+                        continue
+                    
+                    # Flatten MultiIndex columns if needed
+                    if isinstance(pred_df.columns, pd.MultiIndex):
+                        pred_df.columns = pred_df.columns.get_level_values(1).astype(float)
+
+                    quantiles = sorted(pred_df.columns.astype(float))
+                    lower_q = quantiles[0]
+                    upper_q = quantiles[-1]
+                    median_q = min(quantiles, key=lambda q: abs(q - 0.5))
+
+                    fig, ax = plt.subplots(figsize=(12, 6))
+
+                    # Plot each quantile as a separate line (similar to how metrics plots each column)
+                    for q in quantiles:
+                        ax.plot(
+                            pred_df.index,
+                            pred_df[q],
+                            label=f"Forecast (q={q})",
+                            linewidth=0.8,
+                            alpha=0.7
+                        )
+
+                    # Plot confidence interval for the outer quantiles
+                    if lower_q != upper_q:
+                        ax.fill_between(
+                            pred_df.index,
+                            pred_df[lower_q],
+                            pred_df[upper_q],
+                            color="blue",
+                            alpha=0.2,
+                            label=f"Confidence Interval ({lower_q}-{upper_q})",
+                        )
+
+                    # Plot ground truth
+                    gt_df.columns = ["Ground Truth"]
+                    ax.plot(
+                        gt_df.index,
+                        gt_df["Ground Truth"],
+                        label="Ground Truth",
+                        color="black",
+                        linestyle="--",
+                        linewidth=1.2,
+                    )
+
+                    # Set title and labels (similar to _plot_metrics structure)
+                    ax.set_title(f"Predictions for {model.__class__.__name__} - Test Series {i} - Offset {offset}")
+                    ax.set_xlabel("Time")
+                    ax.set_ylabel("Value")
+                    ax.legend()
+                    plt.tight_layout()
+                    plt.show()
+                    plt.close()
 
     def _report_metrics(self):
         self.metric_results = self._compute_metrics()
@@ -161,35 +230,36 @@ class ResultReporter:
             )
             self.model_predictions[model] = predictions_ts_list
 
-    def _plot_predictions(self):
+    def _plot_predictions_old(self):
         for model, prediction_ts_list in self.model_predictions.items():
             for i, (adapter_input, pred_ts) in enumerate(
                 zip(self.test_data, prediction_ts_list)
             ):
                 gt_ts = adapter_input.target  # TimeSeries object
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
-
-                # Create one figure per test series (not per offset)
-                fig, ax = plt.subplots(figsize=(12, 6))
-
                 for offset in offsets:
                     pred_df = pred_ts.by_time(offset).copy()
-                    gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]  # Align indices
 
+                    gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]  # Align indices
                     # Flatten MultiIndex columns if needed
                     if isinstance(pred_df.columns, pd.MultiIndex):
-                        pred_df.columns = pred_df.columns.get_level_values(1).astype(float)
+                        pred_df.columns = pred_df.columns.get_level_values(1).astype(
+                            float
+                        )
 
                     quantiles = sorted(pred_df.columns.astype(float))
                     lower_q = quantiles[0]
                     upper_q = quantiles[-1]
                     median_q = min(quantiles, key=lambda q: abs(q - 0.5))
 
+                    fig, ax = plt.subplots(figsize=(12, 6))
+
                     # Plot median prediction
                     ax.plot(
                         pred_df.index,
                         pred_df[median_q],
-                        label=f"Offset {offset} (q={median_q})",
+                        label=f"Forecast (q={median_q})",
+                        color="blue",
                         linewidth=0.8,
                     )
 
@@ -199,33 +269,36 @@ class ResultReporter:
                             pred_df.index,
                             pred_df[lower_q],
                             pred_df[upper_q],
+                            color="blue",
                             alpha=0.2,
+                            label=f"Confidence (q={lower_q}-{upper_q})",
                         )
 
                     gt_df.columns = ["Ground Truth"]
+                    # Plot ground truth
+                    ax.plot(
+                        gt_df.index,
+                        gt_df["Ground Truth"],
+                        label="Ground Truth",
+                        color="black",
+                        linestyle="--",
+                        linewidth=0.8,
+                    )
 
-                # Plot ground truth once (on top)
-                ax.plot(
-                    gt_df.index,
-                    gt_df["Ground Truth"],
-                    label="Ground Truth",
-                    color="black",
-                    linestyle="--",
-                    linewidth=0.8,
-                )
+                    # Aesthetics
+                    ax.set_title(
+                        f"Model {model} — Test series id: {i} — Offset: {offset}", fontsize=14
+                    )
+                    ax.set_xlabel("Time", fontsize=12, weight="bold")
+                    ax.set_ylabel("Value", fontsize=12)
+                    ax.grid(True, linestyle="--", alpha=0.4)
+                    ax.legend(loc="upper left", fontsize=12)
+                    plt.xticks(rotation=30)
+                    plt.tight_layout()
 
-                # Aesthetics
-                ax.set_title(f"Model {model} — Test series id: {i}", fontsize=14)
-                ax.set_xlabel("Time", fontsize=12, weight="bold")
-                ax.set_ylabel("Value", fontsize=12)
-                ax.grid(True, linestyle="--", alpha=0.4)
-                ax.legend(loc="upper left", fontsize=10)
-                plt.xticks(rotation=30)
-                plt.tight_layout()
-
-                # Keep plt.show() alive long enough for ClearML to intercept it
-                plt.show()
-                #plt.close()
+                    # plt.savefig(f"plot_model_{model_idx}_sample_{i}_offset_{safe_offset}.png")
+                    plt.show()
+                    plt.close()
 
     def _report_plots(self):
         logger.error("Function _report_plots not implemented.")
