@@ -181,15 +181,15 @@ class ResultReporter:
                         )
 
                     # Plot confidence interval for the outer quantiles
-                    if lower_q != upper_q:
-                        ax.fill_between(
-                            pred_df.index,
-                            pred_df[lower_q],
-                            pred_df[upper_q],
-                            color="blue",
-                            alpha=0.2,
-                            label=f"Confidence Interval ({lower_q}-{upper_q})",
-                        )
+                    # if lower_q != upper_q:
+                    #     ax.fill_between(
+                    #         pred_df.index,
+                    #         pred_df[lower_q],
+                    #         pred_df[upper_q],
+                    #         color="blue",
+                    #         alpha=0.2,
+                    #         label=f"Confidence Interval ({lower_q}-{upper_q})",
+                    #     )
 
                     # Plot ground truth
                     gt_df.columns = ["Ground Truth"]
