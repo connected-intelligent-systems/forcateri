@@ -25,13 +25,16 @@ class ResultReporter:
         self.test_data = test_data
         self.models = models
         self.metrics = metrics
-        # dont forget to remove predictions after testing
-        self._make_predictions()
+        self.model_predictions = None  # to be filled after predictions
+        self.metric_results = None  # to be filled after metric computation
 
     def report_all(
         self,
     ):  
         #self.metric_results = self._report_metrics()
+
+        # dont forget to remove predictions after testing
+        self._make_predictions()
         self.report_metrics()
         self.report_plots()
         #self.report_debug_samples()
@@ -227,6 +230,8 @@ class ResultReporter:
 
     def report_metrics(self):
         self.metric_results = self._compute_metrics()
+        if self.model_predictions is None:
+            self._make_predictions()
         #self._plot_metrics(self.metric_results)
         print(self.metric_results)
         #return self.metric_results 
@@ -317,6 +322,8 @@ class ResultReporter:
     def report_plots(self):
         if self.metric_results is None:
             self.metric_results = self._compute_metrics()
+        if self.model_predictions is None:
+            self._make_predictions()
         self._plot_metrics(self.metric_results)
         self._plot_predictions()
         #logger.error("Function _report_plots not implemented.")
