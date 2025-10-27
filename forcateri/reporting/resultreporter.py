@@ -25,14 +25,16 @@ class ResultReporter:
         self.test_data = test_data
         self.models = models
         self.metrics = metrics
+        # dont forget to remove predictions after testing
+        self._make_predictions()
 
     def report_all(
         self,
-    ):  # dont forget to remove predictions after testing
-        self._make_predictions()
+    ):  
         #self.metric_results = self._report_metrics()
-        self._report_metrics()
-        self._plot_predictions()
+        self.report_metrics()
+        self.report_plots()
+        #self.report_debug_samples()
 
     def _compute_metrics(self):
         logger.debug("Computing merics...")
@@ -223,9 +225,9 @@ class ResultReporter:
                     plt.close()
 
 
-    def _report_metrics(self):
+    def report_metrics(self):
         self.metric_results = self._compute_metrics()
-        self._plot_metrics(self.metric_results)
+        #self._plot_metrics(self.metric_results)
         print(self.metric_results)
         #return self.metric_results 
 
@@ -312,8 +314,12 @@ class ResultReporter:
                     plt.show()
                     plt.close()
 
-    def _report_plots(self):
-        logger.error("Function _report_plots not implemented.")
+    def report_plots(self):
+        if self.metric_results is None:
+            self.metric_results = self._compute_metrics()
+        self._plot_metrics(self.metric_results)
+        self._plot_predictions()
+        #logger.error("Function _report_plots not implemented.")
 
     def _persist_artifacts(self):
         logger.error("Function _persist_artifacts not implemented.")
@@ -321,5 +327,5 @@ class ResultReporter:
     def _select_debug_samples(self):
         logger.error("Function _select_debug_samples not implemented.")
 
-    def _report_debug_samples(self):
+    def report_debug_samples(self):
         logger.error("Function _report_debug_samples not implemented.")
