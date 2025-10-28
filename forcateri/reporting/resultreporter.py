@@ -229,9 +229,10 @@ class ResultReporter:
 
 
     def report_metrics(self):
-        self.metric_results = self._compute_metrics()
+        """Reporting metrics"""
         if self.model_predictions is None:
             self._make_predictions()
+        self.metric_results = self._compute_metrics()
         #self._plot_metrics(self.metric_results)
         print(self.metric_results)
         #return self.metric_results 
@@ -320,10 +321,11 @@ class ResultReporter:
                     plt.close()
 
     def report_plots(self):
-        if self.metric_results is None:
-            self.metric_results = self._compute_metrics()
+        '''Reporting plots'''
         if self.model_predictions is None:
             self._make_predictions()
+        if self.metric_results is None:
+            self.metric_results = self._compute_metrics()
         self._plot_metrics(self.metric_results)
         self._plot_predictions()
         #logger.error("Function _report_plots not implemented.")

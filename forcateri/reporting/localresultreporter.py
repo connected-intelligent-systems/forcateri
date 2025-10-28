@@ -8,6 +8,7 @@ from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from typing import List
 
+
 def save_plots(save_dir="plots"):
     os.makedirs(save_dir, exist_ok=True)
 

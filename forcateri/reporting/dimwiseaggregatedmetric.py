@@ -73,6 +73,8 @@ class DimwiseAggregatedMetric(Metric):
                     for axis in group_by
                 ]
             )
+            if len(reduced_index.levels) == 1:
+                reduced_index = reduced_index.levels[0]
             reduced_df = pd.DataFrame(
                 index=reduced_index,
                 columns=DimwiseAggregatedMetric.get_level_values(
