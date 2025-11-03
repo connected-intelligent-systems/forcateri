@@ -1,5 +1,6 @@
 import os
 import pickle
+import pandas as pd
 from forcateri.reporting.resultreporter import ResultReporter
 from .metric import Metric
 from matplotlib import pyplot as plt
@@ -47,6 +48,12 @@ class LocalResultReporter(ResultReporter):
     def report_metrics(self):
         super().report_metrics()
         os.makedirs('reports', exist_ok=True)
+        for model_name, model_results in self.metric_results.items():
+            for metric_name, result_df_list in model_results.items():
+                result = pd.concat(result_df_list, axis=0)
+                result['model'] = model_name
+                result.reset_index(inplace=True)
+                result.to_csv(f'reports/{model_name}_{metric_name}_results.csv', index=False)
         with open('reports/local_metric_results.pkl', 'wb') as f:
             pickle.dump(self.metric_results, f)
 
