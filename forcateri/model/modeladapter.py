@@ -8,6 +8,10 @@ from ..data.timeseries import TimeSeries
 
 
 class ModelAdapter(ABC):
+    
+    def __init__(self, model_name: Optional[str] = None):
+        # default to the class name
+        self.model_name = model_name or self.__class__.__name__
     def fit(
         self,
         train_data: List[AdapterInput],
