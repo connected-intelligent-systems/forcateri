@@ -15,4 +15,7 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
     def __call__(self, ts_gt: TimeSeries, ts_pred: TimeSeries):
         self.reduction = lambda gt, pred: quantile_metric(gt, pred, ts_pred.quantiles)
         return super().__call__(ts_gt, ts_pred)
-
+    
+    def __str__(self):
+        axes_str = "_".join(map(str, self.axes))
+        return f"{self.__class__.__name__}_axes_{axes_str}_reduction_quantile_metric"
