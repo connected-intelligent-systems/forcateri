@@ -98,7 +98,4 @@ class DimwiseAggregatedMetric(Metric):
 
     def __str__(self):
         axes_str = "_".join(map(str, self.axes))
-        red = str(self.reduction)
-        if red.startswith("<function"):
-            red = red.split(" ")[1]
-        return f"{self.__class__.__name__}_axes_{axes_str}_reduction_{red}"
+        return f"{self.__class__.__name__}_on_{axes_str}_using_{self.reduction.__name__}"

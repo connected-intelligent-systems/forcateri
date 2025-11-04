@@ -18,4 +18,4 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
     
     def __str__(self):
         axes_str = "_".join(map(str, self.axes))
-        return f"{self.__class__.__name__}_axes_{axes_str}_reduction_quantile_metric"
+        return f"{self.__class__.__name__}_on_{axes_str}_using_quantile_metric"

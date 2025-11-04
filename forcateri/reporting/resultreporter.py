@@ -44,13 +44,11 @@ class ResultReporter:
         results = {}
 
         # loop over each model's predictions
-        for model, prediction_ts_list in self.model_predictions.items():
-            model_results = {}
+        for met in self.metrics:
+            met_results = {}
 
-            # loop over each metric
-            for met in self.metrics:
-                met_results = []
-
+            for model, prediction_ts_list in self.model_predictions.items():
+                model_results = []
                 # loop over test data & predictions
                 for i, (adapter_input, pred_ts) in enumerate(
                     zip(self.test_data, prediction_ts_list)
@@ -100,11 +98,11 @@ class ResultReporter:
                         f"on test series {i}..."
                     )
                     reduced_df = met(gt_shifted, pred_ts)
-                    met_results.append(reduced_df)
+                    model_results.append(reduced_df)
 
-                model_results[met.__class__.__name__] = met_results
+                met_results[met.__class__.__name__] = model_results
 
-            results[model.__class__.__name__] = model_results
+            results[model.__class__.__name__] = met_results
 
         return results
 
