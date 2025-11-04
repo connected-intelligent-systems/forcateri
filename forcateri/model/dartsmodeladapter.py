@@ -19,7 +19,10 @@ logger = logging.getLogger(__name__)
 
 class DartsModelAdapter(ModelAdapter, ABC):
 
-    def __init__(self, freq: str = "60min", *args, **kwargs):
+    def __init__(
+        self, freq: str = "60min", model_name: Optional[str] = None, *args, **kwargs
+    ):
+        super().__init__(model_name=model_name)
         self.freq = freq
         self.model = None
         self.quantiles = kwargs.get("quantiles", None)

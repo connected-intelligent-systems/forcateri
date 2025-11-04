@@ -95,3 +95,7 @@ class DimwiseAggregatedMetric(Metric):
                 logger.debug(f"\ngt:\n{gt}\npred:\n{pred}")
                 logger.debug(f"Reduced:{reduced}")
             return reduced_df
+
+    def __str__(self):
+        axes_str = "_".join(map(str, self.axes))
+        return f"{self.__class__.__name__}_on_{axes_str}_using_{self.reduction.__name__}"

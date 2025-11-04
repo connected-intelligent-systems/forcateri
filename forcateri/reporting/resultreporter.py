@@ -30,27 +30,25 @@ class ResultReporter:
 
     def report_all(
         self,
-    ):  
-        #self.metric_results = self._report_metrics()
+    ):
+        # self.metric_results = self._report_metrics()
 
         # dont forget to remove predictions after testing
         self._make_predictions()
         self.report_metrics()
         self.report_plots()
-        #self.report_debug_samples()
+        # self.report_debug_samples()
 
     def _compute_metrics(self):
         logger.debug("Computing merics...")
         results = {}
 
-        # loop over each model's predictions
-        for model, prediction_ts_list in self.model_predictions.items():
-            model_results = {}
+        # loop over each metrics
+        for met in self.metrics:
+            met_results = {}
 
-            # loop over each metric
-            for met in self.metrics:
-                met_results = []
-
+            for model, prediction_ts_list in self.model_predictions.items():
+                model_results = []
                 # loop over test data & predictions
                 for i, (adapter_input, pred_ts) in enumerate(
                     zip(self.test_data, prediction_ts_list)
@@ -100,11 +98,11 @@ class ResultReporter:
                         f"on test series {i}..."
                     )
                     reduced_df = met(gt_shifted, pred_ts)
-                    met_results.append(reduced_df)
+                    model_results.append(reduced_df)
 
-                model_results[met.__class__.__name__] = met_results
+                met_results[model.model_name] = model_results
 
-            results[model.__class__.__name__] = model_results
+            results[str(met)] = met_results
 
         return results
 
@@ -146,13 +144,15 @@ class ResultReporter:
                 plt.tight_layout()
                 plt.show()
                 plt.close()
-    
+
     def _plot_predictions(self):
         for model, prediction_ts_list in self.model_predictions.items():
-            for i, (adapter_input, pred_ts) in enumerate(zip(self.test_data, prediction_ts_list)):
+            for i, (adapter_input, pred_ts) in enumerate(
+                zip(self.test_data, prediction_ts_list)
+            ):
                 gt_ts = adapter_input.target
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
-                
+
                 # Create one plot per offset (similar to how _plot_metrics creates one plot per metric)
                 for offset in offsets:
                     pred_df = pred_ts.by_time(offset).copy()
@@ -164,7 +164,9 @@ class ResultReporter:
 
                     # Flatten MultiIndex columns if needed
                     if isinstance(pred_df.columns, pd.MultiIndex):
-                        pred_df.columns = pred_df.columns.get_level_values(1).astype(float)
+                        pred_df.columns = pred_df.columns.get_level_values(1).astype(
+                            float
+                        )
 
                     quantiles = sorted(pred_df.columns.astype(float))
                     lower_q = quantiles[0]
@@ -217,7 +219,9 @@ class ResultReporter:
                     )
 
                     # --- Aesthetics
-                    ax.set_title(f"{model.__class__.__name__} — Test Series {i} — Offset {offset}")
+                    ax.set_title(
+                        f"{model.__class__.__name__} — Test Series {i} — Offset {offset}"
+                    )
                     ax.set_xlabel("Time")
                     ax.set_ylabel("Value")
                     ax.grid(True, linestyle="--", alpha=0.4)
@@ -227,15 +231,14 @@ class ResultReporter:
                     plt.show()
                     plt.close()
 
-
     def report_metrics(self):
         """Reporting metrics"""
         if self.model_predictions is None:
             self._make_predictions()
         self.metric_results = self._compute_metrics()
-        #self._plot_metrics(self.metric_results)
+        # self._plot_metrics(self.metric_results)
         print(self.metric_results)
-        #return self.metric_results 
+        # return self.metric_results
 
     def _make_predictions(self):
         logger.debug("Making predictions...")
@@ -307,7 +310,8 @@ class ResultReporter:
 
                     # Aesthetics
                     ax.set_title(
-                        f"Model {model} — Test series id: {i} — Offset: {offset}", fontsize=14
+                        f"Model {model} — Test series id: {i} — Offset: {offset}",
+                        fontsize=14,
                     )
                     ax.set_xlabel("Time", fontsize=12, weight="bold")
                     ax.set_ylabel("Value", fontsize=12)
@@ -321,14 +325,14 @@ class ResultReporter:
                     plt.close()
 
     def report_plots(self):
-        '''Reporting plots'''
+        """Reporting plots"""
         if self.model_predictions is None:
             self._make_predictions()
         if self.metric_results is None:
             self.metric_results = self._compute_metrics()
         self._plot_metrics(self.metric_results)
         self._plot_predictions()
-        #logger.error("Function _report_plots not implemented.")
+        # logger.error("Function _report_plots not implemented.")
 
     def _persist_artifacts(self):
         logger.error("Function _persist_artifacts not implemented.")
