@@ -100,9 +100,9 @@ class ResultReporter:
                     reduced_df = met(gt_shifted, pred_ts)
                     model_results.append(reduced_df)
 
-                met_results[model.__class__.__name__] = model_results
+                met_results[model.model_name] = model_results
 
-            results[met.__class__.__name__] = met_results
+            results[str(met)] = met_results
 
         return results
 
