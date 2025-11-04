@@ -36,5 +36,6 @@ class ClearMLReporter(ResultReporter):
 
             final_df = pd.concat(all_results, axis=0)
             final_df.reset_index(inplace=True)
-            final_df.to_csv(f'reports/{metric_name}_results.csv', index=False)
+
+            final_df.to_csv(f'{metric_name}_results.csv', index=False)
             Task.current_task().upload_artifact(name=f'{metric_name}_results.csv', artifact_object=final_df)
