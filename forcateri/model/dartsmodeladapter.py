@@ -88,23 +88,23 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         self.model.fit(**fit_args)
 
-    def prepare_predict_args(
-        self, data: List[AdapterInput]
-    ) -> Union[DartsTimeSeries, List[DartsTimeSeries]]:
+    def _prepare_predict_args(
+        self, target: DartsTimeSeries, known: DartsTimeSeries, observed: DartsTimeSeries, static: pd.DataFrame
+    ) -> None:
         """
-        Predict using the model and provided data.
+        Prepare the arguments for the predict method.
         """
-        target, known, observed, static = self.convert_input(data)
+        
         predict_args = {"series": target}
         predict_args.update(self._get_covariate_args(known, observed, static))
-
         self._predict_args = predict_args
 
-    def predict(self, *args, **kwargs) -> Union[TimeSeries, List[TimeSeries]]:
-        raise NotImplementedError(
-            "The predict method is not implemented in the base DartsModelAdapter class. "
-            "Please implement this method in the subclass."
-        )
+    def predict(self, data: List[AdapterInput]) -> List[TimeSeries]:
+        
+        target, known, observed, static = self.convert_input(data)
+        self._prepare_predict_args(target, known, observed, static)
+        preds = self.model.predict(**self._predict_args)
+        return self.convert_output(preds)
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -161,30 +161,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
             data, time_col="time_stamp", value_cols=value_cols, freq=self.freq
         )
 
-    def convert_input(self, input: List[AdapterInput]) -> Tuple[
-        List[DartsTimeSeries],
-        List[DartsTimeSeries],
-        List[DartsTimeSeries],
-        Optional[pd.DataFrame],
-    ]:
-        """
-        Converts a list of AdapterInput objects into a tuple of lists formatted for the Darts model.
-        Parameters:
-            data (List[AdapterInput]): A list of AdapterInput objects containing the input data.
-        Returns:
-            Tuple[List[DartsTimeSeries], List[DartsTimeSeries], List[DartsTimeSeries], Optional[pd.DataFrame]]:
-                - A list of DartsTimeSeries objects representing the target time series.
-                - A list of DartsTimeSeries objects representing the known time series.
-                - A list of DartsTimeSeries objects representing the observed time series.
-                - An optional pandas DataFrame containing static data, if available.
-        """
-
-        target = [self.to_model_format(t.target) for t in input]
-        known = [self.to_model_format(t.known) for t in input]
-        observed = [self.to_model_format(t.observed) for t in input]
-        static = [t.static for t in input]
-
-        return target, known, observed, static
 
     @staticmethod
     def to_time_series(
