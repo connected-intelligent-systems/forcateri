@@ -2,11 +2,14 @@ from datetime import datetime
 from typing import Dict, List, NamedTuple, Tuple, Union
 
 import pandas as pd
-
+import logging
 from .adapterinput import AdapterInput
 from .datasource import DataSource
 from .seriesrole import SeriesRole
 from .timeseries import TimeSeries
+
+
+logger = logging.getLogger(__name__)
 
 Cutoff = Tuple[
     Union[int, float, str, datetime, pd.Timestamp],
@@ -74,8 +77,10 @@ class DataProvider:
         Raises:
             AttributeError: If `roles` or `data_sources` is not properly defined.
         """
+        logger.debug("Separating time series data into target, known, and observed categories.")
 
         for data_source, role in zip(self.data_sources, self.roles):
+            logger.debug(f"Processing data source: {data_source} with roles: {role}")
             columns_observed = [
                 col for col, role in role.items() if role == SeriesRole.OBSERVED
             ]
@@ -85,6 +90,9 @@ class DataProvider:
             columns_target = [
                 col for col, role in role.items() if role == SeriesRole.TARGET
             ]
+            logger.debug(
+                f"Identified columns - Target: {columns_target}, Known: {columns_known}, Observed: {columns_observed}"
+            )
             data_list = data_source.get_data()
             for ts_obj in data_list:
                 self.target.append(ts_obj.get_feature_slice(index=columns_target))
@@ -110,6 +118,7 @@ class DataProvider:
         Returns:
             List[AdapterInput]: A list of AdapterInput objects representing the requested dataset split.
         """
+        logger.debug(f"Retrieving {split_type} dataset split.")
         start, end = self.splits
         list_of_tuples = []
 
@@ -117,6 +126,7 @@ class DataProvider:
             self.target, self.known, self.observed
         ):
             if split_type == "train":
+                logger.debug("Processing training split. List[AdapterInput] length: %d", len(list_of_tuples))
                 list_of_tuples.append(
                     AdapterInput(
                         target=target_ts[:start] if target_ts is not None else None,
@@ -128,6 +138,7 @@ class DataProvider:
                     )
                 )
             elif split_type == "val":
+                logger.debug("Processing validation split. List[AdapterInput] length: %d", len(list_of_tuples))
                 list_of_tuples.append(
                     AdapterInput(
                         target=target_ts[start:end] if target_ts is not None else None,
@@ -139,6 +150,7 @@ class DataProvider:
                     )
                 )
             elif split_type == "test":
+                logger.debug("Processing test split. List[AdapterInput] length: %d", len(list_of_tuples))
                 list_of_tuples.append(
                     AdapterInput(
                         target=target_ts[end:] if target_ts is not None else None,
