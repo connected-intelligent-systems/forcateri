@@ -69,14 +69,18 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         Fits the model using the provided training and validation data.
         """
+        logger.debug(f"Starting model fit for {self.model_name}")
         target, known, observed, static = self.convert_input(train_data)
-        print(static)
+        logger.debug(f"Converted training data to darts format for {self.model_name}")
         fit_args = {"series": target}
         fit_args.update(self._get_covariate_args(known, observed, static))
 
         if val_data is not None:
             val_target, val_known, val_observed, val_static = self.convert_input(
                 val_data
+            )
+            logger.debug(
+                f"Converted validation data to darts format for {self.model_name}"
             )
             fit_args["val_series"] = val_target
             val_covariate_args = self._get_covariate_args(
@@ -89,18 +93,22 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.model.fit(**fit_args)
 
     def _prepare_predict_args(
-        self, target: DartsTimeSeries, known: DartsTimeSeries, observed: DartsTimeSeries, static: pd.DataFrame
+        self,
+        target: DartsTimeSeries,
+        known: DartsTimeSeries,
+        observed: DartsTimeSeries,
+        static: pd.DataFrame,
     ) -> None:
         """
         Prepare the arguments for the predict method.
         """
-        
+
         predict_args = {"series": target}
         predict_args.update(self._get_covariate_args(known, observed, static))
         self._predict_args = predict_args
 
     def predict(self, data: List[AdapterInput]) -> List[TimeSeries]:
-        
+
         target, known, observed, static = self.convert_input(data)
         self._prepare_predict_args(target, known, observed, static)
         preds = self.model.predict(**self._predict_args)
@@ -111,11 +119,13 @@ class DartsModelAdapter(ModelAdapter, ABC):
         # Sort index lexicographically to avoid PerformanceWarning
         df = df.sort_index(level=list(df.index.names), sort_remaining=True)
         df_reset = df.reset_index()
-
+        logger.debug(f"Flattened DataFrame columns: {df_reset.columns.tolist()}")
         # Drop the 'offset' column if it's not needed
         if "offset" in df_reset.columns:
             df_reset = df_reset.drop(columns="offset")
-
+            logger.debug(
+                "Dropped 'offset' column from DataFrame as part of to_model_format in dartsmodeladapter"
+            )
         # Flatten the column MultiIndex
         df_reset.columns = [
             col if not isinstance(col, tuple) else col[0] for col in df_reset.columns
@@ -155,12 +165,12 @@ class DartsModelAdapter(ModelAdapter, ABC):
               columns.
         """
         data = DartsModelAdapter.flatten_timeseries_df(t.data)
+        logger.debug(f"Data after flattening in to_model_format: {data.head()}")
         data["time_stamp"] = pd.to_datetime(data["time_stamp"]).dt.tz_localize(None)
         value_cols = [col for col in data.columns if col != "time_stamp"]
         return DartsTimeSeries.from_dataframe(
             data, time_col="time_stamp", value_cols=value_cols, freq=self.freq
         )
-
 
     @staticmethod
     def to_time_series(
@@ -184,15 +194,22 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 [new_offsets, adjusted_times],
                 names=TimeSeries.ROW_INDEX_NAMES,
             )
-
-            ts_obj = TimeSeries(
-                data=darts_df,
-                representation=TimeSeries.QUANTILE_REP,
-                quantiles=quantiles,
-            )
+            if quantiles:
+                logger.debug("Converting single DartsTimeSeries with quantiles to TimeSeries")
+                ts_obj = TimeSeries(
+                    data=darts_df,
+                    representation=TimeSeries.QUANTILE_REP,
+                    quantiles=quantiles,
+                )
+            else:
+                logger.debug("Converting single DartsTimeSeries with deterministic forecasts to TimeSeries")
+                ts_obj = TimeSeries(
+                    data=darts_df, representation=TimeSeries.DETERM_REP
+                )
             return ts_obj
 
         if isinstance(ts, list):
+            logger.debug("Converting list of DartsTimeSeries to TimeSeries")
             df = pd.concat(
                 [convert_single_ts(darts_ts).data for darts_ts in ts], axis=0
             )
@@ -201,6 +218,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             )
 
         else:
+            logger.debug("Converting single DartsTimeSeries to TimeSeries")
             return convert_single_ts(ts)
 
     def tune(

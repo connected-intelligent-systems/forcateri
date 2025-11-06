@@ -2,10 +2,11 @@ import datetime
 from abc import ABC
 from pathlib import Path
 from typing import Any, List, Optional, Union
-
+import logging
 from ..data.adapterinput import AdapterInput
 from ..data.timeseries import TimeSeries
 
+logger = logging.getLogger(__name__)
 
 class ModelAdapter(ABC):
     
@@ -70,6 +71,7 @@ class ModelAdapter(ABC):
         """
         Converts the output data into the standardized format.
         """
+        logger.debug("Converting model output to standardized TimeSeries format")
         return [self.to_time_series(o) for o in output]
 
     def to_time_series(self, ts: Any) -> TimeSeries:
