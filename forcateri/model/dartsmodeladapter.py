@@ -8,6 +8,7 @@ from typing import List, Optional, Tuple, Union, Any
 import pandas as pd
 from darts import TimeSeries as DartsTimeSeries
 from darts.models.forecasting.forecasting_model import ForecastingModel
+from darts.dataprocessing.transformers import Scaler
 
 from ..data.adapterinput import AdapterInput
 from ..data.timeseries import TimeSeries
@@ -26,6 +27,16 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.freq = freq
         self.model = None
         self.quantiles = kwargs.get("quantiles", None)
+        if kwargs.get("scaler_data"):
+            target, known, observed, static = self.convert_input(kwargs.get("scaler_data"))
+            self.scaler_target = Scaler()
+            self.scaler_target = self.scaler_target.fit(target)
+            self.scaler_known = Scaler()
+            self.scaler_known = self.scaler_known.fit(known)
+            self.scaler_observed = Scaler()
+            self.scaler_observed = self.scaler_observed.fit(observed)
+            # self.scaler_static = Scaler()
+            # self.scaler_static = self.scaler_static.fit(static)
 
     def _get_covariate_args(self, known, observed, static):
         """
@@ -72,6 +83,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         logger.debug(f"Starting model fit for {self.model_name}")
         target, known, observed, static = self.convert_input(train_data)
         logger.debug(f"Converted training data to darts format for {self.model_name}")
+
         fit_args = {"series": target}
         fit_args.update(self._get_covariate_args(known, observed, static))
 
@@ -79,6 +91,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
             val_target, val_known, val_observed, val_static = self.convert_input(
                 val_data
             )
+
+
             logger.debug(
                 f"Converted validation data to darts format for {self.model_name}"
             )
@@ -118,6 +132,19 @@ class DartsModelAdapter(ModelAdapter, ABC):
             preds = self.model.predict(**self._predict_args, n=n, rolling_window=rolling_window, **kwargs)
             is_likelihood = kwargs.get("predict_likelihood_parameters", False)
             return self.convert_output(output=preds, is_likelihood=is_likelihood)
+
+    def convert_input(self, input):
+        target, known, observed, static = super().convert_input(input)
+        if self.scaler_target:
+            logger.debug("Applying target scaler to target data.")
+            target = self.scaler_target.transform(target)
+        if self.scaler_known:
+            logger.debug("Applying known scaler to known data.")
+            known = self.scaler_known.transform(known)
+        if self.scaler_observed:
+            logger.debug("Applying observed scaler to observed data.")
+            observed = self.scaler_observed.transform(observed)
+        return target, known, observed, static
 
     def convert_output(self, output: Union[List[DartsTimeSeries], List[List[DartsTimeSeries]]], is_likelihood: bool) -> List[TimeSeries]:
         """
@@ -178,6 +205,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
             **self._predict_args,
             **kwargs,
         )
+        if self.scaler_target:
+            logger.debug("Inverse transforming forecasts using target scaler.")
+            preds = self.scaler_target.inverse_transform(preds)
+            
         is_likelihood = kwargs.get("predict_likelihood_parameters", False)
         return self.convert_output(preds, is_likelihood=is_likelihood)
 
