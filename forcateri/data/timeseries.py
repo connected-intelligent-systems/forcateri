@@ -141,7 +141,11 @@ class TimeSeries:
         logger.info("Checking the frequency format of the DataFrame")
 
         # Try pandas frequency inference first
-        inferred_freq = pd.infer_freq(index)
+        try:
+            inferred_freq = pd.infer_freq(index)
+        except:
+            logger.debug("Pandas infer_freq failed.")
+            inferred_freq = None
 
         # Frequency inference logic if pandas fails
         if inferred_freq is None:
