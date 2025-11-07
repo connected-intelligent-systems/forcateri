@@ -2,7 +2,7 @@ import logging
 import os
 from abc import ABC
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union, Any
 
 
 import pandas as pd
@@ -107,12 +107,79 @@ class DartsModelAdapter(ModelAdapter, ABC):
         predict_args.update(self._get_covariate_args(known, observed, static))
         self._predict_args = predict_args
 
-    def predict(self, data: List[AdapterInput]) -> List[TimeSeries]:
+    def predict(self, data: List[AdapterInput], n: Optional[int] = 1, rolling_window: bool = False, **kwargs) -> List[TimeSeries]:
 
+        if rolling_window:
+            logger.debug("Using rolling window prediction.")
+            return self._historical_forecasts(data, **kwargs)
+        else:
+            target, known, observed, static = self.convert_input(data)
+            self._prepare_predict_args(target, known, observed, static)
+            preds = self.model.predict(**self._predict_args, n=n, rolling_window=rolling_window, **kwargs)
+            is_likelihood = kwargs.get("predict_likelihood_parameters", False)
+            return self.convert_output(output=preds, is_likelihood=is_likelihood)
+
+    def convert_output(self, output: Union[List[DartsTimeSeries], List[List[DartsTimeSeries]]], is_likelihood: bool) -> List[TimeSeries]:
+        """
+        Converts the model output into a list of TimeSeries objects.
+
+        Parameters:
+            output (Union[List[DartsTimeSeries], List[List[DartsTimeSeries]]]): The model output to convert.
+
+        Returns:
+            List[TimeSeries]: A list of TimeSeries objects.
+        """
+        if not output:
+            return []
+
+        if isinstance(output[0], list):
+            # If the output is a list of lists, flatten it
+            prediction_ts_format = [
+                DartsModelAdapter.to_time_series(ts=pred, quantiles=self.quantiles,is_likelihood=is_likelihood)
+                for pred in output
+            ]
+            #Need to think about this part
+            for ts, new_name in zip(prediction_ts_format, self.target_col_names):
+                ts.data.columns = pd.MultiIndex.from_tuples(
+                    [(new_name, q) for q in ts.data.columns.get_level_values(1)],
+                    names=TimeSeries.COL_INDEX_NAMES
+                )
+        else:
+            
+            prediction_ts_format = DartsModelAdapter.to_time_series(
+                ts=output, quantiles=self.quantiles, is_likelihood=is_likelihood
+            )
+
+        return prediction_ts_format
+
+    def _historical_forecasts(
+        self,
+        data: List[AdapterInput],
+        retrain: bool = False,
+        **kwargs,
+    ) -> List[TimeSeries]:
+        """
+        Generates historical forecasts using the provided data.
+
+        Parameters:
+            data (List[AdapterInput]): The input data for generating forecasts.
+            start (Union[float, int, str]): The starting point for historical forecasts.
+            retrain (bool): Whether to retrain the model before each forecast.
+            **kwargs: Additional keyword arguments for the historical_forecasts method.
+
+        Returns:
+            List[TimeSeries]: A list of TimeSeries objects representing the forecasts.
+        """
         target, known, observed, static = self.convert_input(data)
         self._prepare_predict_args(target, known, observed, static)
-        preds = self.model.predict(**self._predict_args)
-        return self.convert_output(preds)
+        logger.debug("Generating historical forecasts.")
+        preds = self.model.historical_forecasts(
+            retrain=retrain,
+            **self._predict_args,
+            **kwargs,
+        )
+        is_likelihood = kwargs.get("predict_likelihood_parameters", False)
+        return self.convert_output(preds, is_likelihood=is_likelihood)
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -176,6 +243,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
     def to_time_series(
         ts: Union[DartsTimeSeries, List[DartsTimeSeries]],
         quantiles: Optional[List[float]] = None,
+        is_likelihood: bool = False,
         freq: str = "h",
     ) -> TimeSeries:
         """
@@ -194,18 +262,24 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 [new_offsets, adjusted_times],
                 names=TimeSeries.ROW_INDEX_NAMES,
             )
-            if quantiles:
-                logger.debug("Converting single DartsTimeSeries with quantiles to TimeSeries")
+            if quantiles and is_likelihood:
+                logger.debug(
+                    "Converting single DartsTimeSeries with quantiles to TimeSeries"
+                )
+                print(darts_df.head())
                 ts_obj = TimeSeries(
                     data=darts_df,
                     representation=TimeSeries.QUANTILE_REP,
                     quantiles=quantiles,
+                    freq=freq,
                 )
             else:
-                logger.debug("Converting single DartsTimeSeries with deterministic forecasts to TimeSeries")
-                ts_obj = TimeSeries(
-                    data=darts_df, representation=TimeSeries.DETERM_REP
+                logger.debug(
+                    "Converting single DartsTimeSeries with deterministic forecasts to TimeSeries"
                 )
+                
+                print(darts_df.head())
+                ts_obj = TimeSeries(data=darts_df, representation=TimeSeries.DETERM_REP, freq=freq)
             return ts_obj
 
         if isinstance(ts, list):

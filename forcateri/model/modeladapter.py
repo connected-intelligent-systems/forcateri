@@ -23,7 +23,7 @@ class ModelAdapter(ABC):
             "Method not overridden in concrete adapter implementation"
         )
 
-    def predict(self, data: List[AdapterInput]):
+    def predict(self, data: List[AdapterInput], rolling_window:bool):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
         )
