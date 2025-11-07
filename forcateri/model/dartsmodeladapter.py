@@ -322,7 +322,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
                         quantiles=quantiles,
                         freq=freq,
                     )
-                elif num_samples > 1:
+                elif num_samples is not None and num_samples > 1:
                     logger.debug(
                         "Converting single DartsTimeSeries with samples to TimeSeries"
                     )
