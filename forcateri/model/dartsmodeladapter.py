@@ -141,7 +141,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
             self._prepare_predict_args(target, known, observed, static)
             preds = self.model.predict(**self._predict_args, n=n, **kwargs)
             is_likelihood = kwargs.get("predict_likelihood_parameters", True)
-            return self.convert_output(output=preds, is_likelihood=is_likelihood)
+            num_samples = kwargs.get("num_samples", None)
+            return self.convert_output(output=preds, is_likelihood=is_likelihood,num_samples=num_samples)
 
     def convert_input(self, input):
         target, known, observed, static = super().convert_input(input)
@@ -160,6 +161,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self,
         output: Union[List[DartsTimeSeries], List[List[DartsTimeSeries]]],
         is_likelihood: bool,
+        num_samples: Optional[int] = None,
     ) -> List[TimeSeries]:
         """
         Converts the model output into a list of TimeSeries objects.
@@ -177,11 +179,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
             # If the output is a list of lists, flatten it
             prediction_ts_format = [
                 DartsModelAdapter.to_time_series(
-                    ts=pred, quantiles=self.quantiles, is_likelihood=is_likelihood
+                    ts=pred, quantiles=self.quantiles, is_likelihood=is_likelihood, num_samples=num_samples
                 )
                 for pred in output
             ]
-            # Need to think about this part
             for ts, new_name in zip(prediction_ts_format, self.target_col_names):
                 ts.data.columns = pd.MultiIndex.from_tuples(
                     [(new_name, q) for q in ts.data.columns.get_level_values(1)],
@@ -190,7 +191,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         else:
 
             prediction_ts_format = DartsModelAdapter.to_time_series(
-                ts=output, quantiles=self.quantiles, is_likelihood=is_likelihood
+                ts=output, quantiles=self.quantiles, is_likelihood=is_likelihood, num_samples=num_samples
             )
 
         return prediction_ts_format
@@ -291,6 +292,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         ts: Union[DartsTimeSeries, List[DartsTimeSeries]],
         quantiles: Optional[List[float]] = None,
         is_likelihood: bool = False,
+        num_samples: Optional[int] = None,
         freq: str = "h",
     ) -> TimeSeries:
         """
@@ -320,13 +322,30 @@ class DartsModelAdapter(ModelAdapter, ABC):
                         quantiles=quantiles,
                         freq=freq,
                     )
+                elif num_samples > 1:
+                    logger.debug(
+                        "Converting single DartsTimeSeries with samples to TimeSeries"
+                    )
+                    ts_obj = TimeSeries(
+                        data=darts_df,
+                        representation=TimeSeries.SAMPLE_REP,
+                        num_samples=num_samples,
+                        freq=freq,
+                    )
                 else:
                     logger.debug(
-                        "Converting single DartsTimeSeries with deterministic forecasts to TimeSeries"
+                        "Converting single DartsTimeSeries from probabilist model with deterministic forecasts to TimeSeries"
                     )
                     ts_obj = TimeSeries(
                         data=darts_df, representation=TimeSeries.DETERM_REP, freq=freq
                     )
+            else:
+                logger.debug(
+                    "Converting single DartsTimeSeries with deterministic forecasts to TimeSeries"
+                )
+                ts_obj = TimeSeries(
+                    data=darts_df, representation=TimeSeries.DETERM_REP, freq=freq
+                )
             return ts_obj
 
         if isinstance(ts, list):
