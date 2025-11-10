@@ -30,6 +30,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.scaler_target = None
         self.scaler_known = None
         self.scaler_observed = None
+        self.is_likelihood = kwargs.get("predict_likelihood_parameters", False)
+        self.num_samples = kwargs.get("num_samples", None)
         if kwargs.get("scaler_data"):
             target, known, observed, static = self.convert_input(
                 kwargs.get("scaler_data")
@@ -87,6 +89,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         logger.debug(f"Starting model fit for {self.model_name}")
         target, known, observed, static = self.convert_input(train_data)
+        self.target_col_names = [t.components[0] for t in target]
         logger.debug(f"Converted training data to darts format for {self.model_name}")
 
         fit_args = {"series": target}
@@ -132,17 +135,16 @@ class DartsModelAdapter(ModelAdapter, ABC):
         rolling_window: bool = True,
         **kwargs,
     ) -> List[TimeSeries]:
-
+        target, known, observed, static = self.convert_input(data)
+        self._prepare_predict_args(target, known, observed, static)
+        
+        
         if rolling_window:
             logger.debug("Using rolling window prediction.")
             return self._historical_forecasts(data, **kwargs)
         else:
-            target, known, observed, static = self.convert_input(data)
-            self._prepare_predict_args(target, known, observed, static)
             preds = self.model.predict(**self._predict_args, n=n, **kwargs)
-            is_likelihood = kwargs.get("predict_likelihood_parameters", True)
-            num_samples = kwargs.get("num_samples", None)
-            return self.convert_output(output=preds, is_likelihood=is_likelihood,num_samples=num_samples)
+            return self.convert_output(output=preds)#, is_likelihood=self.is_likelihood,num_samples=self.num_samples)
 
     def convert_input(self, input):
         target, known, observed, static = super().convert_input(input)
@@ -160,8 +162,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
     def convert_output(
         self,
         output: Union[List[DartsTimeSeries], List[List[DartsTimeSeries]]],
-        is_likelihood: bool,
-        num_samples: Optional[int] = None,
+        # is_likelihood: bool,
+        # num_samples: Optional[int] = None,
     ) -> List[TimeSeries]:
         """
         Converts the model output into a list of TimeSeries objects.
@@ -174,12 +176,11 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         if not output:
             return []
-
-        if isinstance(output[0], list):
+        if isinstance(output, list):
             # If the output is a list of lists, flatten it
             prediction_ts_format = [
                 DartsModelAdapter.to_time_series(
-                    ts=pred, quantiles=self.quantiles, is_likelihood=is_likelihood, num_samples=num_samples
+                    ts=pred, quantiles=self.quantiles, is_likelihood=self.is_likelihood, num_samples=self.num_samples
                 )
                 for pred in output
             ]
@@ -191,7 +192,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         else:
 
             prediction_ts_format = DartsModelAdapter.to_time_series(
-                ts=output, quantiles=self.quantiles, is_likelihood=is_likelihood, num_samples=num_samples
+                ts=output, quantiles=self.quantiles, is_likelihood=self.is_likelihood, num_samples=self.num_samples
             )
 
         return prediction_ts_format
@@ -214,11 +215,12 @@ class DartsModelAdapter(ModelAdapter, ABC):
         Returns:
             List[TimeSeries]: A list of TimeSeries objects representing the forecasts.
         """
-        target, known, observed, static = self.convert_input(data)
-        self._prepare_predict_args(target, known, observed, static)
+        # target, known, observed, static = self.convert_input(data)
+        # self._prepare_predict_args(target, known, observed, static)
         logger.debug("Generating historical forecasts.")
         preds = self.model.historical_forecasts(
             retrain=retrain,
+            predict_likelihood_parameters=self.is_likelihood,
             **self._predict_args,
             **kwargs,
         )
@@ -226,8 +228,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
             logger.debug("Inverse transforming forecasts using target scaler.")
             preds = self.scaler_target.inverse_transform(preds)
 
-        is_likelihood = kwargs.get("predict_likelihood_parameters", False)
-        return self.convert_output(preds, is_likelihood=is_likelihood, num_samples=kwargs.get("num_samples", None))
+        
+        return self.convert_output(preds)
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -302,7 +304,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         def convert_single_ts(darts_ts: DartsTimeSeries) -> TimeSeries:
 
             darts_df = darts_ts.to_dataframe()
-
             new_offsets = [
                 pd.Timedelta(i, freq) for i in range(1, len(darts_df.index) + 1)
             ]
@@ -334,13 +335,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
                     )
                 else:
                     logger.debug(
-                        f"quantiles: {quantiles}, is_likelihood: {is_likelihood}, num_samples: {num_samples}. Cannot convert probabilistic DartsTimeSeries to deterministic TimeSeries."
+                        "Converting single DartsTimeSeries from probabilist model with deterministic forecasts to TimeSeries"
                     )
-                    # ts_obj = TimeSeries(
-                    #     data=darts_df, representation=TimeSeries.DETERM_REP, freq=freq
-                    # )
-                    raise ValueError(
-                        "Trying to make deterministic forecast with probabilistic model. Please set is_likelihood to True or provide num_samples greater than 1."
+                    ts_obj = TimeSeries(
+                        data=darts_df, representation=TimeSeries.DETERM_REP, freq=freq
                     )
             else:
                 logger.debug(
