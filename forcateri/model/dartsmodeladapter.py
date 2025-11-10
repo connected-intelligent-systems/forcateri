@@ -227,7 +227,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             preds = self.scaler_target.inverse_transform(preds)
 
         is_likelihood = kwargs.get("predict_likelihood_parameters", False)
-        return self.convert_output(preds, is_likelihood=is_likelihood)
+        return self.convert_output(preds, is_likelihood=is_likelihood, num_samples=kwargs.get("num_samples", None))
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
@@ -334,10 +334,13 @@ class DartsModelAdapter(ModelAdapter, ABC):
                     )
                 else:
                     logger.debug(
-                        "Converting single DartsTimeSeries from probabilist model with deterministic forecasts to TimeSeries"
+                        f"quantiles: {quantiles}, is_likelihood: {is_likelihood}, num_samples: {num_samples}. Cannot convert probabilistic DartsTimeSeries to deterministic TimeSeries."
                     )
-                    ts_obj = TimeSeries(
-                        data=darts_df, representation=TimeSeries.DETERM_REP, freq=freq
+                    # ts_obj = TimeSeries(
+                    #     data=darts_df, representation=TimeSeries.DETERM_REP, freq=freq
+                    # )
+                    raise ValueError(
+                        "Trying to make deterministic forecast with probabilistic model. Please set is_likelihood to True or provide num_samples greater than 1."
                     )
             else:
                 logger.debug(
