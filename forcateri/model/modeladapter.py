@@ -2,10 +2,11 @@ import datetime
 from abc import ABC
 from pathlib import Path
 from typing import Any, List, Optional, Union
-
+import logging
 from ..data.adapterinput import AdapterInput
 from ..data.timeseries import TimeSeries
 
+logger = logging.getLogger(__name__)
 
 class ModelAdapter(ABC):
     
@@ -22,7 +23,7 @@ class ModelAdapter(ABC):
             "Method not overridden in concrete adapter implementation"
         )
 
-    def predict(self, data: List[AdapterInput]):
+    def predict(self, data: List[AdapterInput], rolling_window:bool):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
         )
@@ -59,22 +60,18 @@ class ModelAdapter(ABC):
         """
         Converts the input data into the format required by the model.
         """
-        return [
-            AdapterInput(
-                target=self.to_model_format(i.target),
-                known=self.to_model_format(i.known) if i.known is not None else None,
-                observed=(
-                    self.to_model_format(i.observed) if i.observed is not None else None
-                ),
-                static=i.static,
-            )
-            for i in input
-        ]
+        target = [self.to_model_format(t.target) for t in input]
+        known = [self.to_model_format(t.known) for t in input]
+        observed = [self.to_model_format(t.observed) for t in input]
+        static = [t.static for t in input]
+
+        return target, known, observed, static
 
     def convert_output(self, output: List[Any]) -> List[TimeSeries]:
         """
         Converts the output data into the standardized format.
         """
+        logger.debug("Converting model output to standardized TimeSeries format")
         return [self.to_time_series(o) for o in output]
 
     def to_time_series(self, ts: Any) -> TimeSeries:

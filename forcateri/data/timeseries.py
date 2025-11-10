@@ -135,13 +135,17 @@ class TimeSeries:
             If the inferred frequency does not match the provided `freq` or if
             the frequency cannot be inferred.
         """
-        if not isinstance(index, pd.DatetimeIndex):
+        if not isinstance(index, pd.DatetimeIndex) and not freq:
             raise TypeError("Index must be a pandas.DatetimeIndex")
 
         logger.info("Checking the frequency format of the DataFrame")
 
         # Try pandas frequency inference first
-        inferred_freq = pd.infer_freq(index)
+        try:
+            inferred_freq = pd.infer_freq(index)
+        except:
+            logger.debug("Pandas infer_freq failed.")
+            inferred_freq = None
 
         # Frequency inference logic if pandas fails
         if inferred_freq is None:
@@ -170,14 +174,15 @@ class TimeSeries:
         if freq:
             logger.info(f"Validating provided frequency: {freq}")
             if inferred_freq and freq != inferred_freq:
-                raise ValueError(
-                    f"Provided freq {freq} is different from inferred freq {inferred_freq}"
-                )
+                # raise ValueError(
+                #     f"Provided freq {freq} is different from inferred freq {inferred_freq}"
+                # )
+                logger.warning(f"Provided freq {freq} is different from inferred freq {inferred_freq}")
             self.freq = freq
         else:
             if inferred_freq is None:
                 raise ValueError("Could not infer the frequency from the data")
-            logger.info(f"Frequency set to inferred value: {inferred_freq}")
+            logger.warning(f"Freq was not provided and inferred freq is: {inferred_freq}")
             self.freq = inferred_freq
 
     @staticmethod
