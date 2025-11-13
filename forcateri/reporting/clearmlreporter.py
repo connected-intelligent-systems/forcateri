@@ -81,7 +81,7 @@ class ClearMLReporter(ResultReporter):
                 ax.legend()
                 plt.tight_layout()
                 plt.show()
-                clearml_logger.report_matplotlib(
+                clearml_logger.report_matplotlib_figure(
                 title=f"{metric_name} ({model_name})",
                 series="metrics",
                 figure=fig,
@@ -179,7 +179,7 @@ class ClearMLReporter(ResultReporter):
                         plt.xticks(rotation=30)
                         plt.tight_layout()
                         plt.show()
-                        clearml_logger.report_matplotlib(
+                        clearml_logger.report_matplotlib_figure(
                             title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
                             series="predictions",
                             figure=fig,
