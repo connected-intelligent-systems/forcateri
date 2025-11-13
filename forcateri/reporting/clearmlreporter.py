@@ -82,12 +82,12 @@ class ClearMLReporter(ResultReporter):
                 ax.legend()
                 plt.tight_layout()
                 plt.show()
-                clearml_logger.report_matplotlib_figure(
-                title=f"{metric_name} ({model_name})",
-                series="metrics",
-                figure=fig,
-                iteration=0
-                )
+                # clearml_logger.report_matplotlib_figure(
+                # title=f"{metric_name} ({model_name})",
+                # series="metrics",
+                # figure=fig,
+                # iteration=0
+                # )
                 plt.close()
     
     def _plot_predictions(self):
