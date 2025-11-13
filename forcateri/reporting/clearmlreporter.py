@@ -91,99 +91,100 @@ class ClearMLReporter(ResultReporter):
                 plt.close()
     
     def _plot_predictions(self):
-        logger.info("Plotting model predictions...")
-        clearml_logger = Task.current_task().get_logger()
-        for model, prediction_ts_list in self.model_predictions.items():
-            for i, (adapter_input, pred_ts) in enumerate(
-                zip(self.test_data, prediction_ts_list)
-            ):
-                gt_ts = adapter_input.target
-                offsets = pred_ts.data.index.get_level_values("offset").unique()
+        super()._plot_predictions()
+        #logger.info("Plotting model predictions...")
+        # clearml_logger = Task.current_task().get_logger()
+        # for model, prediction_ts_list in self.model_predictions.items():
+        #     for i, (adapter_input, pred_ts) in enumerate(
+        #         zip(self.test_data, prediction_ts_list)
+        #     ):
+        #         gt_ts = adapter_input.target
+        #         offsets = pred_ts.data.index.get_level_values("offset").unique()
 
-                logger.debug(
-                    f"Plotting predictions for model {model.__class__.__name__} on test series {i}."
-                )
-                if pred_ts.representation == TimeSeries.QUANTILE_REP:
-                    for offset in offsets:
-                        logger.debug(f"Plotting predictions for offset {offset}.")
-                        pred_df = pred_ts.by_time(offset).copy()
-                        gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
+        #         logger.debug(
+        #             f"Plotting predictions for model {model.__class__.__name__} on test series {i}."
+        #         )
+        #         if pred_ts.representation == TimeSeries.QUANTILE_REP:
+        #             for offset in offsets:
+        #                 logger.debug(f"Plotting predictions for offset {offset}.")
+        #                 pred_df = pred_ts.by_time(offset).copy()
+        #                 gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
 
-                        # Skip if no data
-                        if len(pred_df) <= 1:
-                            continue
+        #                 # Skip if no data
+        #                 if len(pred_df) <= 1:
+        #                     continue
 
-                        # Flatten MultiIndex columns if needed
-                        if isinstance(pred_df.columns, pd.MultiIndex):
-                            pred_df.columns = pred_df.columns.get_level_values(1).astype(
-                                float
-                            )
+        #                 # Flatten MultiIndex columns if needed
+        #                 if isinstance(pred_df.columns, pd.MultiIndex):
+        #                     pred_df.columns = pred_df.columns.get_level_values(1).astype(
+        #                         float
+        #                     )
 
-                        quantiles = sorted(pred_df.columns.astype(float))
-                        lower_q = quantiles[0]
-                        upper_q = quantiles[-1]
-                        median_q = min(quantiles, key=lambda q: abs(q - 0.5))
+        #                 quantiles = sorted(pred_df.columns.astype(float))
+        #                 lower_q = quantiles[0]
+        #                 upper_q = quantiles[-1]
+        #                 median_q = min(quantiles, key=lambda q: abs(q - 0.5))
 
-                        fig, ax = plt.subplots(figsize=(12, 6))
+        #                 fig, ax = plt.subplots(figsize=(12, 6))
 
-                        # --- Plot lower quantile (dashed line)
-                        ax.plot(
-                            pred_df.index,
-                            pred_df[lower_q],
-                            linestyle="--",
-                            color="tab:blue",
-                            alpha=0.7,
-                            linewidth=1.0,
-                            label=f"Lower q={lower_q:.2f}",
-                        )
+        #                 # --- Plot lower quantile (dashed line)
+        #                 ax.plot(
+        #                     pred_df.index,
+        #                     pred_df[lower_q],
+        #                     linestyle="--",
+        #                     color="tab:blue",
+        #                     alpha=0.7,
+        #                     linewidth=1.0,
+        #                     label=f"Lower q={lower_q:.2f}",
+        #                 )
 
-                        # --- Plot upper quantile (dashed line)
-                        ax.plot(
-                            pred_df.index,
-                            pred_df[upper_q],
-                            linestyle="--",
-                            color="tab:blue",
-                            alpha=0.7,
-                            linewidth=1.0,
-                            label=f"Upper q={upper_q:.2f}",
-                        )
+        #                 # --- Plot upper quantile (dashed line)
+        #                 ax.plot(
+        #                     pred_df.index,
+        #                     pred_df[upper_q],
+        #                     linestyle="--",
+        #                     color="tab:blue",
+        #                     alpha=0.7,
+        #                     linewidth=1.0,
+        #                     label=f"Upper q={upper_q:.2f}",
+        #                 )
 
-                        # --- Plot median quantile (solid line)
-                        if median_q in pred_df.columns:
-                            ax.plot(
-                                pred_df.index,
-                                pred_df[median_q],
-                                color="tab:blue",
-                                linewidth=1.5,
-                                label=f"Median q={median_q:.2f}",
-                            )
+        #                 # --- Plot median quantile (solid line)
+        #                 if median_q in pred_df.columns:
+        #                     ax.plot(
+        #                         pred_df.index,
+        #                         pred_df[median_q],
+        #                         color="tab:blue",
+        #                         linewidth=1.5,
+        #                         label=f"Median q={median_q:.2f}",
+        #                     )
 
-                        # --- Plot ground truth (black dashed)
-                        gt_df.columns = ["Ground Truth"]
-                        ax.plot(
-                            gt_df.index,
-                            gt_df["Ground Truth"],
-                            color="black",
-                            linestyle="--",
-                            linewidth=1.2,
-                            label="Ground Truth",
-                        )
+        #                 # --- Plot ground truth (black dashed)
+        #                 gt_df.columns = ["Ground Truth"]
+        #                 ax.plot(
+        #                     gt_df.index,
+        #                     gt_df["Ground Truth"],
+        #                     color="black",
+        #                     linestyle="--",
+        #                     linewidth=1.2,
+        #                     label="Ground Truth",
+        #                 )
 
-                        # --- Aesthetics
-                        ax.set_title(
-                            f"{model.__class__.__name__} — Test Series {i} — Offset {offset}"
-                        )
-                        ax.set_xlabel("Time")
-                        ax.set_ylabel("Value")
-                        ax.grid(True, linestyle="--", alpha=0.4)
-                        ax.legend(loc="upper left", fontsize=9)
-                        plt.xticks(rotation=30)
-                        plt.tight_layout()
-                        plt.show()
-                        # clearml_logger.report_matplotlib_figure(
-                        #     title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
-                        #     series="predictions",
-                        #     figure=fig,
-                        #     iteration=0
-                        # )
-                        plt.close()
+        #                 # --- Aesthetics
+        #                 ax.set_title(
+        #                     f"{model.__class__.__name__} — Test Series {i} — Offset {offset}"
+        #                 )
+        #                 ax.set_xlabel("Time")
+        #                 ax.set_ylabel("Value")
+        #                 ax.grid(True, linestyle="--", alpha=0.4)
+        #                 ax.legend(loc="upper left", fontsize=9)
+        #                 plt.xticks(rotation=30)
+        #                 plt.tight_layout()
+        #                 plt.show()
+        #                 # clearml_logger.report_matplotlib_figure(
+        #                 #     title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
+        #                 #     series="predictions",
+        #                 #     figure=fig,
+        #                 #     iteration=0
+        #                 # )
+        #                 plt.close()
