@@ -13,6 +13,7 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
+
 class ClearMLReporter(ResultReporter):
 
     def __init__(
@@ -22,27 +23,31 @@ class ClearMLReporter(ResultReporter):
         metrics: List[Metric],
     ):
         super().__init__(test_data, models, metrics)
-        
+
     def report_all(self):
         super().report_all()
         print(f"Test of the metric results {self.metric_results}")
-        Task.current_task().upload_artifact(name='Report', artifact_object=self.metric_results)
-    
+        Task.current_task().upload_artifact(
+            name="Report", artifact_object=self.metric_results
+        )
+
     def report_metrics(self):
         super().report_metrics()
         for metric_name, model_results in self.metric_results.items():
             all_results = []
             for model_name, result_df_list in model_results.items():
                 result = pd.concat(result_df_list, axis=0)
-                result['model'] = model_name
+                result["model"] = model_name
                 all_results.append(result)
 
             final_df = pd.concat(all_results, axis=0)
             final_df.reset_index(inplace=True)
 
-            final_df.to_csv(f'{metric_name}_results.csv', index=False)
-            Task.current_task().upload_artifact(name=f'{metric_name}_results.csv', artifact_object=final_df)
-    
+            final_df.to_csv(f"{metric_name}_results.csv", index=False)
+            Task.current_task().upload_artifact(
+                name=f"{metric_name}_results.csv", artifact_object=final_df
+            )
+
     def _plot_metrics(self, metric_results=None):
         logger.info("Plotting metrics results...")
         clearml_logger = Task.current_task().get_logger()
@@ -82,17 +87,17 @@ class ClearMLReporter(ResultReporter):
                 ax.legend()
                 plt.tight_layout()
                 plt.show()
-                # clearml_logger.report_matplotlib_figure(
-                # title=f"{metric_name} ({model_name})",
-                # series="metrics",
-                # figure=fig,
-                # iteration=0
-                # )
+                clearml_logger.report_matplotlib_figure(
+                    title=f"{metric_name} ({model_name})",
+                    series="metrics",
+                    figure=fig,
+                    iteration=0,
+                )
                 plt.close()
-    
+
     def _plot_predictions(self):
         super()._plot_predictions()
-        #logger.info("Plotting model predictions...")
+        # logger.info("Plotting model predictions...")
         # clearml_logger = Task.current_task().get_logger()
         # for model, prediction_ts_list in self.model_predictions.items():
         #     for i, (adapter_input, pred_ts) in enumerate(
