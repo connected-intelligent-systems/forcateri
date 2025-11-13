@@ -221,6 +221,8 @@ class DartsModelAdapter(ModelAdapter, DefaultParamsMixin, ABC):
         preds = self.model.historical_forecasts(
             retrain=retrain,
             predict_likelihood_parameters=self.is_likelihood,
+            forecast_horizon=kwargs.get("n", 1),
+            last_points_only=False,
             **self._predict_args,
             **kwargs,
         )
