@@ -21,7 +21,7 @@ class ClearMLReporter(ResultReporter):
         metrics: List[Metric],
     ):
         super().__init__(test_data, models, metrics)
-        self.clearml_logger = Task.current_task().get_logger()
+        
     def report_all(self):
         super().report_all()
         print(f"Test of the metric results {self.metric_results}")
@@ -44,7 +44,7 @@ class ClearMLReporter(ResultReporter):
     
     def _plot_metrics(self, metric_results=None):
         logger.info("Plotting metrics results...")
-        
+        clearml_logger = Task.current_task().get_logger()
         if metric_results is None:
             metric_results = self.metric_results
 
@@ -81,7 +81,7 @@ class ClearMLReporter(ResultReporter):
                 ax.legend()
                 plt.tight_layout()
                 plt.show()
-                self.clearml_logger.report_matplotlib(
+                clearml_logger.report_matplotlib(
                 title=f"{metric_name} ({model_name})",
                 series="metrics",
                 figure=fig,
@@ -91,6 +91,7 @@ class ClearMLReporter(ResultReporter):
     
     def _plot_predictions(self):
         logger.info("Plotting model predictions...")
+        clearml_logger = Task.current_task().get_logger()
         for model, prediction_ts_list in self.model_predictions.items():
             for i, (adapter_input, pred_ts) in enumerate(
                 zip(self.test_data, prediction_ts_list)
@@ -178,7 +179,7 @@ class ClearMLReporter(ResultReporter):
                         plt.xticks(rotation=30)
                         plt.tight_layout()
                         plt.show()
-                        self.clearml_logger.report_matplotlib(
+                        clearml_logger.report_matplotlib(
                             title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
                             series="predictions",
                             figure=fig,
