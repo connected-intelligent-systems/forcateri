@@ -5,6 +5,7 @@ from clearml import Task
 import logging
 
 from forcateri.reporting.resultreporter import ResultReporter
+from ..data.timeseries import TimeSeries
 from .metric import Metric
 from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
