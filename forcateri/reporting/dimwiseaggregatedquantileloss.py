@@ -13,6 +13,10 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
         super().__init__(axes, None)
 
     def __call__(self, ts_gt: TimeSeries, ts_pred: TimeSeries):
+        if ts_pred.quantiles is None:
+            raise ValueError(
+                "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
+            )
         self.reduction = lambda gt, pred: quantile_metric(gt, pred, ts_pred.quantiles)
         return super().__call__(ts_gt, ts_pred)
     
