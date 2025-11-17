@@ -1,10 +1,10 @@
 from typing import List
-
+import logging
 from .dimwiseaggregatedmetric import DimwiseAggregatedMetric
 from .metric_aggregations import quantile_metric
 from ..data.timeseries import TimeSeries
 
-
+logger = logging.getLogger(__name__)
 class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
     def __init__(
         self,
@@ -14,6 +14,9 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
 
     def __call__(self, ts_gt: TimeSeries, ts_pred: TimeSeries):
         if ts_pred.quantiles is None:
+            logger.error(
+                "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
+            )
             raise ValueError(
                 "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
             )
