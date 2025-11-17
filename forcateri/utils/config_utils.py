@@ -101,28 +101,45 @@ def from_args_to_kwargs(*args) -> dict:
     return kwargs
 
 
-def arg_parser(config_path):
+def arg_parser(config_path=None, default_kwargs=None):
+    """
+    Creates an argument parser from:
+      - config YAML (if provided)
+      - OR default_kwargs (if config is None)
+    """
+
     parser = argparse.ArgumentParser()
-    # parser.add_argument(
-    #     '--config',
-    #     type=str,
-    #     required=True,
-    #     help="Configuration file name without .yaml extension"
-    # )
-    args, remaining_args = parser.parse_known_args()
-    with open(config_path, "r") as infile:
-        parsed_config = yaml.safe_load(infile)
-    args = extract_config(parsed_config)
-    for k, v in args:
+
+    # Case 1: CONFIG-BASED ARGUMENTS
+    if config_path and os.path.exists(config_path):
+        with open(config_path, "r") as infile:
+            parsed_config = yaml.safe_load(infile)
+
+        cfg_args = extract_config(parsed_config)  # → list of (key, value)
+
+        for k, v in cfg_args:
+            if isinstance(v, list):
+                # Keep lists as lists using nargs='*'
+                parser.add_argument(f"--{k}", default=v, nargs='*', type=type(v[0]) if v else str)
+            elif v is None:
+                parser.add_argument(f"--{k}", default=None)
+            else:
+                parser.add_argument(f"--{k}", default=v, type=type(v))
+
+        return parser
+
+    # Case 2: KWARGS-BASED ARGUMENTS
+    default_kwargs = default_kwargs or {}
+
+    for k, v in default_kwargs.items():
         if isinstance(v, list):
             # Keep lists as lists using nargs='*'
-            parser.add_argument(
-                f"--{k}", default=v, nargs="*", type=type(v[0]) if v else str
-            )
+            parser.add_argument(f"--{k}", default=v, nargs='*', type=type(v[0]) if v else str)
         elif v is None:
             parser.add_argument(f"--{k}", default=None)
         else:
             parser.add_argument(f"--{k}", default=v, type=type(v))
+
     return parser
 
 
