@@ -70,7 +70,7 @@ class ClearMLSingleTaskPipeline(Pipeline):
         function_task = self.task.create_function_task(func=super().run)
         function_task.set_base_docker(docker_image=self.docker)
         function_task.set_packages(self.requirements)
-        function_task.connect_configuration(self.parsed_cfg_args, ignore_remote_overrides= False)
+        function_task.connect(self.parsed_cfg_args, ignore_remote_overrides= False)
         function_task.set_repo(repo=self.repo, branch=self.branch)
         Task.enqueue(task=function_task, queue_name="default")
 
