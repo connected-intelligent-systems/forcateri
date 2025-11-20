@@ -14,11 +14,10 @@ from ..data.adapterinput import AdapterInput
 from ..data.timeseries import TimeSeries
 from .modeladapter import ModelAdapter
 from .modelexceptions import ModelAdapterError
-from ..defaultparamsmixin import DefaultParamsMixin
 logger = logging.getLogger(__name__)
 
 
-class DartsModelAdapter(ModelAdapter, DefaultParamsMixin, ABC):
+class DartsModelAdapter(ModelAdapter, ABC):
 
     def __init__(
         self, freq: str = "60min", model_name: Optional[str] = None, *args, **kwargs
