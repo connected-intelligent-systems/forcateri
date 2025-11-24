@@ -5,7 +5,7 @@ from forcateri.data.timeseries import TimeSeries
 import argparse
 import yaml
 from pathlib import Path
-
+import os
 
 def extract_config(config: dict) -> list[tuple]:
     args = []
