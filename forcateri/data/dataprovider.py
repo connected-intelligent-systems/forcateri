@@ -81,15 +81,17 @@ class DataProvider:
 
         for data_source, role in zip(self.data_sources, self.roles):
             logger.debug(f"Processing data source: {data_source} with roles: {role}")
-            columns_observed = [
-                col for col, role in role.items() if role == SeriesRole.OBSERVED
-            ]
-            columns_known = [
-                col for col, role in role.items() if role == SeriesRole.KNOWN
-            ]
-            columns_target = [
-                col for col, role in role.items() if role == SeriesRole.TARGET
-            ]
+            role = {k.lower(): v for k, v in role.items()}
+            logger.debug("Lowered all role keys to lowercase for consistency.")
+            columns_observed = role.get(SeriesRole.OBSERVED.value) or []
+            columns_observed = columns_observed if isinstance(columns_observed, list) else [columns_observed]
+
+            columns_target = role.get(SeriesRole.TARGET.value) or []
+            columns_target = columns_target if isinstance(columns_target, list) else [columns_target]
+
+            columns_known = role.get(SeriesRole.KNOWN.value) or []
+            columns_known = columns_known if isinstance(columns_known, list) else [columns_known]
+
             logger.debug(
                 f"Identified columns - Target: {columns_target}, Known: {columns_known}, Observed: {columns_observed}"
             )

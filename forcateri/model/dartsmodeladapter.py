@@ -14,7 +14,6 @@ from ..data.adapterinput import AdapterInput
 from ..data.timeseries import TimeSeries
 from .modeladapter import ModelAdapter
 from .modelexceptions import ModelAdapterError
-
 logger = logging.getLogger(__name__)
 
 
@@ -221,6 +220,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
         preds = self.model.historical_forecasts(
             retrain=retrain,
             predict_likelihood_parameters=self.is_likelihood,
+            forecast_horizon=kwargs.get("forecast_horizon", 1),
+            last_points_only=False,
             **self._predict_args,
             **kwargs,
         )
