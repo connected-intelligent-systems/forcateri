@@ -18,5 +18,4 @@ class ClearmlDataMixin:
         self.dataset_name = dataset_name
         self.filename = file_name
         #self.dataset_version = dataset_version
-    def update_on_clearml():
-        pass
+
