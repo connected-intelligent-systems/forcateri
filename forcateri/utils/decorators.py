@@ -4,6 +4,7 @@ from inspect import Parameter, signature
 import logging
 from pathlib import Path
 from typing import Optional
+from collections.abc import Mapping
 
 import yaml
 
@@ -12,6 +13,15 @@ clog = logging.getLogger(__name__)
 clover_parser = ArgumentParser(conflict_handler="resolve")
 global_cfg_dct = dict()
 
+def flatten_dict(d: Mapping, parent_key: str = "") -> dict:
+    items = {}
+    for k, v in d.items():
+        new_key = f"{parent_key}{"."}{k}" if parent_key else k
+        if isinstance(v, Mapping):
+            items.update(flatten_dict(v, new_key))
+        else:
+            items[new_key] = v
+    return items
 
 def _try_eval_literal(s: str, warn_arg_name: Optional[str] = None):
     warn_arg_name = warn_arg_name or s
@@ -40,9 +50,10 @@ def connect_config(config_path: str | Path):
     if cfg_dct is None:
         clog.warning("Connected empty config.")
     else:
-        global_cfg_dct.update(cfg_dct)
-        clog.debug(f"Adding config {cfg_dct} to clover parser.")
-        for k, v in cfg_dct.items():
+        flat_cfg = flatten_dict(cfg_dct)
+        global_cfg_dct.update(flat_cfg)
+        clog.debug(f"Adding config {flat_cfg} to clover parser.")
+        for k, v in flat_cfg.items():
             clover_parser.add_argument(f"--{k}", default=v)
 
 
