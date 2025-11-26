@@ -16,7 +16,7 @@ global_cfg_dct = dict()
 def flatten_dict(d: Mapping, parent_key: str = "") -> dict:
     items = {}
     for k, v in d.items():
-        new_key = f"{parent_key}{"."}{k}" if parent_key else k
+        new_key = f"{parent_key}.{k}" if parent_key else k
         if isinstance(v, Mapping):
             items.update(flatten_dict(v, new_key))
         else:
