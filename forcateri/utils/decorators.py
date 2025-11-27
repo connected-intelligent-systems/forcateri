@@ -13,19 +13,25 @@ clover_parser = ArgumentParser(conflict_handler="resolve")
 global_cfg_dct = dict()
 
 
-def _try_eval_literal(s: str, warn_arg_name: Optional[str] = None):
+def _try_eval_literal(s, warn_arg_name: Optional[str] = None):
     warn_arg_name = warn_arg_name or s
-    try:
-        return literal_eval(s)
-    except ValueError as ve:
-        if str(ve).startswith("malformed node or string"):
-            clog.warning(
-                f"Faild to infer python type for {warn_arg_name}; "
-                "Assuming type string."
-            )
-            return s
-        else:
-            raise ve
+    if isinstance(s, str):
+        try:
+            return literal_eval(s)
+        except ValueError as ve:
+            if str(ve).startswith("malformed node or string"):
+                clog.warning(
+                    f"Faild to infer python type for arg {warn_arg_name} with value {s}; "
+                    "Assuming type string."
+                )
+                return s
+            else:
+                raise ve
+    else:
+        clog.debug(
+            f"Skipping literal evaluation since {warn_arg_name} has type {type(s)}."
+        )
+        return s
 
 
 def connect_config(config_path: str | Path):
@@ -80,10 +86,7 @@ def clover(fn):
             if (
                 (p.annotation != Parameter.empty and p.annotation != str)
                 or ((p.default != Parameter.empty) and (not isinstance(p.default, str)))
-                or (
-                    (qual_pname in global_cfg_dct)
-                    and (not isinstance(global_cfg_dct[qual_pname], str))
-                )
+                or (qual_pname in global_cfg_dct)
             ):
                 parsed_args[pname] = _try_eval_literal(
                     parsed_args[pname], f"--{fn.__qualname__}.{pname}"
