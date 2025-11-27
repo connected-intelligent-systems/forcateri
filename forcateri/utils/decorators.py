@@ -66,7 +66,7 @@ def clover(fn):
         for pn in param_names:
             qual_pn = f"{fn.__qualname__}.{pn}"
             default = global_cfg_dct.get(qual_pn, None)
-            clover_parser.add_argument(f"--{qual_pn}", default=default)
+            clover_parser.add_argument(f"--{qual_pn}", default=default, type=str)
         parsed_args = vars(clover_parser.parse_known_args()[0])
         clog.debug(f"Parsed the following args from cil: {parsed_args}")
 
