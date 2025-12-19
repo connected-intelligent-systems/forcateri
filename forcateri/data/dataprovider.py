@@ -25,7 +25,7 @@ class DataProvider:
     def __init__(
         self,
         data_sources: List[DataSource],
-        roles: List[Dict[str, SeriesRole]],
+        roles: List[Dict[SeriesRole, List[str]]],
         splits: Union[Cutoff, List[Cutoff]] = (1.0 / 3.0, 2.0 / 3.0),
     ):
         """
@@ -33,12 +33,12 @@ class DataProvider:
 
         Args:
             data_sources (List[DataSource]): A list of data sources to be used by the DataProvider.
-            roles (Dict[str, SeriesRole]): A dictionary mapping series names to their respective roles.
+            roles (List[Dict[SeriesRole, List[str]]]): A list of dictionaries mapping series roles to their respective series names.
             splits (Union[Cutoff, List[Cutoff]], optional): The split points for dividing the data.
                 Defaults to (1.0 / 3.0, 2.0 / 3.0).
 
         Attributes:
-            roles (Dict[str, SeriesRole]): Stores the roles of the series.
+            roles (List[Dict[SeriesRole, List[str]]]): Stores the roles of the series.
             splits (Union[Cutoff, List[Cutoff]]): Stores the split points for data division.
             data_sources (List[DataSource]): Stores the provided data sources.
             target (list): A list to store target series.
@@ -81,15 +81,13 @@ class DataProvider:
 
         for data_source, role in zip(self.data_sources, self.roles):
             logger.debug(f"Processing data source: {data_source} with roles: {role}")
-            role = {k.lower(): v for k, v in role.items()}
-            logger.debug("Lowered all role keys to lowercase for consistency.")
-            columns_observed = role.get(SeriesRole.OBSERVED.value) or []
+            columns_observed = role.get(SeriesRole.OBSERVED) or []
             columns_observed = columns_observed if isinstance(columns_observed, list) else [columns_observed]
 
-            columns_target = role.get(SeriesRole.TARGET.value) or []
+            columns_target = role.get(SeriesRole.TARGET) or []
             columns_target = columns_target if isinstance(columns_target, list) else [columns_target]
 
-            columns_known = role.get(SeriesRole.KNOWN.value) or []
+            columns_known = role.get(SeriesRole.KNOWN) or []
             columns_known = columns_known if isinstance(columns_known, list) else [columns_known]
 
             logger.debug(
