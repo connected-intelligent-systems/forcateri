@@ -5,7 +5,7 @@ from forcateri.data.timeseries import TimeSeries
 import argparse
 import yaml
 from pathlib import Path
-
+import os
 
 def extract_config(config: dict) -> list[tuple]:
     args = []
@@ -101,14 +101,14 @@ def from_args_to_kwargs(*args) -> dict:
     return kwargs
 
 
-def arg_parser(config_path=None, default_kwargs=None):
+def arg_parser(config_path=None, default_kwargs=None, parser=None):
     """
     Creates an argument parser from:
       - config YAML (if provided)
       - OR default_kwargs (if config is None)
     """
 
-    parser = argparse.ArgumentParser()
+    #parser = argparse.ArgumentParser()
 
     # Case 1: CONFIG-BASED ARGUMENTS
     if config_path and os.path.exists(config_path):
