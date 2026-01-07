@@ -84,7 +84,36 @@ class DartsModelAdapter(ModelAdapter, ABC):
         val_data: Optional[List[AdapterInput]] = None,
     ) -> None:
         """
-        Fits the model using the provided training and validation data.
+        Fits the Darts forecasting model using the provided training and validation data.
+
+        This method converts the input data to Darts format, prepares the training arguments
+        including any supported covariates (future, past, or static), and optionally includes
+        validation data with the appropriate prefixes. The model is then fitted using these
+        prepared arguments.
+
+        Parameters
+        ----------
+        train_data : List[AdapterInput]
+            A list of AdapterInput objects containing the training data, including target
+            series and any available covariates (known/future, observed/past, and static).
+        val_data : Optional[List[AdapterInput]], default=None
+            An optional list of AdapterInput objects containing validation data. If provided,
+            validation series and covariates will be passed to the model's fit method with
+            'val_' prefixes.
+
+        Returns
+        -------
+        None
+            This method modifies the model in-place and does not return a value.
+
+        Notes
+        -----
+        - The method automatically handles covariate support detection based on the model's
+          capabilities (supports_future_covariates, supports_past_covariates, etc.).
+        - Target column names are stored in self.target_col_names for later use in predictions.
+        - If scalers are configured, they will be applied during the convert_input step.
+        - Validation covariates are automatically prefixed with 'val_' to match Darts API
+          requirements.
         """
         logger.debug(f"Starting model fit for {self.model_name}")
         target, known, observed, static = self.convert_input(train_data)
@@ -134,6 +163,48 @@ class DartsModelAdapter(ModelAdapter, ABC):
         rolling_window: bool = True,
         **kwargs,
     ) -> List[TimeSeries]:
+        """
+        Generates predictions using the fitted Darts forecasting model.
+
+        This method converts the input data to Darts format, prepares prediction arguments
+        including covariates, and generates forecasts. It supports two prediction modes:
+        rolling window (historical forecasts) for backtesting, or direct n-step ahead
+        predictions.
+
+        Parameters
+        ----------
+        data : List[AdapterInput]
+            A list of AdapterInput objects containing the data for prediction, including
+            target series and any available covariates (known/future, observed/past, and static).
+        n : Optional[int], default=1
+            The number of time steps ahead to forecast. Only used when rolling_window=False.
+            For rolling window predictions, use the 'forecast_horizon' kwarg instead.
+        rolling_window : bool, default=True
+            If True, uses historical_forecasts method to generate multiple forecasts with
+            a rolling window approach (useful for backtesting). If False, generates a single
+            n-step ahead forecast from the end of the series.
+        **kwargs
+            Additional keyword arguments passed to the underlying prediction method:
+            - For rolling_window=True: passed to historical_forecasts (e.g., forecast_horizon, stride)
+            - For rolling_window=False: passed to model.predict (e.g., num_samples, mc_dropout)
+
+        Returns
+        -------
+        List[TimeSeries]
+            A list of TimeSeries objects containing the predictions. The format depends on
+            the model type and configuration:
+            - For probabilistic models: quantile or sample-based representations
+            - For deterministic models: point forecasts
+            - If scalers are configured, predictions are inverse-transformed to original scale
+
+        Notes
+        -----
+        - The method automatically handles covariate preparation based on model capabilities.
+        - For rolling window predictions, the forecast_horizon parameter in kwargs controls
+          the prediction horizon at each step.
+        - Predictions are automatically converted from Darts format back to the custom
+          TimeSeries format with proper offset and timestamp indexing.
+        """
         target, known, observed, static = self.convert_input(data)
         self._prepare_predict_args(target, known, observed, static)
         
@@ -146,6 +217,40 @@ class DartsModelAdapter(ModelAdapter, ABC):
             return self.convert_output(output=preds)#, is_likelihood=self.is_likelihood,num_samples=self.num_samples)
 
     def convert_input(self, input):
+        """
+        Converts input data to Darts format and applies scaling transformations.
+
+        This method extends the parent class's convert_input method by adding optional
+        scaling transformations to the target series and covariates. Scalers are applied
+        if they were configured during initialization.
+
+        Parameters
+        ----------
+        input : List[AdapterInput]
+            A list of AdapterInput objects containing the input data with target series,
+            known/future covariates, observed/past covariates, and static covariates.
+
+        Returns
+        -------
+        tuple
+            A tuple containing four elements:
+            - target : List[DartsTimeSeries] or DartsTimeSeries
+                The target series, scaled if scaler_target is configured.
+            - known : List[DartsTimeSeries] or DartsTimeSeries or None
+                The known/future covariates, scaled if scaler_known is configured.
+            - observed : List[DartsTimeSeries] or DartsTimeSeries or None
+                The observed/past covariates, scaled if scaler_observed is configured.
+            - static : pd.DataFrame or None
+                The static covariates (not scaled).
+
+        Notes
+        -----
+        - Scaling is only applied if the corresponding scaler was fitted during
+          initialization (when scaler_data was provided).
+        - The parent class's convert_input method handles the conversion from
+          TimeSeries format to Darts format.
+        - Scalers transform data to have zero mean and unit variance by default.
+        """
         target, known, observed, static = super().convert_input(input)
         if self.scaler_target:
             logger.debug("Applying target scaler to target data.")
@@ -165,18 +270,48 @@ class DartsModelAdapter(ModelAdapter, ABC):
         # num_samples: Optional[int] = None,
     ) -> List[TimeSeries]:
         """
-        Converts the model output into a list of TimeSeries objects.
+        Converts Darts model output to custom TimeSeries format with proper column naming.
 
-        Parameters:
-            output (Union[List[DartsTimeSeries], List[List[DartsTimeSeries]]]): The model output to convert.
+        This method takes the raw output from a Darts forecasting model and converts it
+        to the custom TimeSeries format used by the adapter. It handles both single and
+        multiple series predictions, and properly formats column names to match the original
+        target series names with their associated quantiles or samples.
 
-        Returns:
-            List[TimeSeries]: A list of TimeSeries objects.
+        Parameters
+        ----------
+        output : Union[List[DartsTimeSeries], List[List[DartsTimeSeries]]]
+            The raw output from the Darts model. Can be:
+            - A list of DartsTimeSeries (for multiple predictions)
+            - A single DartsTimeSeries (for single prediction)
+            - A list of lists of DartsTimeSeries (for nested predictions)
+
+        Returns
+        -------
+        List[TimeSeries]
+            A list of TimeSeries objects with:
+            - Proper offset and timestamp indexing
+            - MultiIndex columns with (feature, representation) structure
+            - Original target column names restored
+            - Appropriate representation type (quantile, sample, or deterministic)
+
+        Notes
+        -----
+        - The method uses self.quantiles, self.is_likelihood, and self.num_samples
+          to determine the output format.
+        - For list outputs, each prediction is converted individually and column names
+          are updated to match the original target column names stored in
+          self.target_col_names.
+        - Returns an empty list if the output is None or empty.
+        - The conversion process includes proper handling of:
+          * Quantile forecasts (for probabilistic models)
+          * Sample-based forecasts (for stochastic models)
+          * Point forecasts (for deterministic models)
         """
         if not output:
             return []
         if isinstance(output, list):
             # If the output is a list of lists, flatten it
+            logger.debug("Converting list of DartsTimeSeries to TimeSeries format.")
             prediction_ts_format = [
                 DartsModelAdapter.to_time_series(
                     ts=pred, quantiles=self.quantiles, is_likelihood=self.is_likelihood, num_samples=self.num_samples
@@ -188,8 +323,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
                     [(new_name, q) for q in ts.data.columns.get_level_values(1)],
                     names=TimeSeries.COL_INDEX_NAMES,
                 )
+                logger.debug(f"Renamed column names to match TimeSeries format: {ts.data.columns}")
         else:
-
+            logger.debug("Converting single DartsTimeSeries to TimeSeries format.")
             prediction_ts_format = DartsModelAdapter.to_time_series(
                 ts=output, quantiles=self.quantiles, is_likelihood=self.is_likelihood, num_samples=self.num_samples
             )
@@ -234,6 +370,48 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
     @staticmethod
     def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
+        """
+        Flattens a TimeSeries DataFrame by resetting its MultiIndex and simplifying column structure.
+
+        This static method prepares a TimeSeries DataFrame for conversion to Darts format by:
+        - Sorting the index to avoid performance warnings
+        - Resetting the MultiIndex to regular columns
+        - Removing the 'offset' column (not needed for Darts)
+        - Flattening MultiIndex columns to single-level columns
+        - Ensuring 'time_stamp' is the first column
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            A TimeSeries DataFrame with MultiIndex rows (offset, time_stamp) and potentially
+            MultiIndex columns (feature, representation).
+
+        Returns
+        -------
+        pd.DataFrame
+            A flattened DataFrame with:
+            - Regular (non-MultiIndex) row index
+            - 'time_stamp' as the first column
+            - Single-level column names
+            - No 'offset' column
+
+        Notes
+        -----
+        - The input DataFrame is sorted lexicographically to avoid pandas PerformanceWarning.
+        - MultiIndex columns are flattened by taking the first level (feature name).
+        - The 'offset' column is dropped as Darts uses time_stamp directly for indexing.
+        - This method is typically called as part of the to_model_format conversion pipeline.
+
+        Examples
+        --------
+        Input DataFrame (MultiIndex):
+            Index: [(0 days, '2020-01-01'), (1 day, '2020-01-02'), ...]
+            Columns: [('feature1', 'value'), ('feature2', 'value')]
+
+        Output DataFrame:
+            Index: [0, 1, ...]
+            Columns: ['time_stamp', 'feature1', 'feature2']
+        """
         # Sort index lexicographically to avoid PerformanceWarning
         df = df.sort_index(level=list(df.index.names), sort_remaining=True)
         df_reset = df.reset_index()
@@ -299,7 +477,71 @@ class DartsModelAdapter(ModelAdapter, ABC):
         freq: str = "h",
     ) -> TimeSeries:
         """
-        Converts a DartsTimeSeries or a list of DartsTimeSeries into a pandas DataFrame (or list of DataFrames).
+        Converts DartsTimeSeries object(s) to forcateri TimeSeries format with proper indexing.
+
+        This static method converts Darts forecasting model output into the custom TimeSeries
+        format used by the adapter. It handles the conversion of time indices to offset-based
+        indexing and properly sets the representation type (quantile, sample, or deterministic)
+        based on the model configuration.
+
+        Parameters
+        ----------
+        ts : Union[DartsTimeSeries, List[DartsTimeSeries]]
+            A single DartsTimeSeries or a list of DartsTimeSeries objects to convert.
+            Multiple series are concatenated into a single TimeSeries object.
+        quantiles : Optional[List[float]], default=None
+            List of quantile levels (e.g., [0.1, 0.5, 0.9]) if the predictions are
+            probabilistic forecasts. If None, the output is treated as deterministic.
+        is_likelihood : bool, default=False
+            If True and quantiles are provided, indicates that the model predicted
+            likelihood parameters for quantile regression. Determines the representation
+            type of the output TimeSeries.
+        num_samples : Optional[int], default=None
+            Number of stochastic samples if the predictions are sample-based (e.g., from
+            Monte Carlo dropout). If greater than 1, uses SAMPLE_REP representation.
+        freq : str, default="h"
+            Frequency string for the time deltas used in offset calculation.
+            Examples: 'h' (hour), 'd' (day), 'min' (minute).
+
+        Returns
+        -------
+        TimeSeries
+            A TimeSeries object with:
+            - MultiIndex rows: (offset, time_stamp)
+              * offset: pd.Timedelta representing forecast horizon
+              * time_stamp: actual timestamp adjusted by subtracting offset
+            - Appropriate representation type:
+              * QUANTILE_REP if is_likelihood=True and quantiles provided
+              * SAMPLE_REP if num_samples > 1
+              * DETERM_REP otherwise
+
+        Notes
+        -----
+        - The offset represents the forecast horizon (e.g., 1 hour ahead, 2 hours ahead).
+        - Adjusted times are calculated as: original_time - offset, allowing reconstruction
+          of the forecast origin time.
+        - For list inputs, all series are concatenated along axis 0, preserving the
+          MultiIndex structure.
+        - The conversion handles three types of forecasts:
+          1. Quantile forecasts (probabilistic with quantile levels)
+          2. Sample-based forecasts (stochastic with multiple samples)
+          3. Deterministic forecasts (point predictions)
+
+        Examples
+        --------
+        Converting a single probabilistic forecast:
+        >>> ts = to_time_series(
+        ...     darts_ts,
+        ...     quantiles=[0.1, 0.5, 0.9],
+        ...     is_likelihood=True,
+        ...     freq='h'
+        ... )
+
+        Converting multiple deterministic forecasts:
+        >>> ts = to_time_series(
+        ...     [darts_ts1, darts_ts2, darts_ts3],
+        ...     freq='d'
+        ... )
         """
 
         def convert_single_ts(darts_ts: DartsTimeSeries) -> TimeSeries:

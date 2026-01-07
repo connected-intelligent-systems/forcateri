@@ -25,27 +25,44 @@ class DataProvider:
     def __init__(
         self,
         data_sources: List[DataSource],
-        roles: List[Dict[str, SeriesRole]],
+        roles: List[Dict[SeriesRole, List[str]]],
         splits: Union[Cutoff, List[Cutoff]] = (1.0 / 3.0, 2.0 / 3.0),
     ):
         """
-        Initializes the DataProvider class.
+        Initializes the DataProvider.
 
         Args:
-            data_sources (List[DataSource]): A list of data sources to be used by the DataProvider.
-            roles (Dict[str, SeriesRole]): A dictionary mapping series names to their respective roles.
-            splits (Union[Cutoff, List[Cutoff]], optional): The split points for dividing the data.
-                Defaults to (1.0 / 3.0, 2.0 / 3.0).
+            data_sources (List[DataSource]):
+                Data sources used to load time series data.
+            roles (Dict[SeriesRole, List[str]]):
+                Mapping from series roles to series names.
+                Example:
+                    {
+                        SeriesRole.TARGET: ["target_series"],
+                        SeriesRole.KNOWN: ["known_1", "known_2"],
+                        SeriesRole.OBSERVED: ["observed_1"]
+                    }
+            splits (Union[Cutoff, List[Cutoff]], optional):
+                Cutoff(s) used to split the data (e.g., train/val/test).
+                Defaults to (1/3, 2/3).
 
         Attributes:
-            roles (Dict[str, SeriesRole]): Stores the roles of the series.
-            splits (Union[Cutoff, List[Cutoff]]): Stores the split points for data division.
-            data_sources (List[DataSource]): Stores the provided data sources.
-            target (list): A list to store target series.
-            known (list): A list to store known series.
-            observed (list): A list to store observed series.
-            static (Dict[str, float]): A dictionary to store static features.
+            data_sources (List[DataSource]):
+                Provided data sources.
+            roles (Dict[SeriesRole, List[str]]):
+                Series role definitions.
+            splits (Union[Cutoff, List[Cutoff]]):
+                Split points for data division.
+            target (List):
+                Loaded target time series.
+            known (List):
+                Loaded known covariate series.
+            observed (List):
+                Loaded observed covariate series.
+            static (Dict[str, float]):
+                Static features shared across series.
         """
+
         self.roles = roles
         self.splits = splits
         self.data_sources = data_sources
@@ -81,15 +98,13 @@ class DataProvider:
 
         for data_source, role in zip(self.data_sources, self.roles):
             logger.debug(f"Processing data source: {data_source} with roles: {role}")
-            role = {k.lower(): v for k, v in role.items()}
-            logger.debug("Lowered all role keys to lowercase for consistency.")
-            columns_observed = role.get(SeriesRole.OBSERVED.value) or []
+            columns_observed = role.get(SeriesRole.OBSERVED) or []
             columns_observed = columns_observed if isinstance(columns_observed, list) else [columns_observed]
 
-            columns_target = role.get(SeriesRole.TARGET.value) or []
+            columns_target = role.get(SeriesRole.TARGET) or []
             columns_target = columns_target if isinstance(columns_target, list) else [columns_target]
 
-            columns_known = role.get(SeriesRole.KNOWN.value) or []
+            columns_known = role.get(SeriesRole.KNOWN) or []
             columns_known = columns_known if isinstance(columns_known, list) else [columns_known]
 
             logger.debug(

@@ -1,10 +1,14 @@
-from typing import Dict, NamedTuple, Optional
+from dataclasses import dataclass
+from typing import Optional, Dict
 
 from .timeseries import TimeSeries
 
 
-class AdapterInput(NamedTuple):
+
+
+@dataclass
+class AdapterInput:
     target: TimeSeries
-    observed: Optional[TimeSeries]
-    known: Optional[TimeSeries]
-    static: Optional[Dict[str, float]]
+    observed: Optional[TimeSeries] = None
+    known: Optional[TimeSeries] = None
+    static: Optional[Dict[str, float]] = None
