@@ -31,6 +31,7 @@ class Pipeline:
         2. Evaluate the model(s) using test data.
         3. Report all metrics.
         """
+        self.dp._separate_ts()
         # Example training
         for model in self.mad:
             model.fit(self.dp.get_train_set(), self.dp.get_val_set())

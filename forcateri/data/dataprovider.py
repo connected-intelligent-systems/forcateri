@@ -70,7 +70,7 @@ class DataProvider:
         self.known = []
         self.observed = []
         self.static: Dict[str, float] = None
-        self._separate_ts()
+        #self._separate_ts()
 
     def _separate_ts(self):
         """ ""
