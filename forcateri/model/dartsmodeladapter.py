@@ -31,18 +31,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.scaler_observed = None
         self.is_likelihood = kwargs.get("predict_likelihood_parameters", False)
         self.num_samples = kwargs.get("num_samples", None)
-        if kwargs.get("scaler_data"):
-            target, known, observed, static = self.convert_input(
-                kwargs.get("scaler_data")
-            )
-            self.scaler_target = Scaler()
-            self.scaler_target = self.scaler_target.fit(target)
-            self.scaler_known = Scaler()
-            self.scaler_known = self.scaler_known.fit(known)
-            self.scaler_observed = Scaler()
-            self.scaler_observed = self.scaler_observed.fit(observed)
-            # self.scaler_static = Scaler()
-            # self.scaler_static = self.scaler_static.fit(static)
+        self.scaler_target: Optional[Scaler] = None
+        self.scaler_known: Optional[Scaler] = None
+        self.scaler_observed: Optional[Scaler] = None
 
     def _get_covariate_args(self, known, observed, static):
         """
@@ -252,9 +243,11 @@ class DartsModelAdapter(ModelAdapter, ABC):
         - Scalers transform data to have zero mean and unit variance by default.
         """
         target, known, observed, static = super().convert_input(input)
-        if self.scaler_target:
-            logger.debug("Applying target scaler to target data.")
-            target = self.scaler_target.transform(target)
+        self.scaler_target = Scaler().fit(target)
+        self.scaler_known = Scaler().fit(known) if known is not None else None
+        self.scaler_observed = Scaler().fit(observed) if observed is not None else None
+        logger.debug("Applying target scaler to target data.")
+        target = self.scaler_target.transform(target)
         if self.scaler_known:
             logger.debug("Applying known scaler to known data.")
             known = self.scaler_known.transform(known)
