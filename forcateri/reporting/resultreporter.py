@@ -11,6 +11,7 @@ from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from ..data.timeseries import TimeSeries
 
+
 logger = logging.getLogger(__name__)
 
 
@@ -18,19 +19,20 @@ class ResultReporter:
 
     def __init__(
         self,
-        test_data: List[AdapterInput],
+        #test_data: List[AdapterInput],
         models: List[ModelAdapter],
         metrics: List[Metric],
     ):
-        self.test_data = test_data
+        self.test_data = None  # to be set when report_all is called
         self.models = models
         self.metrics = metrics
         self.model_predictions = None  # to be filled after predictions
         self.metric_results = None  # to be filled after metric computation
 
     def report_all(
-        self,
+        self, test_data: List[AdapterInput]
     ):
+        self.test_data = test_data
         # self.metric_results = self._report_metrics()
         logger.info("Reporting all results...")
         # dont forget to remove predictions after testing

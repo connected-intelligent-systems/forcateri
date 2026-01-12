@@ -18,14 +18,14 @@ class ClearMLReporter(ResultReporter):
 
     def __init__(
         self,
-        test_data: List[AdapterInput],
+        #test_data: List[AdapterInput],
         models: List[ModelAdapter],
         metrics: List[Metric],
     ):
-        super().__init__(test_data, models, metrics)
-
-    def report_all(self):
-        super().report_all()
+        super().__init__(models, metrics)
+        
+    def report_all(self, test_data: List[AdapterInput]):
+        super().report_all(test_data)
         print(f"Test of the metric results {self.metric_results}")
         Task.current_task().upload_artifact(
             name="Report", artifact_object=self.metric_results

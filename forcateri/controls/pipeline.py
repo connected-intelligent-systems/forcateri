@@ -38,6 +38,6 @@ class Pipeline:
         # Evaluate and report results
         #results = []
         for reporter in self.rep:
-            reporter.report_all()
+            reporter.report_all(test_data=self.dp.get_test_set())
             #results.append(res)
         #return results
