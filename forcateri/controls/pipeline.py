@@ -31,7 +31,7 @@ class Pipeline:
         2. Evaluate the model(s) using test data.
         3. Report all metrics.
         """
-        self.dp._separate_ts()
+        
         train_set = self.dp.get_train_set()
         val_set = self.dp.get_val_set()
         test_set = self.dp.get_test_set()

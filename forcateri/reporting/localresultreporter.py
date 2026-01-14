@@ -42,8 +42,8 @@ def save_plots(save_dir="plots"):
     return decorator
 
 class LocalResultReporter(ResultReporter):
-    def __init__(self, test_data: List[AdapterInput], models: List[ModelAdapter], metrics: List[Metric]):
-        super().__init__(test_data, models, metrics)
+    def __init__(self, models: List[ModelAdapter], metrics: List[Metric]):
+        super().__init__(models, metrics)
     
     def report_metrics(self):
         super().report_metrics()

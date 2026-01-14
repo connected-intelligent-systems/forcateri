@@ -70,6 +70,7 @@ class DataProvider:
         self.known = []
         self.observed = []
         self.static: Dict[str, float] = None
+        self.is_separated = False
         #self._separate_ts()
 
     def _separate_ts(self):
@@ -186,6 +187,9 @@ class DataProvider:
         Returns:
             List[AdapterInput]: A list of AdapterInput objects representing the training dataset.
         """
+        if not self.is_separated:
+            self._separate_ts()
+            self.is_separated = True
         return self._get_split_set("train")
 
     def get_val_set(self) -> List[AdapterInput]:
@@ -195,6 +199,9 @@ class DataProvider:
         Returns:
             List[AdapterInput]: A list of AdapterInput objects representing the validation dataset.
         """
+        if not self.is_separated:
+            self._separate_ts()
+            self.is_separated = True
         return self._get_split_set("val")
 
     def get_test_set(self) -> List[AdapterInput]:
@@ -204,4 +211,7 @@ class DataProvider:
         Returns:
             List[AdapterInput]: A list of AdapterInput objects representing the test dataset.
         """
+        if not self.is_separated:
+            self._separate_ts()
+            self.is_separated = True
         return self._get_split_set("test")
