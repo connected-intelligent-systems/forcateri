@@ -707,7 +707,7 @@ class TimeSeries:
             raise ValueError("Cannot slice TimeSeries: Index is empty.")
 
         new_data = self.data[index]
-        return TimeSeries(data=new_data.copy() if copy else new_data)
+        return TimeSeries(data=new_data.copy() if copy else new_data, freq=self.freq)
 
     def get_time_slice(self, index, copy: bool = False):
         """
@@ -782,7 +782,7 @@ class TimeSeries:
             .swaplevel(axis=0)
             .sort_index()
         )
-        return TimeSeries(data=new_data.copy() if copy else new_data)
+        return TimeSeries(data=new_data.copy() if copy else new_data, freq=self.freq)
 
     def __repr__(self):
         return f"TimeSeries(data={self.data})"
