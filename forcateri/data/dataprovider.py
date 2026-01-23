@@ -8,7 +8,6 @@ from .datasource import DataSource
 from .seriesrole import SeriesRole
 from .timeseries import TimeSeries
 
-
 logger = logging.getLogger(__name__)
 
 Cutoff = Tuple[
@@ -71,7 +70,7 @@ class DataProvider:
         self.observed = []
         self.static: Dict[str, float] = None
         self.is_separated = False
-        #self._separate_ts()
+        # self._separate_ts()
 
     def _separate_ts(self):
         """ ""
@@ -95,26 +94,36 @@ class DataProvider:
         Raises:
             AttributeError: If `roles` or `data_sources` is not properly defined.
         """
-        logger.debug("Separating time series data into target, known, and observed categories.")
+        logger.debug(
+            "Separating time series data into target, known, and observed categories."
+        )
 
         for data_source, role in zip(self.data_sources, self.roles):
             logger.debug(f"Processing data source: {data_source} with roles: {role}")
             columns_observed = role.get(SeriesRole.OBSERVED) or []
-            columns_observed = columns_observed if isinstance(columns_observed, list) else [columns_observed]
+            columns_observed = (
+                columns_observed
+                if isinstance(columns_observed, list)
+                else [columns_observed]
+            )
 
             columns_target = role.get(SeriesRole.TARGET) or []
-            columns_target = columns_target if isinstance(columns_target, list) else [columns_target]
+            columns_target = (
+                columns_target if isinstance(columns_target, list) else [columns_target]
+            )
 
             columns_known = role.get(SeriesRole.KNOWN) or []
-            columns_known = columns_known if isinstance(columns_known, list) else [columns_known]
+            columns_known = (
+                columns_known if isinstance(columns_known, list) else [columns_known]
+            )
 
             logger.debug(
                 f"Identified columns - Target: {columns_target}, Known: {columns_known}, Observed: {columns_observed}"
             )
             data_list = data_source.get_data()
             for ts_obj in data_list:
-                #self.target.append(ts_obj.get_feature_slice(index=columns_target))
-                self.target.append(ts_obj.get_feature_slice(index=['target']))
+                # self.target.append(ts_obj.get_feature_slice(index=columns_target))
+                self.target.append(ts_obj.get_feature_slice(index=["target"]))
                 self.known.append(
                     ts_obj.get_feature_slice(index=columns_known)
                     if len(columns_known) > 0
@@ -145,7 +154,10 @@ class DataProvider:
             self.target, self.known, self.observed
         ):
             if split_type == "train":
-                logger.debug("Processing training split. List[AdapterInput] length: %d", len(list_of_tuples))
+                logger.debug(
+                    "Processing training split. List[AdapterInput] length: %d",
+                    len(list_of_tuples),
+                )
                 list_of_tuples.append(
                     AdapterInput(
                         target=target_ts[:start] if target_ts is not None else None,
@@ -157,7 +169,10 @@ class DataProvider:
                     )
                 )
             elif split_type == "val":
-                logger.debug("Processing validation split. List[AdapterInput] length: %d", len(list_of_tuples))
+                logger.debug(
+                    "Processing validation split. List[AdapterInput] length: %d",
+                    len(list_of_tuples),
+                )
                 list_of_tuples.append(
                     AdapterInput(
                         target=target_ts[start:end] if target_ts is not None else None,
@@ -169,7 +184,10 @@ class DataProvider:
                     )
                 )
             elif split_type == "test":
-                logger.debug("Processing test split. List[AdapterInput] length: %d", len(list_of_tuples))
+                logger.debug(
+                    "Processing test split. List[AdapterInput] length: %d",
+                    len(list_of_tuples),
+                )
                 list_of_tuples.append(
                     AdapterInput(
                         target=target_ts[end:] if target_ts is not None else None,

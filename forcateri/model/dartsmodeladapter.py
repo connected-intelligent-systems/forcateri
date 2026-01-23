@@ -14,6 +14,7 @@ from ..data.adapterinput import AdapterInput
 from ..data.timeseries import TimeSeries
 from .modeladapter import ModelAdapter
 from .modelexceptions import ModelAdapterError
+
 logger = logging.getLogger(__name__)
 
 
@@ -198,14 +199,15 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         target, known, observed, static = self.convert_input(data)
         self._prepare_predict_args(target, known, observed, static)
-        
-        
+
         if rolling_window:
             logger.debug("Using rolling window prediction.")
             return self._historical_forecasts(data, **kwargs)
         else:
             preds = self.model.predict(**self._predict_args, n=n, **kwargs)
-            return self.convert_output(output=preds)#, is_likelihood=self.is_likelihood,num_samples=self.num_samples)
+            return self.convert_output(
+                output=preds
+            )  # , is_likelihood=self.is_likelihood,num_samples=self.num_samples)
 
     def convert_input(self, input):
         """
@@ -307,7 +309,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
             logger.debug("Converting list of DartsTimeSeries to TimeSeries format.")
             prediction_ts_format = [
                 DartsModelAdapter.to_time_series(
-                    ts=pred, quantiles=self.quantiles, is_likelihood=self.is_likelihood, num_samples=self.num_samples
+                    ts=pred,
+                    quantiles=self.quantiles,
+                    is_likelihood=self.is_likelihood,
+                    num_samples=self.num_samples,
                 )
                 for pred in output
             ]
@@ -316,11 +321,16 @@ class DartsModelAdapter(ModelAdapter, ABC):
                     [(new_name, q) for q in ts.data.columns.get_level_values(1)],
                     names=TimeSeries.COL_INDEX_NAMES,
                 )
-                logger.debug(f"Renamed column names to match TimeSeries format: {ts.data.columns}")
+                logger.debug(
+                    f"Renamed column names to match TimeSeries format: {ts.data.columns}"
+                )
         else:
             logger.debug("Converting single DartsTimeSeries to TimeSeries format.")
             prediction_ts_format = DartsModelAdapter.to_time_series(
-                ts=output, quantiles=self.quantiles, is_likelihood=self.is_likelihood, num_samples=self.num_samples
+                ts=output,
+                quantiles=self.quantiles,
+                is_likelihood=self.is_likelihood,
+                num_samples=self.num_samples,
             )
 
         return prediction_ts_format
@@ -358,7 +368,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
             logger.debug("Inverse transforming forecasts using target scaler.")
             preds = self.scaler_target.inverse_transform(preds)
 
-        
         return self.convert_output(preds)
 
     @staticmethod

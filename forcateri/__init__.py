@@ -8,7 +8,6 @@ from .reporting.resultreporter import ResultReporter as ResultReporter
 from .data.seriesrole import SeriesRole as SeriesRole
 from .data.timeseries import TimeSeries as TimeSeries
 
-
 __all__ = [
     "AdapterInput",
     "DataProvider",

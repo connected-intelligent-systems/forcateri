@@ -4,8 +4,6 @@ from typing import Optional, Dict
 from .timeseries import TimeSeries
 
 
-
-
 @dataclass
 class AdapterInput:
     target: TimeSeries

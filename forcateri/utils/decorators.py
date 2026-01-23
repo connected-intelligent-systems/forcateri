@@ -7,7 +7,6 @@ from typing import Dict, List, Optional
 
 import yaml
 
-
 clog = logging.getLogger(__name__)
 clover_parser = ArgumentParser(conflict_handler="resolve")
 global_cfg_dct = dict()

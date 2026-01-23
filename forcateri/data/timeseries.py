@@ -177,12 +177,16 @@ class TimeSeries:
                 # raise ValueError(
                 #     f"Provided freq {freq} is different from inferred freq {inferred_freq}"
                 # )
-                logger.warning(f"Provided freq {freq} is different from inferred freq {inferred_freq}")
+                logger.warning(
+                    f"Provided freq {freq} is different from inferred freq {inferred_freq}"
+                )
             self.freq = freq
         else:
             if inferred_freq is None:
                 raise ValueError("Could not infer the frequency from the data")
-            logger.warning(f"Freq was not provided and inferred freq is: {inferred_freq}")
+            logger.warning(
+                f"Freq was not provided and inferred freq is: {inferred_freq}"
+            )
             self.freq = inferred_freq
 
     @staticmethod
@@ -302,7 +306,9 @@ class TimeSeries:
                 has_datetime = isinstance(
                     df.index.get_level_values(0), pd.DatetimeIndex
                 ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
-                has_delta = isinstance(df.index.get_level_values(0), pd.TimedeltaIndex) or isinstance(df.index.get_level_values(1), pd.TimedeltaIndex)
+                has_delta = isinstance(
+                    df.index.get_level_values(0), pd.TimedeltaIndex
+                ) or isinstance(df.index.get_level_values(1), pd.TimedeltaIndex)
                 return has_datetime and has_delta
 
             # Check full MultiIndex structure
@@ -319,16 +325,21 @@ class TimeSeries:
             )
 
         return False
-    
-    def __align_column_level(self,df:pd.DataFrame):
+
+    def __align_column_level(self, df: pd.DataFrame):
         """Ensure columns follow the correct MultiIndex order."""
-        if set(TimeSeries.COL_INDEX_NAMES) == set(df.columns.names) and df.columns.names != TimeSeries.COL_INDEX_NAMES:
+        if (
+            set(TimeSeries.COL_INDEX_NAMES) == set(df.columns.names)
+            and df.columns.names != TimeSeries.COL_INDEX_NAMES
+        ):
             logger.info("Reordering column levels to match expected format.")
-            order = [df.columns.names.index(name) for name in TimeSeries.COL_INDEX_NAMES]
+            order = [
+                df.columns.names.index(name) for name in TimeSeries.COL_INDEX_NAMES
+            ]
             df.columns = df.columns.reorder_levels(order)
 
         if self.representation == TimeSeries.DETERM_REP:
-            
+
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
@@ -393,10 +404,8 @@ class TimeSeries:
                     raise ValueError(
                         "Cannot map inner column levels to samples: mismatched length."
                     )
-        
 
-
-    def _align_index_level(self,df:pd.DataFrame):
+    def _align_index_level(self, df: pd.DataFrame):
         """Ensure index follows the correct MultiIndex order."""
 
         if not isinstance(df.index, pd.MultiIndex):
@@ -405,8 +414,8 @@ class TimeSeries:
             df.index = pd.MultiIndex.from_product(
                 [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
             )
-            return 
-       
+            return
+
         if "time_stamp" in df.index.names:
             logger.info("Casting the index to datetime format")
             try:
@@ -424,29 +433,24 @@ class TimeSeries:
                 )
         level0 = df.index.get_level_values(0)
         level1 = df.index.get_level_values(1)
-        if isinstance(level0, pd.TimedeltaIndex) and isinstance(level1, pd.DatetimeIndex):
+        if isinstance(level0, pd.TimedeltaIndex) and isinstance(
+            level1, pd.DatetimeIndex
+        ):
             logger.info("Index levels are in correct order.")
             df.index.names = TimeSeries.ROW_INDEX_NAMES
-        elif isinstance(level0, pd.DatetimeIndex) and isinstance(level1, pd.TimedeltaIndex):
+        elif isinstance(level0, pd.DatetimeIndex) and isinstance(
+            level1, pd.TimedeltaIndex
+        ):
             logger.info("Swapping index levels to match expected format.")
             df.index = df.index.reorder_levels([1, 0])
             df.index.names = TimeSeries.ROW_INDEX_NAMES
         else:
             logger.warning("Index levels do not match expected types. Cannot align.")
 
-        
-
     def align_format(self, df: pd.DataFrame):
 
         self._align_index_level(df)
         self.__align_column_level(df)
-        
-
-
-        
-        
-
-        
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """

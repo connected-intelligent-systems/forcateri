@@ -39,34 +39,36 @@ def save_plots(save_dir="plots"):
                 plt.show = original_show
 
         return wrapper
+
     return decorator
+
 
 class LocalResultReporter(ResultReporter):
     def __init__(self, models: List[ModelAdapter], metrics: List[Metric]):
         super().__init__(models, metrics)
-    
+
     def report_metrics(self):
         super().report_metrics()
-        os.makedirs('reports', exist_ok=True)
+        os.makedirs("reports", exist_ok=True)
         print(self.metric_results)
         for metric_name, model_results in self.metric_results.items():
             all_results = []
             for model_name, result_df_list in model_results.items():
                 result = pd.concat(result_df_list, axis=0)
-                result['model'] = model_name
+                result["model"] = model_name
                 all_results.append(result)
 
             final_df = pd.concat(all_results, axis=0)
             final_df.reset_index(inplace=True)
-            final_df.to_csv(f'reports/{metric_name}_results.csv', index=False)
-        with open('reports/local_metric_results.pkl', 'wb') as f:
+            final_df.to_csv(f"reports/{metric_name}_results.csv", index=False)
+        with open("reports/local_metric_results.pkl", "wb") as f:
             pickle.dump(self.metric_results, f)
 
     @save_plots(save_dir="my_saved_plots")
     def _plot_metrics(self, metric_results=None):
-        #TODO Add decorator of saving the plots locally
+        # TODO Add decorator of saving the plots locally
         return super()._plot_metrics(metric_results)
-    
+
     @save_plots(save_dir="my_saved_plots")
     def _plot_predictions(self):
         return super()._plot_predictions()

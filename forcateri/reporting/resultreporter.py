@@ -11,7 +11,6 @@ from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from ..data.timeseries import TimeSeries
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -19,7 +18,7 @@ class ResultReporter:
 
     def __init__(
         self,
-        #test_data: List[AdapterInput],
+        # test_data: List[AdapterInput],
         models: List[ModelAdapter],
         metrics: List[Metric],
     ):
@@ -29,9 +28,7 @@ class ResultReporter:
         self.model_predictions = None  # to be filled after predictions
         self.metric_results = None  # to be filled after metric computation
 
-    def report_all(
-        self, test_data: List[AdapterInput]
-    ):
+    def report_all(self, test_data: List[AdapterInput]):
         self.test_data = test_data
         # self.metric_results = self._report_metrics()
         logger.info("Reporting all results...")
@@ -58,7 +55,7 @@ class ResultReporter:
                     logger.debug(
                         f"Computing metrics for model {model.__class__.__name__} on test series {i}."
                     )
-                    
+
                     gt_ts = adapter_input.target
                     # adjust ground truth length to match pred_ts
 
@@ -172,9 +169,9 @@ class ResultReporter:
 
                         # Flatten MultiIndex columns if needed
                         if isinstance(pred_df.columns, pd.MultiIndex):
-                            pred_df.columns = pred_df.columns.get_level_values(1).astype(
-                                float
-                            )
+                            pred_df.columns = pred_df.columns.get_level_values(
+                                1
+                            ).astype(float)
 
                         quantiles = sorted(pred_df.columns.astype(float))
                         lower_q = quantiles[0]

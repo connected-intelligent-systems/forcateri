@@ -3,7 +3,8 @@ from typing import List, Union
 from ..model.modeladapter import ModelAdapter
 from ..data.dataprovider import DataProvider
 from ..reporting.resultreporter import ResultReporter
-import logging 
+import logging
+
 
 class Pipeline:
     """
@@ -31,7 +32,7 @@ class Pipeline:
         2. Evaluate the model(s) using test data.
         3. Report all metrics.
         """
-        
+
         train_set = self.dp.get_train_set()
         val_set = self.dp.get_val_set()
         test_set = self.dp.get_test_set()
@@ -47,8 +48,8 @@ class Pipeline:
             model.fit(train_set, val_set)
 
         # Evaluate and report results
-        #results = []
+        # results = []
         for reporter in self.rep:
             reporter.report_all(test_data=test_set)
-            #results.append(res)
-        #return results
+            # results.append(res)
+        # return results
