@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import List, Optional, Union, Tuple, Callable
+from typing import List, Optional, Union, Tuple, Callable, Dict, Any
 from typing_extensions import Self
 
 import numpy as np
@@ -26,6 +26,7 @@ class TimeSeries:
         representation=None,
         quantiles: Optional[List[float]] = None,
         freq: Optional[str] = None,
+        static_data: Optional[Dict[str,Any]] = None
     ):
         if representation is None:
             if quantiles is None:
@@ -66,10 +67,12 @@ class TimeSeries:
                 f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
+        self.static_data = static_data if static_data is not None else {}
         self._check_freq_format(
             self.data.index.get_level_values(0) + self.data.index.get_level_values(1),
             freq,
         )
+        
 
     @property
     def features(self):
@@ -544,7 +547,7 @@ class TimeSeries:
             self.data = shifted_data
             return self
         else:
-            return TimeSeries(data=shifted_data)
+            return TimeSeries(data=shifted_data, freq=self.freq, static_data=self.static_data)
 
     def shift_to_repeat_to_multihorizon(self, horizon: int = 1, in_place: bool = False):
         """
@@ -586,7 +589,7 @@ class TimeSeries:
             self.data = shifted_data
             return self
         else:
-            return TimeSeries(data=shifted_data)
+            return TimeSeries(data=shifted_data, freq=self.freq, static_data=self.static_data)
 
     def to_quantiles(self, quantiles: List[float] = [0.1, 0.5, 0.9]) -> pd.DataFrame:
         """
@@ -711,7 +714,7 @@ class TimeSeries:
             raise ValueError("Cannot slice TimeSeries: Index is empty.")
 
         new_data = self.data[index]
-        return TimeSeries(data=new_data.copy() if copy else new_data, freq=self.freq)
+        return TimeSeries(data=new_data.copy() if copy else new_data, freq=self.freq, static_data=self.static_data)
 
     def get_time_slice(self, index, copy: bool = False):
         """
@@ -786,7 +789,7 @@ class TimeSeries:
             .swaplevel(axis=0)
             .sort_index()
         )
-        return TimeSeries(data=new_data.copy() if copy else new_data, freq=self.freq)
+        return TimeSeries(data=new_data.copy() if copy else new_data, freq=self.freq, static_data=self.static_data)
 
     def __repr__(self):
         return f"TimeSeries(data={self.data})"
@@ -891,6 +894,8 @@ class TimeSeries:
                 data=target_df,
                 representation=main_ts.representation,
                 quantiles=quantiles_to_preserve,
+                freq = self.freq,
+                static_data=self.static_data,
             )
 
     def _check_operation_compatibility(self, other: TimeSeries):
@@ -944,6 +949,8 @@ class TimeSeries:
         ts_kwargs = {
             "data": negated_data,
             "representation": self.representation,
+            "freq": self.freq,
+            "static_data": self.static_data,
         }
         if self.representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles  # Preserve quantiles list
@@ -978,6 +985,8 @@ class TimeSeries:
         ts_kwargs = {
             "data": new_data,
             "representation": self.representation,
+            "freq": self.freq,
+            "static_data": self.static_data,
         }
         if self.representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles
@@ -1029,7 +1038,7 @@ class TimeSeries:
                 "Can only multiply by a scalar(int,float) or by other TimeSeries object"
             )
         return TimeSeries(
-            data=new_data, representation=self.representation, quantiles=self.quantiles
+            data=new_data, representation=self.representation, quantiles=self.quantiles, freq=self.freq, static_data=self.static_data
         )
 
     def __rmul__(self, scalar: Union[int, float]) -> TimeSeries:
@@ -1096,6 +1105,8 @@ class TimeSeries:
         ts_kwargs = {
             "data": new_data,
             "representation": self.representation,
+            "freq": self.freq,
+            "static_data": self.static_data,
         }
         if self.representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles
