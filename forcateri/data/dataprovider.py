@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, NamedTuple, Tuple, Union
+from typing import Dict, List, NamedTuple, Tuple, Union, Callable
 
 import pandas as pd
 import logging
@@ -15,6 +15,11 @@ Cutoff = Tuple[
     Union[int, float, str, datetime, pd.Timestamp],
 ]
 
+CutoffFunction = Callable[
+    [TimeSeries],
+    Tuple[TimeSeries, TimeSeries, TimeSeries]  # train, val, test
+]
+
 
 class DataProvider:
     """
@@ -25,7 +30,7 @@ class DataProvider:
         self,
         data_sources: List[DataSource],
         roles: List[Dict[SeriesRole, List[str]]],
-        splits: Union[Cutoff, List[Cutoff]] = (1.0 / 3.0, 2.0 / 3.0),
+        splits: Union[Cutoff, List[Cutoff], CutoffFunction, List[CutoffFunction]] = (1.0 / 3.0, 2.0 / 3.0),
     ):
         """
         Initializes the DataProvider.
@@ -41,7 +46,7 @@ class DataProvider:
                         SeriesRole.KNOWN: ["known_1", "known_2"],
                         SeriesRole.OBSERVED: ["observed_1"]
                     }
-            splits (Union[Cutoff, List[Cutoff]], optional):
+            splits (Union[Cutoff, List[Cutoff], CutoffFunction, List[CutoffFunction]], optional):
                 Cutoff(s) used to split the data (e.g., train/val/test).
                 Defaults to (1/3, 2/3).
 
@@ -147,55 +152,105 @@ class DataProvider:
             List[AdapterInput]: A list of AdapterInput objects representing the requested dataset split.
         """
         logger.debug(f"Retrieving {split_type} dataset split.")
-        start, end = self.splits
-        list_of_tuples = []
+        if  isinstance(self.splits,Cutoff):
+            start, end = self.splits
+            list_of_tuples = []
 
-        for target_ts, known_ts, observed_ts in zip(
-            self.target, self.known, self.observed
-        ):
-            if split_type == "train":
-                logger.debug(
-                    "Processing training split. List[AdapterInput] length: %d",
-                    len(list_of_tuples),
-                )
-                list_of_tuples.append(
-                    AdapterInput(
-                        target=target_ts[:start] if target_ts is not None else None,
-                        known=known_ts[:start] if known_ts is not None else None,
-                        observed=(
-                            observed_ts[:start] if observed_ts is not None else None
-                        ),
-                        static=self.static,
+            for target_ts, known_ts, observed_ts in zip(
+                self.target, self.known, self.observed
+            ):
+                if split_type == "train":
+                    logger.debug(
+                        "Processing training split. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
                     )
-                )
-            elif split_type == "val":
-                logger.debug(
-                    "Processing validation split. List[AdapterInput] length: %d",
-                    len(list_of_tuples),
-                )
-                list_of_tuples.append(
-                    AdapterInput(
-                        target=target_ts[start:end] if target_ts is not None else None,
-                        known=known_ts[start:end] if known_ts is not None else None,
-                        observed=(
-                            observed_ts[start:end] if observed_ts is not None else None
-                        ),
-                        static=self.static,
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=target_ts[:start] if target_ts is not None else None,
+                            known=known_ts[:start] if known_ts is not None else None,
+                            observed=(
+                                observed_ts[:start] if observed_ts is not None else None
+                            ),
+                            static=self.static,
+                        )
                     )
-                )
-            elif split_type == "test":
-                logger.debug(
-                    "Processing test split. List[AdapterInput] length: %d",
-                    len(list_of_tuples),
-                )
-                list_of_tuples.append(
-                    AdapterInput(
-                        target=target_ts[end:] if target_ts is not None else None,
-                        known=known_ts[end:] if known_ts is not None else None,
-                        observed=observed_ts[end:] if observed_ts is not None else None,
-                        static=self.static,
+                elif split_type == "val":
+                    logger.debug(
+                        "Processing validation split. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
                     )
-                )
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=target_ts[start:end] if target_ts is not None else None,
+                            known=known_ts[start:end] if known_ts is not None else None,
+                            observed=(
+                                observed_ts[start:end] if observed_ts is not None else None
+                            ),
+                            static=self.static,
+                        )
+                    )
+                elif split_type == "test":
+                    logger.debug(
+                        "Processing test split. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
+                    )
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=target_ts[end:] if target_ts is not None else None,
+                            known=known_ts[end:] if known_ts is not None else None,
+                            observed=observed_ts[end:] if observed_ts is not None else None,
+                            static=self.static,
+                        )
+                    )
+        elif callable(self.splits):
+            list_of_tuples = []
+
+            for target_ts, known_ts, observed_ts in zip(
+                self.target, self.known, self.observed
+            ):
+                train_target_ts, val_target_ts, test_target_ts = self.splits(target_ts)
+                train_known_ts, val_known_ts, test_known_ts = self.splits(known_ts)
+                train_observed_ts, val_observed_ts, test_observed_ts = self.splits(observed_ts)
+                if split_type == "train":
+                    logger.debug(
+                        "Processing training split with Callable split function. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
+                    )
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=train_target_ts,
+                            known=train_known_ts,
+                            observed=train_observed_ts,
+                            static=self.static,
+                        )
+                    )
+                elif split_type == "val":
+                    logger.debug(
+                        "Processing validation split with Callable split function. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
+                    )
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=val_target_ts,
+                            known=val_known_ts,
+                            observed=val_observed_ts,
+                            static=self.static,
+                        )
+                    )
+                elif split_type == "test":
+                    logger.debug(
+                        "Processing test split with Callable split function. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
+                    )
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=test_target_ts,
+                            known=test_known_ts,
+                            observed=test_observed_ts,
+                            static=self.static,
+                        )
+                    )
+
         return list_of_tuples
 
     def get_train_set(self) -> List[AdapterInput]:
