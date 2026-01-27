@@ -16,8 +16,7 @@ Cutoff = Tuple[
 ]
 
 CutoffFunction = Callable[
-    [TimeSeries],
-    Tuple[TimeSeries, TimeSeries, TimeSeries]  # train, val, test
+    [TimeSeries], Tuple[TimeSeries, TimeSeries, TimeSeries]  # train, val, test
 ]
 
 
@@ -30,7 +29,10 @@ class DataProvider:
         self,
         data_sources: List[DataSource],
         roles: List[Dict[SeriesRole, List[str]]],
-        splits: Union[Cutoff, List[Cutoff], CutoffFunction, List[CutoffFunction]] = (1.0 / 3.0, 2.0 / 3.0),
+        splits: Union[Cutoff, List[Cutoff], CutoffFunction, List[CutoffFunction]] = (
+            1.0 / 3.0,
+            2.0 / 3.0,
+        ),
     ):
         """
         Initializes the DataProvider.
@@ -152,7 +154,7 @@ class DataProvider:
             List[AdapterInput]: A list of AdapterInput objects representing the requested dataset split.
         """
         logger.debug(f"Retrieving {split_type} dataset split.")
-        if  isinstance(self.splits,Cutoff):
+        if isinstance(self.splits, Cutoff):
             start, end = self.splits
             list_of_tuples = []
 
@@ -181,10 +183,14 @@ class DataProvider:
                     )
                     list_of_tuples.append(
                         AdapterInput(
-                            target=target_ts[start:end] if target_ts is not None else None,
+                            target=(
+                                target_ts[start:end] if target_ts is not None else None
+                            ),
                             known=known_ts[start:end] if known_ts is not None else None,
                             observed=(
-                                observed_ts[start:end] if observed_ts is not None else None
+                                observed_ts[start:end]
+                                if observed_ts is not None
+                                else None
                             ),
                             static=self.static,
                         )
@@ -198,7 +204,9 @@ class DataProvider:
                         AdapterInput(
                             target=target_ts[end:] if target_ts is not None else None,
                             known=known_ts[end:] if known_ts is not None else None,
-                            observed=observed_ts[end:] if observed_ts is not None else None,
+                            observed=(
+                                observed_ts[end:] if observed_ts is not None else None
+                            ),
                             static=self.static,
                         )
                     )
@@ -210,7 +218,9 @@ class DataProvider:
             ):
                 train_target_ts, val_target_ts, test_target_ts = self.splits(target_ts)
                 train_known_ts, val_known_ts, test_known_ts = self.splits(known_ts)
-                train_observed_ts, val_observed_ts, test_observed_ts = self.splits(observed_ts)
+                train_observed_ts, val_observed_ts, test_observed_ts = self.splits(
+                    observed_ts
+                )
                 if split_type == "train":
                     logger.debug(
                         "Processing training split with Callable split function. List[AdapterInput] length: %d",
