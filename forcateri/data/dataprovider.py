@@ -154,7 +154,7 @@ class DataProvider:
             List[AdapterInput]: A list of AdapterInput objects representing the requested dataset split.
         """
         logger.debug(f"Retrieving {split_type} dataset split.")
-        if isinstance(self.splits, Cutoff):
+        if isinstance(self.splits, tuple):
             start, end = self.splits
             list_of_tuples = []
 
