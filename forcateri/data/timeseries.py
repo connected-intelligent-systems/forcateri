@@ -1045,6 +1045,7 @@ class TimeSeries:
                 logger.info("Mul cannot be applied, different shapes")
                 # Need to think about multiplication of different representations
                 raise ValueError("TimeSeries objects have different shapes")
+            self._check_operation_compatibility(other)
             new_data = self.data * other.data
         else:
             raise TypeError(
