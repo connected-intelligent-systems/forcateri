@@ -4,10 +4,12 @@ from .dimwiseaggregatedquantileloss import (
     DimwiseAggregatedQuantileLoss as DimwiseAggregatedQuantileLoss,
 )
 from .resultreporter import ResultReporter as ResultReporter
+from .clearmlreporter import ClearMLReporter as ClearMLReporter
 
 __all__ = [
     "Metric",
     "DimwiseAggregatedMetric",
     "DimwiseAggregatedQuantileLoss",
     "ResultReporter",
+    "ClearMLReporter",
 ]

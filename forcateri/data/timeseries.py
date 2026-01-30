@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import List, Optional, Union, Tuple, Callable
+from typing import List, Optional, Union, Tuple, Callable, Dict, Any
 from typing_extensions import Self
 
 import numpy as np
@@ -26,6 +26,7 @@ class TimeSeries:
         representation=None,
         quantiles: Optional[List[float]] = None,
         freq: Optional[str] = None,
+        static_data: Optional[Dict[str, Any]] = None,
     ):
         if representation is None:
             if quantiles is None:
@@ -66,6 +67,7 @@ class TimeSeries:
                 f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
+        self.static_data = static_data if static_data is not None else {}
         self._check_freq_format(
             self.data.index.get_level_values(0) + self.data.index.get_level_values(1),
             freq,
@@ -177,12 +179,16 @@ class TimeSeries:
                 # raise ValueError(
                 #     f"Provided freq {freq} is different from inferred freq {inferred_freq}"
                 # )
-                logger.warning(f"Provided freq {freq} is different from inferred freq {inferred_freq}")
+                logger.warning(
+                    f"Provided freq {freq} is different from inferred freq {inferred_freq}"
+                )
             self.freq = freq
         else:
             if inferred_freq is None:
                 raise ValueError("Could not infer the frequency from the data")
-            logger.warning(f"Freq was not provided and inferred freq is: {inferred_freq}")
+            logger.warning(
+                f"Freq was not provided and inferred freq is: {inferred_freq}"
+            )
             self.freq = inferred_freq
 
     @staticmethod
@@ -302,7 +308,9 @@ class TimeSeries:
                 has_datetime = isinstance(
                     df.index.get_level_values(0), pd.DatetimeIndex
                 ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
-                has_delta = isinstance(df.index.get_level_values(0), pd.TimedeltaIndex) or isinstance(df.index.get_level_values(1), pd.TimedeltaIndex)
+                has_delta = isinstance(
+                    df.index.get_level_values(0), pd.TimedeltaIndex
+                ) or isinstance(df.index.get_level_values(1), pd.TimedeltaIndex)
                 return has_datetime and has_delta
 
             # Check full MultiIndex structure
@@ -319,16 +327,21 @@ class TimeSeries:
             )
 
         return False
-    
-    def __align_column_level(self,df:pd.DataFrame):
+
+    def __align_column_level(self, df: pd.DataFrame):
         """Ensure columns follow the correct MultiIndex order."""
-        if set(TimeSeries.COL_INDEX_NAMES) == set(df.columns.names) and df.columns.names != TimeSeries.COL_INDEX_NAMES:
+        if (
+            set(TimeSeries.COL_INDEX_NAMES) == set(df.columns.names)
+            and df.columns.names != TimeSeries.COL_INDEX_NAMES
+        ):
             logger.info("Reordering column levels to match expected format.")
-            order = [df.columns.names.index(name) for name in TimeSeries.COL_INDEX_NAMES]
+            order = [
+                df.columns.names.index(name) for name in TimeSeries.COL_INDEX_NAMES
+            ]
             df.columns = df.columns.reorder_levels(order)
 
         if self.representation == TimeSeries.DETERM_REP:
-            
+
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
@@ -393,10 +406,8 @@ class TimeSeries:
                     raise ValueError(
                         "Cannot map inner column levels to samples: mismatched length."
                     )
-        
 
-
-    def _align_index_level(self,df:pd.DataFrame):
+    def _align_index_level(self, df: pd.DataFrame):
         """Ensure index follows the correct MultiIndex order."""
 
         if not isinstance(df.index, pd.MultiIndex):
@@ -405,8 +416,8 @@ class TimeSeries:
             df.index = pd.MultiIndex.from_product(
                 [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
             )
-            return 
-       
+            return
+
         if "time_stamp" in df.index.names:
             logger.info("Casting the index to datetime format")
             try:
@@ -424,29 +435,24 @@ class TimeSeries:
                 )
         level0 = df.index.get_level_values(0)
         level1 = df.index.get_level_values(1)
-        if isinstance(level0, pd.TimedeltaIndex) and isinstance(level1, pd.DatetimeIndex):
+        if isinstance(level0, pd.TimedeltaIndex) and isinstance(
+            level1, pd.DatetimeIndex
+        ):
             logger.info("Index levels are in correct order.")
             df.index.names = TimeSeries.ROW_INDEX_NAMES
-        elif isinstance(level0, pd.DatetimeIndex) and isinstance(level1, pd.TimedeltaIndex):
+        elif isinstance(level0, pd.DatetimeIndex) and isinstance(
+            level1, pd.TimedeltaIndex
+        ):
             logger.info("Swapping index levels to match expected format.")
             df.index = df.index.reorder_levels([1, 0])
             df.index.names = TimeSeries.ROW_INDEX_NAMES
         else:
             logger.warning("Index levels do not match expected types. Cannot align.")
 
-        
-
     def align_format(self, df: pd.DataFrame):
 
         self._align_index_level(df)
         self.__align_column_level(df)
-        
-
-
-        
-        
-
-        
 
     def to_samples(self, n_samples: int) -> pd.DataFrame:
         """
@@ -540,7 +546,9 @@ class TimeSeries:
             self.data = shifted_data
             return self
         else:
-            return TimeSeries(data=shifted_data)
+            return TimeSeries(
+                data=shifted_data, freq=self.freq, static_data=self.static_data
+            )
 
     def shift_to_repeat_to_multihorizon(self, horizon: int = 1, in_place: bool = False):
         """
@@ -582,7 +590,9 @@ class TimeSeries:
             self.data = shifted_data
             return self
         else:
-            return TimeSeries(data=shifted_data)
+            return TimeSeries(
+                data=shifted_data, freq=self.freq, static_data=self.static_data
+            )
 
     def to_quantiles(self, quantiles: List[float] = [0.1, 0.5, 0.9]) -> pd.DataFrame:
         """
@@ -707,7 +717,11 @@ class TimeSeries:
             raise ValueError("Cannot slice TimeSeries: Index is empty.")
 
         new_data = self.data[index]
-        return TimeSeries(data=new_data.copy() if copy else new_data)
+        return TimeSeries(
+            data=new_data.copy() if copy else new_data,
+            freq=self.freq,
+            static_data=self.static_data,
+        )
 
     def get_time_slice(self, index, copy: bool = False):
         """
@@ -782,7 +796,11 @@ class TimeSeries:
             .swaplevel(axis=0)
             .sort_index()
         )
-        return TimeSeries(data=new_data.copy() if copy else new_data)
+        return TimeSeries(
+            data=new_data.copy() if copy else new_data,
+            freq=self.freq,
+            static_data=self.static_data,
+        )
 
     def __repr__(self):
         return f"TimeSeries(data={self.data})"
@@ -887,6 +905,8 @@ class TimeSeries:
                 data=target_df,
                 representation=main_ts.representation,
                 quantiles=quantiles_to_preserve,
+                freq=self.freq,
+                static_data=self.static_data,
             )
 
     def _check_operation_compatibility(self, other: TimeSeries):
@@ -909,6 +929,8 @@ class TimeSeries:
                 f"self.index = {self.data.index}\n"
                 f"other.index = {other.data.index}"
             )
+        if self.static_data != other.static_data:
+            raise ValueError("TimeSeries static data must match to perform this operation.")
 
     def __neg__(self) -> TimeSeries:
         """
@@ -940,6 +962,8 @@ class TimeSeries:
         ts_kwargs = {
             "data": negated_data,
             "representation": self.representation,
+            "freq": self.freq,
+            "static_data": self.static_data,
         }
         if self.representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles  # Preserve quantiles list
@@ -974,6 +998,8 @@ class TimeSeries:
         ts_kwargs = {
             "data": new_data,
             "representation": self.representation,
+            "freq": self.freq,
+            "static_data": self.static_data,
         }
         if self.representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles
@@ -1019,13 +1045,18 @@ class TimeSeries:
                 logger.info("Mul cannot be applied, different shapes")
                 # Need to think about multiplication of different representations
                 raise ValueError("TimeSeries objects have different shapes")
+            self._check_operation_compatibility(other)
             new_data = self.data * other.data
         else:
             raise TypeError(
                 "Can only multiply by a scalar(int,float) or by other TimeSeries object"
             )
         return TimeSeries(
-            data=new_data, representation=self.representation, quantiles=self.quantiles
+            data=new_data,
+            representation=self.representation,
+            quantiles=self.quantiles,
+            freq=self.freq,
+            static_data=self.static_data,
         )
 
     def __rmul__(self, scalar: Union[int, float]) -> TimeSeries:
@@ -1092,6 +1123,8 @@ class TimeSeries:
         ts_kwargs = {
             "data": new_data,
             "representation": self.representation,
+            "freq": self.freq,
+            "static_data": self.static_data,
         }
         if self.representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles

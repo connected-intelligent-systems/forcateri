@@ -8,11 +8,13 @@ from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
 
+
 class ModelAdapter(ABC):
-    
+
     def __init__(self, model_name: Optional[str] = None):
         # default to the class name
         self.model_name = model_name or self.__class__.__name__
+
     def fit(
         self,
         train_data: List[AdapterInput],
@@ -23,7 +25,7 @@ class ModelAdapter(ABC):
             "Method not overridden in concrete adapter implementation"
         )
 
-    def predict(self, data: List[AdapterInput], rolling_window:bool):
+    def predict(self, data: List[AdapterInput], rolling_window: bool):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
         )

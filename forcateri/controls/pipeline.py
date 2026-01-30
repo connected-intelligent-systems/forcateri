@@ -3,6 +3,7 @@ from typing import List, Union
 from ..model.modeladapter import ModelAdapter
 from ..data.dataprovider import DataProvider
 from ..reporting.resultreporter import ResultReporter
+import logging
 
 
 class Pipeline:
@@ -31,13 +32,24 @@ class Pipeline:
         2. Evaluate the model(s) using test data.
         3. Report all metrics.
         """
+
+        train_set = self.dp.get_train_set()
+        val_set = self.dp.get_val_set()
+        test_set = self.dp.get_test_set()
+        logging.info("Starting pipeline execution.")
+        logging.info(f"Training set size: {len(train_set)}")
+        logging.info(f"Validation set size: {len(val_set)}")
+        logging.info(f"Test set size: {len(test_set)}")
         # Example training
+        print(f"Training set size: {len(train_set)}")
+        print(f"Validation set size: {len(val_set)}")
+        print(f"Test set size: {len(test_set)}")
         for model in self.mad:
-            model.fit(self.dp.get_train_set(), self.dp.get_val_set())
+            model.fit(train_set, val_set)
 
         # Evaluate and report results
-        #results = []
+        # results = []
         for reporter in self.rep:
-            reporter.report_all()
-            #results.append(res)
-        #return results
+            reporter.report_all(test_data=test_set)
+            # results.append(res)
+        # return results

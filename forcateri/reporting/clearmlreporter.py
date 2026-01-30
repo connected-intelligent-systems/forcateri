@@ -18,14 +18,14 @@ class ClearMLReporter(ResultReporter):
 
     def __init__(
         self,
-        test_data: List[AdapterInput],
+        # test_data: List[AdapterInput],
         models: List[ModelAdapter],
         metrics: List[Metric],
     ):
-        super().__init__(test_data, models, metrics)
+        super().__init__(models, metrics)
 
-    def report_all(self):
-        super().report_all()
+    def report_all(self, test_data: List[AdapterInput]):
+        super().report_all(test_data)
         print(f"Test of the metric results {self.metric_results}")
         Task.current_task().upload_artifact(
             name="Report", artifact_object=self.metric_results
@@ -93,10 +93,10 @@ class ClearMLReporter(ResultReporter):
                     figure=fig,
                     iteration=0,
                 )
-                #plt.close()
+                # plt.close()
 
     def _plot_predictions(self):
-        #super()._plot_predictions()
+        # super()._plot_predictions()
         logger.info("Plotting model predictions...")
         clearml_logger = Task.current_task().get_logger()
         for model, prediction_ts_list in self.model_predictions.items():
@@ -121,9 +121,9 @@ class ClearMLReporter(ResultReporter):
 
                         # Flatten MultiIndex columns if needed
                         if isinstance(pred_df.columns, pd.MultiIndex):
-                            pred_df.columns = pred_df.columns.get_level_values(1).astype(
-                                float
-                            )
+                            pred_df.columns = pred_df.columns.get_level_values(
+                                1
+                            ).astype(float)
 
                         quantiles = sorted(pred_df.columns.astype(float))
                         lower_q = quantiles[0]
@@ -190,6 +190,6 @@ class ClearMLReporter(ResultReporter):
                             title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
                             series="predictions",
                             figure=fig,
-                            iteration=0
+                            iteration=0,
                         )
-                        #plt.close()
+                        # plt.close()

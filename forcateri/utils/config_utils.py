@@ -7,6 +7,7 @@ import yaml
 from pathlib import Path
 import os
 
+
 def extract_config(config: dict) -> list[tuple]:
     args = []
     for section, section_content in config.items():
@@ -108,7 +109,7 @@ def arg_parser(config_path=None, default_kwargs=None, parser=None):
       - OR default_kwargs (if config is None)
     """
 
-    #parser = argparse.ArgumentParser()
+    # parser = argparse.ArgumentParser()
 
     # Case 1: CONFIG-BASED ARGUMENTS
     if config_path and os.path.exists(config_path):
@@ -120,7 +121,9 @@ def arg_parser(config_path=None, default_kwargs=None, parser=None):
         for k, v in cfg_args:
             if isinstance(v, list):
                 # Keep lists as lists using nargs='*'
-                parser.add_argument(f"--{k}", default=v, nargs='*', type=type(v[0]) if v else str)
+                parser.add_argument(
+                    f"--{k}", default=v, nargs="*", type=type(v[0]) if v else str
+                )
             elif v is None:
                 parser.add_argument(f"--{k}", default=None)
             else:
@@ -134,7 +137,9 @@ def arg_parser(config_path=None, default_kwargs=None, parser=None):
     for k, v in default_kwargs.items():
         if isinstance(v, list):
             # Keep lists as lists using nargs='*'
-            parser.add_argument(f"--{k}", default=v, nargs='*', type=type(v[0]) if v else str)
+            parser.add_argument(
+                f"--{k}", default=v, nargs="*", type=type(v[0]) if v else str
+            )
         elif v is None:
             parser.add_argument(f"--{k}", default=None)
         else:

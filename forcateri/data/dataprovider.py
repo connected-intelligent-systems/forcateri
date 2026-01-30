@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, List, NamedTuple, Tuple, Union
+from typing import Dict, List, NamedTuple, Tuple, Union, Callable
 
 import pandas as pd
 import logging
@@ -8,13 +8,13 @@ from .datasource import DataSource
 from .seriesrole import SeriesRole
 from .timeseries import TimeSeries
 
-
 logger = logging.getLogger(__name__)
 
 Cutoff = Tuple[
     Union[int, float, str, datetime, pd.Timestamp],
     Union[int, float, str, datetime, pd.Timestamp],
 ]
+
 
 
 class DataProvider:
@@ -70,7 +70,8 @@ class DataProvider:
         self.known = []
         self.observed = []
         self.static: Dict[str, float] = None
-        self._separate_ts()
+        self.is_separated = False
+        # self._separate_ts()
 
     def _separate_ts(self):
         """ ""
@@ -94,25 +95,36 @@ class DataProvider:
         Raises:
             AttributeError: If `roles` or `data_sources` is not properly defined.
         """
-        logger.debug("Separating time series data into target, known, and observed categories.")
+        logger.debug(
+            "Separating time series data into target, known, and observed categories."
+        )
 
         for data_source, role in zip(self.data_sources, self.roles):
             logger.debug(f"Processing data source: {data_source} with roles: {role}")
             columns_observed = role.get(SeriesRole.OBSERVED) or []
-            columns_observed = columns_observed if isinstance(columns_observed, list) else [columns_observed]
+            columns_observed = (
+                columns_observed
+                if isinstance(columns_observed, list)
+                else [columns_observed]
+            )
 
             columns_target = role.get(SeriesRole.TARGET) or []
-            columns_target = columns_target if isinstance(columns_target, list) else [columns_target]
+            columns_target = (
+                columns_target if isinstance(columns_target, list) else [columns_target]
+            )
 
             columns_known = role.get(SeriesRole.KNOWN) or []
-            columns_known = columns_known if isinstance(columns_known, list) else [columns_known]
+            columns_known = (
+                columns_known if isinstance(columns_known, list) else [columns_known]
+            )
 
             logger.debug(
                 f"Identified columns - Target: {columns_target}, Known: {columns_known}, Observed: {columns_observed}"
             )
             data_list = data_source.get_data()
             for ts_obj in data_list:
-                self.target.append(ts_obj.get_feature_slice(index=columns_target))
+                # self.target.append(ts_obj.get_feature_slice(index=columns_target))
+                self.target.append(ts_obj.get_feature_slice(index=["target"]))
                 self.known.append(
                     ts_obj.get_feature_slice(index=columns_known)
                     if len(columns_known) > 0
@@ -136,46 +148,63 @@ class DataProvider:
             List[AdapterInput]: A list of AdapterInput objects representing the requested dataset split.
         """
         logger.debug(f"Retrieving {split_type} dataset split.")
-        start, end = self.splits
-        list_of_tuples = []
+        if isinstance(self.splits, tuple):
+            start, end = self.splits
+            list_of_tuples = []
 
-        for target_ts, known_ts, observed_ts in zip(
-            self.target, self.known, self.observed
-        ):
-            if split_type == "train":
-                logger.debug("Processing training split. List[AdapterInput] length: %d", len(list_of_tuples))
-                list_of_tuples.append(
-                    AdapterInput(
-                        target=target_ts[:start] if target_ts is not None else None,
-                        known=known_ts[:start] if known_ts is not None else None,
-                        observed=(
-                            observed_ts[:start] if observed_ts is not None else None
-                        ),
-                        static=self.static,
+            for target_ts, known_ts, observed_ts in zip(
+                self.target, self.known, self.observed
+            ):
+                if split_type == "train":
+                    logger.debug(
+                        "Processing training split. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
                     )
-                )
-            elif split_type == "val":
-                logger.debug("Processing validation split. List[AdapterInput] length: %d", len(list_of_tuples))
-                list_of_tuples.append(
-                    AdapterInput(
-                        target=target_ts[start:end] if target_ts is not None else None,
-                        known=known_ts[start:end] if known_ts is not None else None,
-                        observed=(
-                            observed_ts[start:end] if observed_ts is not None else None
-                        ),
-                        static=self.static,
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=target_ts[:start] if target_ts is not None else None,
+                            known=known_ts[:start] if known_ts is not None else None,
+                            observed=(
+                                observed_ts[:start] if observed_ts is not None else None
+                            ),
+                            static=self.static,
+                        )
                     )
-                )
-            elif split_type == "test":
-                logger.debug("Processing test split. List[AdapterInput] length: %d", len(list_of_tuples))
-                list_of_tuples.append(
-                    AdapterInput(
-                        target=target_ts[end:] if target_ts is not None else None,
-                        known=known_ts[end:] if known_ts is not None else None,
-                        observed=observed_ts[end:] if observed_ts is not None else None,
-                        static=self.static,
+                elif split_type == "val":
+                    logger.debug(
+                        "Processing validation split. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
                     )
-                )
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=(
+                                target_ts[start:end] if target_ts is not None else None
+                            ),
+                            known=known_ts[start:end] if known_ts is not None else None,
+                            observed=(
+                                observed_ts[start:end]
+                                if observed_ts is not None
+                                else None
+                            ),
+                            static=self.static,
+                        )
+                    )
+                elif split_type == "test":
+                    logger.debug(
+                        "Processing test split. List[AdapterInput] length: %d",
+                        len(list_of_tuples),
+                    )
+                    list_of_tuples.append(
+                        AdapterInput(
+                            target=target_ts[end:] if target_ts is not None else None,
+                            known=known_ts[end:] if known_ts is not None else None,
+                            observed=(
+                                observed_ts[end:] if observed_ts is not None else None
+                            ),
+                            static=self.static,
+                        )
+                    )
+
         return list_of_tuples
 
     def get_train_set(self) -> List[AdapterInput]:
@@ -185,6 +214,9 @@ class DataProvider:
         Returns:
             List[AdapterInput]: A list of AdapterInput objects representing the training dataset.
         """
+        if not self.is_separated:
+            self._separate_ts()
+            self.is_separated = True
         return self._get_split_set("train")
 
     def get_val_set(self) -> List[AdapterInput]:
@@ -194,6 +226,9 @@ class DataProvider:
         Returns:
             List[AdapterInput]: A list of AdapterInput objects representing the validation dataset.
         """
+        if not self.is_separated:
+            self._separate_ts()
+            self.is_separated = True
         return self._get_split_set("val")
 
     def get_test_set(self) -> List[AdapterInput]:
@@ -203,4 +238,7 @@ class DataProvider:
         Returns:
             List[AdapterInput]: A list of AdapterInput objects representing the test dataset.
         """
+        if not self.is_separated:
+            self._separate_ts()
+            self.is_separated = True
         return self._get_split_set("test")
