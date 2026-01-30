@@ -929,6 +929,8 @@ class TimeSeries:
                 f"self.index = {self.data.index}\n"
                 f"other.index = {other.data.index}"
             )
+        if self.static_data != other.static_data:
+            raise ValueError("TimeSeries static data must match to perform this operation.")
 
     def __neg__(self) -> TimeSeries:
         """
