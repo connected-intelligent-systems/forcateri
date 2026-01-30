@@ -765,13 +765,20 @@ class TimeSeries:
                     else:
                         return slice(to_dt(i.start), to_dt(i.stop))
                 case pd.Timestamp():
-                    return i
+                    return i.tz_convert("utc")
                 case datetime():
-                    return pd.Timestamp(i)
+                    return pd.Timestamp(i).tz_convert("utc")
                 case int():
-                    return self.data.index.get_level_values(1)[i]
+                    return self.timestamps[i].tz_convert("utc")
                 case float():
-                    return to_dt(int(np.round(len(self) * i)))
+                    if i == 1.0:
+                        return self.timestamps[-1].tz_convert("utc")
+                    elif 0.0 <= i < 1.0:
+                        return to_dt(int(np.round(len(self) * i)))
+                    else:
+                        raise IndexError(
+                            "Float indexation of TimeSeries must be between 0.0 and 1.0"
+                        )
                 case _:
                     raise TypeError(f"Key {i} has unexpected type {type(i)}.")
 
@@ -930,7 +937,9 @@ class TimeSeries:
                 f"other.index = {other.data.index}"
             )
         if self.static_data != other.static_data:
-            raise ValueError("TimeSeries static data must match to perform this operation.")
+            raise ValueError(
+                "TimeSeries static data must match to perform this operation."
+            )
 
     def __neg__(self) -> TimeSeries:
         """
