@@ -42,7 +42,7 @@ class DataProvider:
                         SeriesRole.KNOWN: ["known_1", "known_2"],
                         SeriesRole.OBSERVED: ["observed_1"]
                     }
-            splits (Union[Cutoff, List[Cutoff], CutoffFunction, List[CutoffFunction]], optional):
+            splits (Union[Cutoff, List[Cutoff]], optional):
                 Cutoff(s) used to split the data (e.g., train/val/test).
                 Defaults to (1/3, 2/3).
 
