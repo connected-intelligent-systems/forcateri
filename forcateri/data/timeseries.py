@@ -787,6 +787,8 @@ class TimeSeries:
                         return slice(to_dt(i.start), to_dt(i.stop))
                 case pd.Timestamp():
                     check_tz_compatibilizy(i)
+                    if i.tz is not None:
+                        i = i.tz_convert("utc")
                     return i
                 case datetime():
                     return to_dt(pd.Timestamp(i))
