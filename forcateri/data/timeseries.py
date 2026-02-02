@@ -797,7 +797,7 @@ class TimeSeries:
                     return self.timestamps[i]
                 case float():
                     if 0.0 <= i < 1.0:
-                        return to_dt(int(np.round(len(self) * i)))
+                        return to_dt(int(np.round((len(self) - 1) * i)))
                     else:
                         raise IndexError(
                             "Float indexation of TimeSeries must be between 0.0 and 1.0"
@@ -814,9 +814,12 @@ class TimeSeries:
         # back to imitate the behavior of range() in excluding the upper bound.
         # One step back should also work but it depends heavier on the implementation of pandas.
         elif index.stop in self.data.index.get_level_values(1):
+            upper_bound = index.stop - pd.Timedelta(1, unit=self.freq) * 0.5
+            if self.tz is not None:
+                upper_bound = upper_bound.tz_convert("utc")
             index = slice(
                 index.start,
-                (index.stop - pd.Timedelta(1, unit=self.freq) * 0.5).tz_convert("utc"),
+                upper_bound,
             )
 
         # slice the underlying data
