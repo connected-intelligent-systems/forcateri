@@ -763,7 +763,7 @@ class TimeSeries:
             When the step property of a slice is not None.
         """
 
-        def check_tz_compatibilizy(dt: pd.Timestamp):
+        def check_tz_compatibiliy(dt: pd.Timestamp):
             if self.tz is None and dt.tz is not None:
                 raise TypeError(
                     f"Attempting to slice a timezone-naive time series via a timezone-aware index {dt}."
@@ -784,9 +784,10 @@ class TimeSeries:
                             "Only continuous slices are supported."
                         )
                     else:
-                        return slice(to_dt(i.start), to_dt(i.stop))
+                        upper_bound = None if i.stop == 1.0 else to_dt(i.stop)
+                        return slice(to_dt(i.start), upper_bound)
                 case pd.Timestamp():
-                    check_tz_compatibilizy(i)
+                    check_tz_compatibiliy(i)
                     if i.tz is not None:
                         i = i.tz_convert("utc")
                     return i
@@ -795,10 +796,8 @@ class TimeSeries:
                 case int():
                     return self.timestamps[i]
                 case float():
-                    if i == 1.0:
-                        return self.timestamps[-1]
-                    elif 0.0 <= i < 1.0:
-                        return to_dt(int(np.round(len(self) * i)))
+                    if 0.0 <= i < 1.0:
+                        return to_dt(int(np.round((len(self) - 1) * i)))
                     else:
                         raise IndexError(
                             "Float indexation of TimeSeries must be between 0.0 and 1.0"
@@ -815,8 +814,12 @@ class TimeSeries:
         # back to imitate the behavior of range() in excluding the upper bound.
         # One step back should also work but it depends heavier on the implementation of pandas.
         elif index.stop in self.data.index.get_level_values(1):
+            upper_bound = index.stop - pd.Timedelta(1, unit=self.freq) * 0.5
+            if self.tz is not None:
+                upper_bound = upper_bound.tz_convert("utc")
             index = slice(
-                index.start, index.stop - pd.Timedelta(1, unit=self.freq) * 0.5
+                index.start,
+                upper_bound,
             )
 
         # slice the underlying data
