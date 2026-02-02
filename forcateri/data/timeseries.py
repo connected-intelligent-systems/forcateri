@@ -816,7 +816,8 @@ class TimeSeries:
         # One step back should also work but it depends heavier on the implementation of pandas.
         elif index.stop in self.data.index.get_level_values(1):
             index = slice(
-                index.start, index.stop - pd.Timedelta(1, unit=self.freq) * 0.5
+                index.start,
+                (index.stop - pd.Timedelta(1, unit=self.freq) * 0.5).tz_convert("utc"),
             )
 
         # slice the underlying data
