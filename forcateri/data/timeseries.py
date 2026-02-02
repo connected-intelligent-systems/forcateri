@@ -763,7 +763,7 @@ class TimeSeries:
             When the step property of a slice is not None.
         """
 
-        def check_tz_compatibilizy(dt: pd.Timestamp):
+        def check_tz_compatibiliy(dt: pd.Timestamp):
             if self.tz is None and dt.tz is not None:
                 raise TypeError(
                     f"Attempting to slice a timezone-naive time series via a timezone-aware index {dt}."
@@ -786,7 +786,7 @@ class TimeSeries:
                     else:
                         return slice(to_dt(i.start), to_dt(i.stop))
                 case pd.Timestamp():
-                    check_tz_compatibilizy(i)
+                    check_tz_compatibiliy(i)
                     if i.tz is not None:
                         i = i.tz_convert("utc")
                     return i
