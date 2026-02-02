@@ -784,7 +784,8 @@ class TimeSeries:
                             "Only continuous slices are supported."
                         )
                     else:
-                        return slice(to_dt(i.start), to_dt(i.stop))
+                        upper_bound = None if i.stop == 1.0 else to_dt(i.stop)
+                        return slice(to_dt(i.start), upper_bound)
                 case pd.Timestamp():
                     check_tz_compatibiliy(i)
                     if i.tz is not None:
@@ -795,9 +796,7 @@ class TimeSeries:
                 case int():
                     return self.timestamps[i]
                 case float():
-                    if i == 1.0:
-                        return self.timestamps[-1]
-                    elif 0.0 <= i < 1.0:
+                    if 0.0 <= i < 1.0:
                         return to_dt(int(np.round(len(self) * i)))
                     else:
                         raise IndexError(
