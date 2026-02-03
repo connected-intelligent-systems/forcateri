@@ -85,15 +85,15 @@ class ClearMLReporter(ResultReporter):
                 ax.set_xlabel(xlabel)
                 ax.set_ylabel("Metric Value")
                 ax.legend()
-                # plt.tight_layout()
-                # plt.show()
-                clearml_logger.report_matplotlib_figure(
-                    title=f"{metric_name} ({model_name})",
-                    series="metrics",
-                    figure=fig,
-                    iteration=0,
-                )
-                # plt.close()
+                plt.tight_layout()
+                plt.show()
+                # clearml_logger.report_matplotlib_figure(
+                #     title=f"{metric_name} ({model_name})",
+                #     series="metrics",
+                #     figure=fig,
+                #     iteration=0,
+                # )
+                plt.close(fig)
 
     def _plot_predictions(self):
         # super()._plot_predictions()
@@ -183,13 +183,13 @@ class ClearMLReporter(ResultReporter):
                         ax.set_ylabel("Value")
                         ax.grid(True, linestyle="--", alpha=0.4)
                         ax.legend(loc="upper left", fontsize=9)
-                        # plt.xticks(rotation=30)
-                        # plt.tight_layout()
-                        # plt.show()
-                        clearml_logger.report_matplotlib_figure(
-                            title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
-                            series="predictions",
-                            figure=fig,
-                            iteration=0,
-                        )
-                        # plt.close()
+                        plt.xticks(rotation=30)
+                        plt.tight_layout()
+                        plt.show()
+                        # clearml_logger.report_matplotlib_figure(
+                        #     title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
+                        #     series="predictions",
+                        #     figure=fig,
+                        #     iteration=0,
+                        # )
+                        plt.close(fig)
