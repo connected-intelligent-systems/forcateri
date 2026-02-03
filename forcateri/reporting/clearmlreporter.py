@@ -100,6 +100,9 @@ class ClearMLReporter(ResultReporter):
     def _plot_metrics(self, metric_results=None):
         return super()._plot_metrics(metric_results)
 
+    @save_interactive_plots(save_dir="clearml_plots", upload=True)
+    def _plot_predictions(self):
+        return super()._plot_predictions()
     # def _plot_metrics(self, metric_results=None):
     #     logger.info("Plotting metrics results...")
     #     if metric_results is None:
