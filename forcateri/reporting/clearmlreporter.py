@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 from clearml import Task
 import logging
+from functools import wraps
+import plotly.io as pio
+from plotly.tools import mpl_to_plotly
 
 from forcateri.reporting.resultreporter import ResultReporter
 from ..data.timeseries import TimeSeries
@@ -13,6 +16,49 @@ from typing import List
 
 logger = logging.getLogger(__name__)
 
+import os
+import matplotlib.pyplot as plt
+from functools import wraps
+from clearml import Task
+
+
+def save_interactive_plots(save_dir="plots", upload=True):
+    os.makedirs(save_dir, exist_ok=True)
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            original_show = plt.show
+
+            def save_show(*s_args, **s_kwargs):
+                fig = plt.gcf()
+                ax = fig.axes[0] if fig.axes else None
+                title = ax.get_title() if ax and ax.get_title() else "plot"
+                # sanitize filename
+                filename = title.replace(" ", "_").replace("/", "_") + ".html"
+                filepath = os.path.join(save_dir, filename)
+
+                # convert matplotlib fig to plotly
+                pfig = mpl_to_plotly(fig)
+                pio.write_html(pfig, file=filepath, auto_open=False)
+
+                # upload to ClearML
+                if upload:
+                    task = Task.current_task()
+                    if task:
+                        task.upload_artifact(name=filename, artifact_object=filepath)
+
+                # close matplotlib figure
+                plt.close(fig)
+
+            plt.show = save_show
+            try:
+                return func(*args, **kwargs)
+            finally:
+                plt.show = original_show
+
+        return wrapper
+    return decorator
 
 class ClearMLReporter(ResultReporter):
 
@@ -30,6 +76,9 @@ class ClearMLReporter(ResultReporter):
         Task.current_task().upload_artifact(
             name="Report", artifact_object=self.metric_results
         )
+        Task.current_task().upload_artifact(
+            name="Model Predictions", artifact_object=self.model_predictions
+        )
 
     def report_metrics(self):
         super().report_metrics()
@@ -45,8 +94,11 @@ class ClearMLReporter(ResultReporter):
 
             final_df.to_csv(f"{metric_name}_results.csv", index=False)
             Task.current_task().upload_artifact(
-                name=f"{metric_name}_results.csv", artifact_object=final_df
+                name=f"{metric_name}_results.csv", artifact_object=f"{metric_name}_results.csv"
             )
+    @save_interactive_plots(save_dir="clearml_plots", upload=True)
+    def _plot_metrics(self, metric_results=None):
+        return super()._plot_metrics(metric_results)
 
     # def _plot_metrics(self, metric_results=None):
     #     logger.info("Plotting metrics results...")
