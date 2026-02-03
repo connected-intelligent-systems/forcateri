@@ -55,6 +55,7 @@ class ClearMLReporter(ResultReporter):
             metric_results = self.metric_results
 
         for model_name, model_metrics in metric_results.items():
+            metric_id = 0
             for metric_name, metric_list in model_metrics.items():
                 fig, ax = plt.subplots(figsize=(10, 5))
                 for i, df in enumerate(metric_list):
@@ -86,14 +87,17 @@ class ClearMLReporter(ResultReporter):
                 ax.set_ylabel("Metric Value")
                 ax.legend()
                 plt.tight_layout()
+                # 
+                iteration = metric_id*10_000 + i
+                clearml_logger.report_matplotlib_figure(
+                    title=f"{metric_name} ({model_name})",
+                    series="metrics",
+                    figure=fig,
+                    iteration=iteration,
+                )
                 plt.show()
-                # clearml_logger.report_matplotlib_figure(
-                #     title=f"{metric_name} ({model_name})",
-                #     series="metrics",
-                #     figure=fig,
-                #     iteration=0,
-                # )
                 plt.close(fig)
+                metric_id += 1
 
     def _plot_predictions(self):
         # super()._plot_predictions()
@@ -110,6 +114,7 @@ class ClearMLReporter(ResultReporter):
                     f"Plotting predictions for model {model.__class__.__name__} on test series {i}."
                 )
                 if pred_ts.representation == TimeSeries.QUANTILE_REP:
+                    offset_id = 0
                     for offset in offsets:
                         logger.debug(f"Plotting predictions for offset {offset}.")
                         pred_df = pred_ts.by_time(offset).copy()
@@ -185,11 +190,17 @@ class ClearMLReporter(ResultReporter):
                         ax.legend(loc="upper left", fontsize=9)
                         plt.xticks(rotation=30)
                         plt.tight_layout()
+                        iteration = (
+                            i * 10_000
+                            + offset_id
+                        )
+                        
+                        clearml_logger.report_matplotlib_figure(
+                            title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
+                            series="predictions",
+                            figure=fig,
+                            iteration=iteration,
+                        )
                         plt.show()
-                        # clearml_logger.report_matplotlib_figure(
-                        #     title=f"Predictions ({model.__class__.__name__}) - Test Series {i} - Offset {offset}",
-                        #     series="predictions",
-                        #     figure=fig,
-                        #     iteration=0,
-                        # )
                         plt.close(fig)
+                        offset_id += 1
