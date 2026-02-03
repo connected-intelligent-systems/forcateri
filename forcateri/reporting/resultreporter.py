@@ -154,6 +154,7 @@ class ResultReporter:
                 gt_ts = adapter_input.target
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
 
+                print(f"offsets: {offsets}")
                 logger.debug(
                     f"Plotting predictions for model {model.__class__.__name__} on test series {i}."
                 )
@@ -230,6 +231,39 @@ class ResultReporter:
                         ax.set_xlabel("Time")
                         ax.set_ylabel("Value")
                         ax.grid(True, linestyle="--", alpha=0.4)
+                        ax.legend(loc="upper left", fontsize=9)
+                        plt.xticks(rotation=30)
+                        plt.tight_layout()
+                        plt.show()
+                        plt.close()
+
+                elif pred_ts.representation == TimeSeries.DETERM_REP:
+                    for offset in offsets:
+                        pred_df = pred_ts.by_time(offset).copy()
+                        logger.debug(f"pred_df:\n{pred_df.head()}")
+                        fig,ax = plt.subplots(figsize=(12,6))
+                        gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
+                        ax.plot(
+                            pred_df.index,
+                            pred_df.iloc[:, 0],
+                            color="tab:blue",
+                            linewidth=1.5,
+                            label="Prediction",
+                        )
+                        ax.plot(
+                            gt_df.index,
+                            gt_df.iloc[:, 0],
+                            color="black",
+                            linestyle="--",
+                            linewidth=1.2,
+                            label="Ground Truth",
+                        )
+                        ax.set_title(
+                            f"{model.__class__.__name__} — Test Series {i} — Offset {offset}"
+                        )
+                        ax.set_xlabel("Time")
+                        ax.set_ylabel("Value")
+                        ax.grid(True, linestyle="--", alpha=0.4)    
                         ax.legend(loc="upper left", fontsize=9)
                         plt.xticks(rotation=30)
                         plt.tight_layout()
