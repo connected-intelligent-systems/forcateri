@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, tzinfo
 from typing import List, Optional, Union, Tuple, Callable, Dict, Any
 from typing_extensions import Self
 
@@ -111,6 +111,17 @@ class TimeSeries:
         Whether the series has offsets other than 0.
         """
         return (len(self.offsets) != 1) or (self.offsets[0] != pd.Timedelta(0))
+
+    @property
+    def tz(self) -> tzinfo | None:
+        """The time zone of the series.
+
+        Returns
+        _______
+        datetime.tzinfo
+            The time zone of the time series or None if the series is timezone-naive.
+        """
+        return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).tz
 
     def _check_freq_format(self, index: pd.Index, freq: Optional[str] = None) -> None:
         """
@@ -752,6 +763,16 @@ class TimeSeries:
             When the step property of a slice is not None.
         """
 
+        def check_tz_compatibiliy(dt: pd.Timestamp):
+            if self.tz is None and dt.tz is not None:
+                raise TypeError(
+                    f"Attempting to slice a timezone-naive time series via a timezone-aware index {dt}."
+                )
+            elif self.tz is not None and dt.tz is None:
+                raise TypeError(
+                    f"Attempting to slice a timezone-aware time series ({self.tz}) via a timezone-naive index."
+                )
+
         # conversion of various formats into timestamps
         def to_dt(i) -> Optional[Union[pd.Timestamp, slice]]:
             match i:
@@ -763,18 +784,20 @@ class TimeSeries:
                             "Only continuous slices are supported."
                         )
                     else:
-                        return slice(to_dt(i.start), to_dt(i.stop))
+                        upper_bound = None if i.stop == 1.0 else to_dt(i.stop)
+                        return slice(to_dt(i.start), upper_bound)
                 case pd.Timestamp():
-                    return i.tz_convert("utc")
+                    check_tz_compatibiliy(i)
+                    if i.tz is not None:
+                        i = i.tz_convert("utc")
+                    return i
                 case datetime():
-                    return pd.Timestamp(i).tz_convert("utc")
+                    return to_dt(pd.Timestamp(i))
                 case int():
-                    return self.timestamps[i].tz_convert("utc")
+                    return self.timestamps[i]
                 case float():
-                    if i == 1.0:
-                        return self.timestamps[-1].tz_convert("utc")
-                    elif 0.0 <= i < 1.0:
-                        return to_dt(int(np.round(len(self) * i)))
+                    if 0.0 <= i < 1.0:
+                        return to_dt(int(np.round((len(self) - 1) * i)))
                     else:
                         raise IndexError(
                             "Float indexation of TimeSeries must be between 0.0 and 1.0"
@@ -791,8 +814,12 @@ class TimeSeries:
         # back to imitate the behavior of range() in excluding the upper bound.
         # One step back should also work but it depends heavier on the implementation of pandas.
         elif index.stop in self.data.index.get_level_values(1):
+            upper_bound = index.stop - pd.Timedelta(1, unit=self.freq) * 0.5
+            if self.tz is not None:
+                upper_bound = upper_bound.tz_convert("utc")
             index = slice(
-                index.start, index.stop - pd.Timedelta(1, unit=self.freq) * 0.5
+                index.start,
+                upper_bound,
             )
 
         # slice the underlying data
