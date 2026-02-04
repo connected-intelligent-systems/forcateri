@@ -241,7 +241,7 @@ class ResultReporter:
                     for offset in offsets:
                         pred_df = pred_ts.by_time(offset).copy()
                         logger.debug(f"pred_df:\n{pred_df.head()}")
-                        fig,ax = plt.subplots(figsize=(12,6))
+                        fig, ax = plt.subplots(figsize=(12, 6))
                         gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
                         ax.plot(
                             pred_df.index,
@@ -263,7 +263,7 @@ class ResultReporter:
                         )
                         ax.set_xlabel("Time")
                         ax.set_ylabel("Value")
-                        ax.grid(True, linestyle="--", alpha=0.4)    
+                        ax.grid(True, linestyle="--", alpha=0.4)
                         ax.legend(loc="upper left", fontsize=9)
                         plt.xticks(rotation=30)
                         plt.tight_layout()
