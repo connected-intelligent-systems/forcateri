@@ -154,6 +154,7 @@ class ResultReporter:
                 gt_ts = adapter_input.target
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
 
+                print(f"offsets: {offsets}")
                 logger.debug(
                     f"Plotting predictions for model {model.__class__.__name__} on test series {i}."
                 )
