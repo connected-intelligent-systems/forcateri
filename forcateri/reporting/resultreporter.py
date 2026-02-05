@@ -57,46 +57,12 @@ class ResultReporter:
                     )
 
                     gt_ts = adapter_input.target
-                    # adjust ground truth length to match pred_ts
-
-                    # reading the max horizon from the model series prediction
-                    horizon = pred_ts.offsets.max() // pd.Timedelta(1, pred_ts.freq)
-                    logger.debug(f"Horizon determined to be: {horizon}")
-
-                    if horizon < 1:
-                        raise ValueError(
-                            f"Invalid model adapter output. "
-                            f"Horizon is expected to be 1 or greater but was {horizon}."
-                        )
-
-                    logger.debug("Aligning predictions and ground truth...")
-                    gt_shifted = gt_ts.shift_to_repeat_to_multihorizon(horizon=horizon)
-                    logger.debug(f"\ngt_shifted:\n{gt_shifted}")
-                    common_index = gt_shifted.data.index.intersection(
-                        pred_ts.data.index
-                    )
-                    logger.debug(
-                        f"Common index determined to be\n{common_index.to_frame(index=False)}"
-                    )
-                    gt_shifted.data = gt_shifted.data.loc[common_index]
-                    old_pred_len = len(pred_ts)
-                    pred_ts.data = pred_ts.data.loc[common_index]
-                    dropped_gt_steps = len(gt_ts) - len(gt_shifted)
-                    dropped_pred_steps = old_pred_len - len(pred_ts)
-                    if (dropped_gt_steps, dropped_pred_steps) != (0, 0):
-                        logger.warning(
-                            f"Alignment dropped {dropped_gt_steps} time steps ftom the ground truth "
-                            f"and {dropped_pred_steps} time steps from the prediction."
-                        )
-                    else:
-                        logger.debug("No time steps were dropped during alignment.")
-
                     logger.debug(
                         f"Computing metric {met.__class__.__name__} "
                         f"for model {model.__class__.__name__} "
                         f"on test series {i}..."
                     )
-                    reduced_df = met(gt_shifted, pred_ts)
+                    reduced_df = met(gt_ts, pred_ts)
                     model_results.append(reduced_df)
 
                 met_results[model.model_name] = model_results

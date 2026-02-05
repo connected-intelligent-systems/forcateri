@@ -34,6 +34,8 @@ class DimwiseAggregatedMetric(Metric):
             raise ValueError("Axis not found neither in row nor in column index.")
 
     def __call__(self, ts_gt: TimeSeries, ts_pred: TimeSeries):
+        
+        ts_gt, ts_pred = Metric.align(ts_gt, ts_pred)
         flat_pred = ts_pred.data.copy().stack(level=0, future_stack=True)
         flat_gt = ts_gt.data.copy().stack(level=0, future_stack=True)
         logger.info(f"Reducing axes {self.axes}")
