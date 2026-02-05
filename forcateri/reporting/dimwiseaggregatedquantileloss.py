@@ -3,6 +3,7 @@ import logging
 from .dimwiseaggregatedmetric import DimwiseAggregatedMetric
 from .metric_aggregations import quantile_metric
 from ..data.timeseries import TimeSeries
+from .metric import Metric
 
 logger = logging.getLogger(__name__)
 
@@ -15,7 +16,7 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
         super().__init__(axes, None)
 
     def __call__(self, ts_gt: TimeSeries, ts_pred: TimeSeries):
-        super().__call__(ts_gt, ts_pred)  # for alignment 
+        ts_gt, ts_pred = Metric.align(ts_gt, ts_pred)  # for alignment 
         if ts_pred.quantiles is None:
             logger.error(
                 "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
