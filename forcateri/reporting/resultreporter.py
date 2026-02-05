@@ -57,16 +57,12 @@ class ResultReporter:
                     )
 
                     gt_ts = adapter_input.target
-                    # adjust ground truth length to match pred_ts
-
-                    gt_shifted, pred_ts = met.align(gt_ts, pred_ts)
-
                     logger.debug(
                         f"Computing metric {met.__class__.__name__} "
                         f"for model {model.__class__.__name__} "
                         f"on test series {i}..."
                     )
-                    reduced_df = met(gt_shifted, pred_ts)
+                    reduced_df = met(gt_ts, pred_ts)
                     model_results.append(reduced_df)
 
                 met_results[model.model_name] = model_results

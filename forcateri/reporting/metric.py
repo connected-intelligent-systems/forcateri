@@ -10,7 +10,8 @@ logger = logging.getLogger(__name__)
 
 class Metric:
 
-    def align(self, gt: TimeSeries, pred: TimeSeries) -> Tuple[TimeSeries, TimeSeries]:
+    @staticmethod
+    def align( gt: TimeSeries, pred: TimeSeries) -> Tuple[TimeSeries, TimeSeries]:
         """Brings ground truth and prediction into a similar format.
 
         More precisely:
@@ -65,4 +66,6 @@ class Metric:
         Consider adding `self.align` to the implementation
         to make metric instances more generalizable.
         """
+        logger.debug("Aligning ground truth and prediction time series for metric computation.")
+        Metric.align(gt, pred)  # for alignment check
         raise NotImplementedError("Must be overridden in child classes.")
