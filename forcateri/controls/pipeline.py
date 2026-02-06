@@ -21,7 +21,7 @@ class Pipeline:
         model_adapter: Union[ModelAdapter, List[ModelAdapter]],
         reporter: Union[ResultReporter, List[ResultReporter]],
     ):
-        self.dp = data_provider
+        self.data_provider = data_provider
         self.mad = model_adapter if isinstance(model_adapter, list) else [model_adapter]
         self.rep = reporter if isinstance(reporter, list) else [reporter]
 
