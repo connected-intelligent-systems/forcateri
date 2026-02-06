@@ -203,7 +203,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         if use_rolling_window:
             logger.debug("Using rolling window prediction.")
-            return self._historical_forecasts(data, **kwargs)
+            return self._historical_forecasts( **kwargs)
         else:
             preds = self.model.predict(**self._predict_args, n=n, **kwargs)
             return self.convert_output(

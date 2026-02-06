@@ -22,9 +22,9 @@ class Pipeline:
         reporter: Union[ResultReporter, List[ResultReporter]],
     ):
         self.data_provider = data_provider
-        self.mad = model_adapter if isinstance(model_adapter, list) else [model_adapter]
-        self.rep = reporter if isinstance(reporter, list) else [reporter]
-
+        self.model_adapters = model_adapter if isinstance(model_adapter, list) else [model_adapter]
+        self.reporters = reporter if isinstance(reporter, list) else [reporter]
+        
     def run(self):
         """
         Executes the pipeline:
@@ -41,12 +41,12 @@ class Pipeline:
         logging.info(f"Validation set size: {len(val_set)}")
         logging.info(f"Test set size: {len(test_set)}")
 
-        for model in self.mad:
+        for model in self.model_adapters:
             model.fit(train_set, val_set)
 
         # Evaluate and report results
         # results = []
-        for reporter in self.rep:
+        for reporter in self.reporters:
             reporter.report_all(test_data=test_set)
             # results.append(res)
         # return results
