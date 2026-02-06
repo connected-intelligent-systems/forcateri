@@ -64,7 +64,6 @@ class ClearMLReporter(ResultReporter):
 
     def __init__(
         self,
-        # test_data: List[AdapterInput],
         models: List[ModelAdapter],
         metrics: List[Metric],
     ):
