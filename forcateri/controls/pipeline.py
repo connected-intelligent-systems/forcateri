@@ -17,11 +17,11 @@ class Pipeline:
 
     def __init__(
         self,
-        dp: DataProvider,
+        data_provider: DataProvider,
         model_adapter: Union[ModelAdapter, List[ModelAdapter]],
         reporter: Union[ResultReporter, List[ResultReporter]],
     ):
-        self.dp = dp
+        self.dp = data_provider
         self.mad = model_adapter if isinstance(model_adapter, list) else [model_adapter]
         self.rep = reporter if isinstance(reporter, list) else [reporter]
 
@@ -40,10 +40,7 @@ class Pipeline:
         logging.info(f"Training set size: {len(train_set)}")
         logging.info(f"Validation set size: {len(val_set)}")
         logging.info(f"Test set size: {len(test_set)}")
-        # Example training
-        print(f"Training set size: {len(train_set)}")
-        print(f"Validation set size: {len(val_set)}")
-        print(f"Test set size: {len(test_set)}")
+
         for model in self.mad:
             model.fit(train_set, val_set)
 

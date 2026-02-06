@@ -14,7 +14,7 @@ class ClearMLSingleTaskPipeline(Pipeline):
 
     def __init__(
         self,
-        dp: DataProvider,
+        data_provider: DataProvider,
         model_adapter: Union[ModelAdapter, List[ModelAdapter]],
         reporter: Union[ResultReporter, List[ResultReporter]],
         config_path: Optional[str] = None,
@@ -28,7 +28,7 @@ class ClearMLSingleTaskPipeline(Pipeline):
     ):
         # self.task_name = task_name
 
-        super().__init__(dp, model_adapter, reporter)
+        super().__init__(data_provider, model_adapter, reporter)
 
         self.init_args = init_args or []
         self.requirements = requirements

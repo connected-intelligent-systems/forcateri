@@ -35,6 +35,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.scaler_target: Optional[Scaler] = None
         self.scaler_known: Optional[Scaler] = None
         self.scaler_observed: Optional[Scaler] = None
+        self.args = args 
+        self.kwargs = kwargs
 
     def _get_covariate_args(self, known, observed, static):
         """
@@ -152,7 +154,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self,
         data: List[AdapterInput],
         n: Optional[int] = 1,
-        rolling_window: bool = True,
+        use_rolling_window: bool = True,
         **kwargs,
     ) -> List[TimeSeries]:
         """
@@ -200,7 +202,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         target, known, observed, static = self.convert_input(data)
         self._prepare_predict_args(target, known, observed, static)
 
-        if rolling_window:
+        if use_rolling_window:
             logger.debug("Using rolling window prediction.")
             return self._historical_forecasts(data, **kwargs)
         else:
