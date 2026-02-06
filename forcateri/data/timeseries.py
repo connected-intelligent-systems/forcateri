@@ -17,7 +17,7 @@ class TimeSeries:
     DETERM_REP = "determ"
     QUANTILE_REP = "quantile"
     SAMPLE_REP = "sample"
-    ROW_INDEX_NAMES: Tuple[str, str] = ("offset", "time_stamp")
+    ROW_INDEX_NAMES: Tuple[str, str] = ("offset", "time")
     COL_INDEX_NAMES: Tuple[str, str] = ("feature", "representation")
 
     def __init__(
@@ -64,7 +64,7 @@ class TimeSeries:
             raise InvalidDataFrameFormat(
                 f"Cannot build TimeSeries from the provided DataFrame: "
                 f"DataFrame is not in a matching or compatible format for representation '{representation}'. "
-                f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
+                f"Expected MultiIndex with index names {['offset', 'time']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
         self.static_data = static_data if static_data is not None else {}
@@ -93,8 +93,8 @@ class TimeSeries:
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0]).unique()
 
     @property
-    def timestamps(self):
-        "The timestamps property"
+    def time(self):
+        "The time property"
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).unique()
 
     @property
@@ -429,20 +429,20 @@ class TimeSeries:
             )
             return
 
-        if "time_stamp" in df.index.names:
+        if "time" in df.index.names:
             logger.info("Casting the index to datetime format")
             try:
                 df.index = pd.MultiIndex.from_arrays(
                     [
                         df.index.get_level_values("offset"),
-                        pd.to_datetime(df.index.get_level_values("time_stamp")),
+                        pd.to_datetime(df.index.get_level_values("time")),
                     ],
                     names=TimeSeries.ROW_INDEX_NAMES,
                 )
             except Exception as e:
-                logger.error(f"Failed to convert 'time_stamp' to datetime: {e}")
+                logger.error(f"Failed to convert 'time' to datetime: {e}")
                 raise ValueError(
-                    f"Cannot convert index level 'time_stamp' to datetime: {e}"
+                    f"Cannot convert index level 'time' to datetime: {e}"
                 )
         level0 = df.index.get_level_values(0)
         level1 = df.index.get_level_values(1)
@@ -638,14 +638,14 @@ class TimeSeries:
 
     def by_time(self, horizon: Optional[Union[int, pd.Timedelta]] = None):
         """
-        Returns a DataFrame with 'time_stamp' as the outer index.
+        Returns a DataFrame with 'time' as the outer index.
 
         Parameters
         ----------
         horizon : int or pd.Timedelta, optional
             - If an `int` is provided, it is interpreted as an offset in hours.
             - If a `pd.Timedelta` is provided, it is used directly to select a specific offset.
-            - If None, the MultiIndex is reordered to make 'time_stamp' the outer index.
+            - If None, the MultiIndex is reordered to make 'time' the outer index.
 
         Returns
         -------
@@ -666,9 +666,9 @@ class TimeSeries:
             # Filter and return only that offset (drops 'offset' level)
             return self.data.xs(horizon, level="offset")
 
-        # Otherwise, reorder index to make time_stamp the outer index
-        return self.data.swaplevel("offset", "time_stamp").sort_index(
-            level="time_stamp"
+        # Otherwise, reorder index to make time the outer index
+        return self.data.swaplevel("offset", "time").sort_index(
+            level="time"
         )
 
     def by_horizon(self, t0):
@@ -692,8 +692,8 @@ class TimeSeries:
         """
         try:
             forecasts = self.data.loc[t0]
-            forecasts["time_stamp"] = forecasts.index + t0
-            forecasts.set_index("time_stamp", inplace=True, drop=True)
+            forecasts["time"] = forecasts.index + t0
+            forecasts.set_index("time", inplace=True, drop=True)
             return forecasts
         except KeyError:
             logger.error(f"{t0} not found in forecast data.")
