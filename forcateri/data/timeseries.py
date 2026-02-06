@@ -129,7 +129,7 @@ class TimeSeries:
 
         This method attempts to infer the frequency of the index using pandas'
         built-in `infer_freq`. If that fails, it manually computes the most
-        common difference between consecutive timestamps. It then validates the
+        common difference between consecutive times. It then validates the
         inferred frequency against a user-provided frequency, if given.
 
         Parameters
@@ -170,7 +170,7 @@ class TimeSeries:
             if len(diffs) > 0:
                 most_common_delta = diffs.value_counts().idxmax()
                 logger.info(
-                    f"Most common delta between timestamps: {most_common_delta}"
+                    f"Most common delta between times: {most_common_delta}"
                 )
                 try:
                     inferred_freq = pd.tseries.frequencies.to_offset(
@@ -507,7 +507,7 @@ class TimeSeries:
         Shifts the time series data forward by a specified horizon.
 
         This method moves the values in the time series `horizon` steps forward,
-        effectively aligning each timestamp with the value that occurs `horizon`
+        effectively aligning each time with the value that occurs `horizon`
         steps ahead. The index offsets are adjusted accordingly to reflect the shift.
 
         Parameters
@@ -529,7 +529,7 @@ class TimeSeries:
         -----
         - The shifting operation fills the vacated positions with NaNs.
         - The MultiIndex of the DataFrame is updated so that the first level (offsets)
-        is incremented by `horizon * freq`, while the second level (original timestamps)
+        is incremented by `horizon * freq`, while the second level (original times)
         remains unchanged.
         """
         if self.freq is None:
@@ -673,7 +673,7 @@ class TimeSeries:
 
     def by_horizon(self, t0):
         """
-        Return forecasts made at time `t0`, reindexed by their actual timestamps.
+        Return forecasts made at time `t0`, reindexed by their actual times.
 
         Parameters
         ----------
@@ -773,7 +773,7 @@ class TimeSeries:
                     f"Attempting to slice a timezone-aware time series ({self.tz}) via a timezone-naive index."
                 )
 
-        # conversion of various formats into timestamps
+        # conversion of various formats into times
         def to_dt(i) -> Optional[Union[pd.Timestamp, slice]]:
             match i:
                 case None:
@@ -794,7 +794,7 @@ class TimeSeries:
                 case datetime():
                     return to_dt(pd.Timestamp(i))
                 case int():
-                    return self.timestamps[i]
+                    return self.time[i]
                 case float():
                     if 0.0 <= i < 1.0:
                         return to_dt(int(np.round((len(self) - 1) * i)))
