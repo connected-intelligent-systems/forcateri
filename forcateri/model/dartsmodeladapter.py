@@ -338,7 +338,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
     def _historical_forecasts(
         self,
-        #data: List[AdapterInput],
+        data: List[AdapterInput],
         retrain: bool = False,
         **kwargs,
     ) -> List[TimeSeries]:
