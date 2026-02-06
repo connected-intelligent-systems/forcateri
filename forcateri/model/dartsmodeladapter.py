@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 class DartsModelAdapter(ModelAdapter, ABC):
 
     def __init__(
-        self, freq: str = "60min", model_name: Optional[str] = None, *args, **kwargs
+        self, freq: str = "60min", model_name: Optional[str] = None, **kwargs
     ):
         super().__init__(model_name=model_name)
         self.freq = freq
@@ -35,7 +35,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.scaler_target: Optional[Scaler] = None
         self.scaler_known: Optional[Scaler] = None
         self.scaler_observed: Optional[Scaler] = None
-        self.args = args 
         self.kwargs = kwargs
 
     def _get_covariate_args(self, known, observed, static):
@@ -339,7 +338,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
     def _historical_forecasts(
         self,
-        data: List[AdapterInput],
+        #data: List[AdapterInput],
         retrain: bool = False,
         **kwargs,
     ) -> List[TimeSeries]:

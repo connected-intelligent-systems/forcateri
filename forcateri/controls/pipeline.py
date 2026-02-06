@@ -33,9 +33,9 @@ class Pipeline:
         3. Report all metrics.
         """
 
-        train_set = self.dp.get_train_set()
-        val_set = self.dp.get_val_set()
-        test_set = self.dp.get_test_set()
+        train_set = self.data_provider.get_train_set()
+        val_set = self.data_provider.get_val_set()
+        test_set = self.data_provider.get_test_set()
         logging.info("Starting pipeline execution.")
         logging.info(f"Training set size: {len(train_set)}")
         logging.info(f"Validation set size: {len(val_set)}")
