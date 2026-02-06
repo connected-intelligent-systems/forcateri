@@ -21,21 +21,25 @@ logger = logging.getLogger(__name__)
 class DartsModelAdapter(ModelAdapter, ABC):
 
     def __init__(
-        self, freq: str = "60min", model_name: Optional[str] = None, **kwargs
+        self,
+        freq: str = "60min",
+        model_name: Optional[str] = None,
+        quantiles: Optional[List[float]] = None,
+        is_likelihood: bool = False,
+        num_samples: Optional[int] = None,
     ):
         super().__init__(model_name=model_name)
         self.freq = freq
         self.model = None
-        self.quantiles = kwargs.get("quantiles", None)
+        self.quantiles = quantiles
         self.scaler_target = None
         self.scaler_known = None
         self.scaler_observed = None
-        self.is_likelihood = kwargs.get("predict_likelihood_parameters", False)
-        self.num_samples = kwargs.get("num_samples", None)
+        self.is_likelihood = is_likelihood
+        self.num_samples = num_samples
         self.scaler_target: Optional[Scaler] = None
         self.scaler_known: Optional[Scaler] = None
         self.scaler_observed: Optional[Scaler] = None
-        self.kwargs = kwargs
 
     def _get_covariate_args(self, known, observed, static):
         """
@@ -154,7 +158,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         data: List[AdapterInput],
         n: Optional[int] = 1,
         use_rolling_window: bool = True,
-        **kwargs,
     ) -> List[TimeSeries]:
         """
         Generates predictions using the fitted Darts forecasting model.
@@ -203,9 +206,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         if use_rolling_window:
             logger.debug("Using rolling window prediction.")
-            return self._historical_forecasts( **kwargs)
+            return self._historical_forecasts(n=n)
         else:
-            preds = self.model.predict(**self._predict_args, n=n, **kwargs)
+            preds = self.model.predict(**self._predict_args, n=n)
             return self.convert_output(
                 output=preds
             )  # , is_likelihood=self.is_likelihood,num_samples=self.num_samples)
@@ -339,7 +342,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
     def _historical_forecasts(
         self,
         retrain: bool = False,
-        **kwargs,
+        n: Optional[int] = 1,
     ) -> List[TimeSeries]:
         """
         Generates historical forecasts using the provided data.
@@ -348,8 +351,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             data (List[AdapterInput]): The input data for generating forecasts.
             start (Union[float, int, str]): The starting point for historical forecasts.
             retrain (bool): Whether to retrain the model before each forecast.
-            **kwargs: Additional keyword arguments for the historical_forecasts method.
-
+            n (Optional[int]): The forecast horizon for historical forecasts.
         Returns:
             List[TimeSeries]: A list of TimeSeries objects representing the forecasts.
         """
@@ -359,10 +361,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
         preds = self.model.historical_forecasts(
             retrain=retrain,
             predict_likelihood_parameters=self.is_likelihood,
-            forecast_horizon=kwargs.get("forecast_horizon", 1),
+            forecast_horizon=n,
             last_points_only=False,
             **self._predict_args,
-            **kwargs,
         )
         if self.scaler_target:
             logger.debug("Inverse transforming forecasts using target scaler.")
