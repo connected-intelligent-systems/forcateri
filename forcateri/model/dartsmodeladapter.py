@@ -2,7 +2,7 @@ import logging
 import os
 from abc import ABC
 from pathlib import Path
-from typing import List, Optional, Tuple, Union, Any
+from typing import List, Optional, Tuple, Union, Any, Dict
 
 
 import pandas as pd
@@ -151,7 +151,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         predict_args = {"series": target}
         predict_args.update(self._get_covariate_args(known, observed, static))
-        self._predict_args = predict_args
+        
+        return predict_args
 
     def predict(
         self,
@@ -202,13 +203,13 @@ class DartsModelAdapter(ModelAdapter, ABC):
           TimeSeries format with proper offset and timestamp indexing.
         """
         target, known, observed, static = self.convert_input(data)
-        self._prepare_predict_args(target, known, observed, static)
+        predict_args = self._prepare_predict_args(target, known, observed, static)
 
         if use_rolling_window:
             logger.debug("Using rolling window prediction.")
-            return self._historical_forecasts(n=n)
+            return self._historical_forecasts(n=n, data = predict_args)
         else:
-            preds = self.model.predict(**self._predict_args, n=n)
+            preds = self.model.predict(**predict_args, n=n)
             return self.convert_output(
                 output=preds
             )  # , is_likelihood=self.is_likelihood,num_samples=self.num_samples)
@@ -341,6 +342,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
     def _historical_forecasts(
         self,
+        data: Dict[str,DartsTimeSeries],
         retrain: bool = False,
         n: Optional[int] = 1,
     ) -> List[TimeSeries]:
@@ -363,7 +365,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             predict_likelihood_parameters=self.is_likelihood,
             forecast_horizon=n,
             last_points_only=False,
-            **self._predict_args,
+            **data,
         )
         if self.scaler_target:
             logger.debug("Inverse transforming forecasts using target scaler.")
