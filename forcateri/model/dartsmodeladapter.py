@@ -62,6 +62,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
         args = {key: None for key in covariate_map}
         for key, (supports, value) in covariate_map.items():
             if not supports or value is None:
+                logger.warning(
+                    f"Model does not support {key} or no {key} provided, skipping this covariate."
+                )
                 continue
 
             # if value is a list, skip if all elements are None or empty
@@ -69,6 +72,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 if all(
                     v is None or (hasattr(v, "__len__") and len(v) == 0) for v in value
                 ):
+                    logger.warning(
+                        f"All elements in {key} are None or empty, skipping this covariate."
+                    )
                     continue
 
             args[key] = value
