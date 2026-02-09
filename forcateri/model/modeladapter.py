@@ -27,7 +27,6 @@ class ModelAdapter(ABC):
     def predict(
         self,
         data: List[AdapterInput],
-        n: Optional[int] = 1,
         use_rolling_window: bool = True,
     ):
         raise NotImplementedError(
