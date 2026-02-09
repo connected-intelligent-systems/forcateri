@@ -54,12 +54,12 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 getattr(self.model, "supports_past_covariates", False),
                 observed,
             ),
-            "static_covariates": (
-                getattr(self.model, "supports_static_covariates", False),
-                static,
-            ),
+            # "static_covariates": (
+            #     getattr(self.model, "supports_static_covariates", False),
+            #     static,
+            # ),
         }
-        args = {}
+        args = {key: None for key in covariate_map}
         for key, (supports, value) in covariate_map.items():
             if not supports or value is None:
                 continue
@@ -73,7 +73,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
             args[key] = value
 
-        return args
+        return args['future_covariates'], args['past_covariates'] #, args['static_covariates']
 
     def fit(
         self,
@@ -117,9 +117,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.target_col_names = [t.components[0] for t in target]
         logger.debug(f"Converted training data to darts format for {self.model_name}")
 
-        fit_args = {"series": target}
-        fit_args.update(self._get_covariate_args(known, observed, static))
 
+        future_covariates, past_covariates = self._get_covariate_args(known, observed, static)
+
+        val_target, val_future_covariate, val_past_covariates = None, None, None
         if val_data is not None:
             val_target, val_known, val_observed, val_static = self.convert_input(
                 val_data
@@ -128,31 +129,19 @@ class DartsModelAdapter(ModelAdapter, ABC):
             logger.debug(
                 f"Converted validation data to darts format for {self.model_name}"
             )
-            fit_args["val_series"] = val_target
-            val_covariate_args = self._get_covariate_args(
+            
+            val_future_covariate, val_past_covariates = self._get_covariate_args(
                 val_known, val_observed, val_static
             )
-            # Prefix validation covariate keys with 'val_'
-            for key, value in val_covariate_args.items():
-                fit_args[f"val_{key}"] = value
 
-        self.model.fit(**fit_args)
 
-    def _prepare_predict_args(
-        self,
-        target: DartsTimeSeries,
-        known: DartsTimeSeries,
-        observed: DartsTimeSeries,
-        static: pd.DataFrame,
-    ) -> None:
-        """
-        Prepare the arguments for the predict method.
-        """
-
-        predict_args = {"series": target}
-        predict_args.update(self._get_covariate_args(known, observed, static))
         
-        return predict_args
+        self.model.fit(series=target, 
+                       future_covariates=future_covariates, 
+                       past_covariates=past_covariates, 
+                       val_series=val_target, 
+                       val_future_covariates=val_future_covariate, 
+                       val_past_covariates=val_past_covariates)
 
     def predict(
         self,
@@ -203,16 +192,17 @@ class DartsModelAdapter(ModelAdapter, ABC):
           TimeSeries format with proper offset and timestamp indexing.
         """
         target, known, observed, static = self.convert_input(data)
-        predict_args = self._prepare_predict_args(target, known, observed, static)
-
+        #predict_args = self._prepare_predict_args(target, known, observed, static)
+        future_covariates, past_covariates = self._get_covariate_args(known, observed, static)
+        #print(f"Predict args: {predict_args.keys()}")
         if use_rolling_window:
             logger.debug("Using rolling window prediction.")
-            return self._historical_forecasts(n=n, data = predict_args)
+            return self._historical_forecasts(n=n, series=target, future_covariates=future_covariates, past_covariates=past_covariates)
         else:
-            preds = self.model.predict(**predict_args, n=n)
+            preds = self.model.predict(n=n, future_covariates=future_covariates, past_covariates=past_covariates)
             return self.convert_output(
                 output=preds
-            )  # , is_likelihood=self.is_likelihood,num_samples=self.num_samples)
+            )  
 
     def convert_input(self, input):
         """
@@ -342,7 +332,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
     def _historical_forecasts(
         self,
-        data: Dict[str,DartsTimeSeries],
+        series: DartsTimeSeries,
+        future_covariates: Optional[DartsTimeSeries] = None,
+        past_covariates: Optional[DartsTimeSeries] = None,
         retrain: bool = False,
         n: Optional[int] = 1,
     ) -> List[TimeSeries]:
@@ -350,8 +342,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
         Generates historical forecasts using the provided data.
 
         Parameters:
-            data (List[AdapterInput]): The input data for generating forecasts.
-            start (Union[float, int, str]): The starting point for historical forecasts.
+            series (DartsTimeSeries): The input time series for generating forecasts.
+            future_covariates (Optional[DartsTimeSeries]): Future covariates for the model.
+            past_covariates (Optional[DartsTimeSeries]): Past covariates for the model.
+            static_covariates (Optional[DartsTimeSeries]): Static covariates for the model.
             retrain (bool): Whether to retrain the model before each forecast.
             n (Optional[int]): The forecast horizon for historical forecasts.
         Returns:
@@ -361,11 +355,13 @@ class DartsModelAdapter(ModelAdapter, ABC):
         # self._prepare_predict_args(target, known, observed, static)
         logger.debug("Generating historical forecasts.")
         preds = self.model.historical_forecasts(
+            series=series,
+            future_covariates=future_covariates,
+            past_covariates=past_covariates,
             retrain=retrain,
             predict_likelihood_parameters=self.is_likelihood,
             forecast_horizon=n,
             last_points_only=False,
-            **data,
         )
         if self.scaler_target:
             logger.debug("Inverse transforming forecasts using target scaler.")
