@@ -18,7 +18,7 @@ class ModelAdapter(ABC):
     def fit(
         self,
         train_data: List[AdapterInput],
-        val_data: Optional[List[AdapterInput]],
+        val_data: Optional[List[AdapterInput]]=None,
     ):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
