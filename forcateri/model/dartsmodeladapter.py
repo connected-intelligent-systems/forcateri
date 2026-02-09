@@ -41,7 +41,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.scaler_known: Optional[Scaler] = None
         self.scaler_observed: Optional[Scaler] = None
 
-    def _get_covariate_args(self, known, observed, static):
+    def _get_covariate_args(self, known, observed):
         """
         Helper method to build covariate arguments for model fitting and prediction.
         """
