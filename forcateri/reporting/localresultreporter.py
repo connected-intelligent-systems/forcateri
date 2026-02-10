@@ -9,6 +9,7 @@ from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from typing import List
 import logging 
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,7 @@ def save_plots(save_dir="plots"):
                     title = "plot"
                 # sanitize filename
                 filename = title.replace(" ", "_").replace("/", "_") + ".png"
-                filepath = os.path.join(save_dir, filename)
+                filepath = Path(save_dir) / filename
                 fig.savefig(filepath)
                 plt.close(fig)
 
@@ -55,10 +56,10 @@ class LocalResultReporter(ResultReporter):
 
         super().report_all(test_data)
         for model in self.models:
-            os.makedirs("models", exist_ok=True)
-            model_path = f"models/{model.model_name}.pkl"
-            model.save(model_path)
-            logger.info(f"Saved model {model.model_name} to {model_path}")
+            model_dir = Path("models") / model.model_name
+            model_dir.mkdir(parents=True, exist_ok=True)
+            model.save(str(model_dir))
+            logger.info(f"Saved model {model.model_name} to {model_dir}")
 
     def report_metrics(self):
         super().report_metrics()
