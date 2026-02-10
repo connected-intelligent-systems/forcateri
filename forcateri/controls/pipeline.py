@@ -17,14 +17,14 @@ class Pipeline:
 
     def __init__(
         self,
-        dp: DataProvider,
+        data_provider: DataProvider,
         model_adapter: Union[ModelAdapter, List[ModelAdapter]],
         reporter: Union[ResultReporter, List[ResultReporter]],
     ):
-        self.dp = dp
-        self.mad = model_adapter if isinstance(model_adapter, list) else [model_adapter]
-        self.rep = reporter if isinstance(reporter, list) else [reporter]
-
+        self.data_provider = data_provider
+        self.model_adapters = model_adapter if isinstance(model_adapter, list) else [model_adapter]
+        self.reporters = reporter if isinstance(reporter, list) else [reporter]
+        
     def run(self):
         """
         Executes the pipeline:
@@ -33,23 +33,20 @@ class Pipeline:
         3. Report all metrics.
         """
 
-        train_set = self.dp.get_train_set()
-        val_set = self.dp.get_val_set()
-        test_set = self.dp.get_test_set()
+        train_set = self.data_provider.get_train_set()
+        val_set = self.data_provider.get_val_set()
+        test_set = self.data_provider.get_test_set()
         logging.info("Starting pipeline execution.")
         logging.info(f"Training set size: {len(train_set)}")
         logging.info(f"Validation set size: {len(val_set)}")
         logging.info(f"Test set size: {len(test_set)}")
-        # Example training
-        print(f"Training set size: {len(train_set)}")
-        print(f"Validation set size: {len(val_set)}")
-        print(f"Test set size: {len(test_set)}")
-        for model in self.mad:
+
+        for model in self.model_adapters:
             model.fit(train_set, val_set)
 
         # Evaluate and report results
         # results = []
-        for reporter in self.rep:
+        for reporter in self.reporters:
             reporter.report_all(test_data=test_set)
             # results.append(res)
         # return results
