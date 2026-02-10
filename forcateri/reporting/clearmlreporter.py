@@ -14,13 +14,15 @@ from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from typing import List
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
-
 import os
 import matplotlib.pyplot as plt
 from functools import wraps
 from clearml import Task
+
+
+logger = logging.getLogger(__name__)
+
+
 
 
 def save_interactive_plots(save_dir="plots", upload=True):
