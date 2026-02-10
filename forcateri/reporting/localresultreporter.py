@@ -23,10 +23,9 @@ class LocalResultReporter(ResultReporter):
 
         super().report_all(test_data)
         for model in self.models:
-            model_dir = Path("models") / model.model_name
-            model_dir.mkdir(parents=True, exist_ok=True)
-            model.save(str(model_dir))
-            logger.info(f"Saved model {model.model_name} to {model_dir}")
+            save_path = Path("models") / f"{model.model_name}.pkl"
+            model.save(save_path)
+            logger.info(f"Saved model {model.model_name} to {save_path}")
 
     def report_metrics(self):
         super().report_metrics()
