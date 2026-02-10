@@ -8,16 +8,29 @@ from functools import wraps
 from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from typing import List
+import logging 
 
+logger = logging.getLogger(__name__)
 
 class LocalResultReporter(ResultReporter):
+
     def __init__(self, models: List[ModelAdapter], metrics: List[Metric]):
         super().__init__(models, metrics)
+
+
+    def report_all(self, test_data):
+
+        super().report_all(test_data)
+        for model in self.models:
+            os.makedirs("models", exist_ok=True)
+            model_path = f"models/{model.model_name}.pkl"
+            model.save(model_path)
+            logger.info(f"Saved model {model.model_name} to {model_path}")
 
     def report_metrics(self):
         super().report_metrics()
         os.makedirs("reports", exist_ok=True)
-        print(self.metric_results)
+        logger.info(f"Metric results: {self.metric_results}")
         for metric_name, model_results in self.metric_results.items():
             all_results = []
             for model_name, result_df_list in model_results.items():
