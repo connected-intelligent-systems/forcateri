@@ -124,7 +124,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         logger.debug(f"Converted training data to darts format for {self.model_name}")
 
 
-        future_covariates, past_covariates = self._get_covariate_args(known, observed, static)
+        future_covariates, past_covariates = self._get_covariate_args(known, observed)
 
         val_target, val_future_covariate, val_past_covariates = None, None, None
         if val_data is not None:
@@ -137,7 +137,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             )
             
             val_future_covariate, val_past_covariates = self._get_covariate_args(
-                val_known, val_observed, val_static
+                val_known, val_observed
             )
 
 
@@ -199,7 +199,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         target, known, observed, static = self.convert_input(data)
         #predict_args = self._prepare_predict_args(target, known, observed, static)
-        future_covariates, past_covariates = self._get_covariate_args(known, observed, static)
+        future_covariates, past_covariates = self._get_covariate_args(known, observed)
         #print(f"Predict args: {predict_args.keys()}")
         if use_rolling_window:
             logger.debug("Using rolling window prediction.")
