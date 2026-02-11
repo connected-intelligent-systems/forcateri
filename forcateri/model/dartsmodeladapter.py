@@ -195,7 +195,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         - For rolling window predictions, the forecast_horizon parameter in kwargs controls
           the prediction horizon at each step.
         - Predictions are automatically converted from Darts format back to the custom
-          TimeSeries format with proper offset and timestamp indexing.
+          TimeSeries format with proper offset and time indexing.
         """
         target, known, observed, static = self.convert_input(data)
         #predict_args = self._prepare_predict_args(target, known, observed, static)
@@ -285,7 +285,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         -------
         List[TimeSeries]
             A list of TimeSeries objects with:
-            - Proper offset and timestamp indexing
+            - Proper offset and time indexing
             - MultiIndex columns with (feature, representation) structure
             - Original target column names restored
             - Appropriate representation type (quantile, sample, or deterministic)
@@ -516,7 +516,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             A TimeSeries object with:
             - MultiIndex rows: (offset, time)
               * offset: pd.Timedelta representing forecast horizon
-              * time: actual timestamp adjusted by subtracting offset
+              * time: actual time adjusted by subtracting offset
             - Appropriate representation type:
               * QUANTILE_REP if is_likelihood=True and quantiles provided
               * SAMPLE_REP if num_samples > 1
