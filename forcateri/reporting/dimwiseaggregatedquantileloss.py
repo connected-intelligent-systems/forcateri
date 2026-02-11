@@ -15,17 +15,17 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
     ):
         super().__init__(axes, None)
 
-    def __call__(self, ts_gt: TimeSeries, ts_pred: TimeSeries):
-        ts_gt, ts_pred = Metric.align(ts_gt, ts_pred)  # for alignment 
-        if ts_pred.quantiles is None:
+    def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
+        ground_truth, prediction = Metric.align(ground_truth, prediction)  # for alignment 
+        if prediction.quantiles is None:
             logger.error(
                 "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
             )
             raise ValueError(
                 "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
             )
-        self.reduction = lambda gt, pred: quantile_metric(gt, pred, ts_pred.quantiles)
-        return super().__call__(ts_gt, ts_pred)
+        self.reduction = lambda gt, pred: quantile_metric(gt, pred, prediction.quantiles)
+        return super().__call__(ground_truth, prediction)
 
     def __str__(self):
         axes_str = "_".join(map(str, self.axes))
