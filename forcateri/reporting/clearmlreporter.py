@@ -82,7 +82,7 @@ class ClearMLReporter(ResultReporter):
             name="Model Predictions", artifact_object=self.model_predictions
         )
         for model in self.models:
-            save_path = Path("models") / f"{model.model_name}.pkl"
+            save_path = Path("models") / f"{model.model_name}"
             model.save(save_path)
             logger.info(f"Saved model {model.model_name} to {save_path}")
             Task.current_task().upload_artifact(
