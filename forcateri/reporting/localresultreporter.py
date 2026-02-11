@@ -23,7 +23,7 @@ class LocalResultReporter(ResultReporter):
 
         super().report_all(test_data)
         for model in self.models:
-            save_path = Path("models") / f"{model.model_name}.pkl"
+            save_path = Path("models") / f"{model.model_name}"
             model.save(save_path)
             logger.info(f"Saved model {model.model_name} to {save_path}")
 
