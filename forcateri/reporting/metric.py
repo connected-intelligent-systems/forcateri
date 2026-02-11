@@ -27,7 +27,7 @@ class Metric:
             If the prediction offset is < 1
         """
 
-        horizon = prediction.offsets.max() // pd.Timedelta(1, prediction.freq)
+        horizon = prediction.offset.max() // pd.Timedelta(1, prediction.freq)
         logger.debug(
             f"While computing metric the following horizon was calculated on pred_ts: {horizon}"
         )

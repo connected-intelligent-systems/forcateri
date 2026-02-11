@@ -35,7 +35,7 @@ class TimeSeries:
                 representation = TimeSeries.QUANTILE_REP
 
         self.quantiles = None
-        self.representation = representation
+        self._representation = representation
         if representation == TimeSeries.QUANTILE_REP:
             if not all(isinstance(x, float) for x in quantiles):
                 raise TypeError("Quantiles must be a list of floats.")
@@ -49,11 +49,11 @@ class TimeSeries:
             raise TypeError("Expected a pandas DataFrame")
 
         # If already in internal format (e.g. MultiIndex on both axes), just store it
-        if TimeSeries.is_matching_format(data, self.representation):
+        if TimeSeries.is_matching_format(data, self._representation):
             self.data = data.copy()
 
             logger.info("TimeSeries initialized from internal-format DataFrame.")
-        elif TimeSeries.is_compatible_format(data, self.representation):
+        elif TimeSeries.is_compatible_format(data, self._representation):
             # If the DataFrame is compatible but not in the expected format, align it
             self.data = data.copy()
             self.align_format(self.data)
@@ -83,10 +83,16 @@ class TimeSeries:
     @property
     def representation(self):
         "The representation property"
-        return list(
-            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique()
-        )
-
+        return self._representation
+    
+    @representation.setter
+    def representation(self, value):
+        if value in (TimeSeries.DETERM_REP,TimeSeries.QUANTILE_REP,TimeSeries.SAMPLE_REP):
+            self._representation = value
+        else:
+            raise InvalidRepresentationFormat(
+                f"provided representation is not determ, quantile or sample"
+            )
     @property
     def offset(self):
         "The offset property"
@@ -103,7 +109,7 @@ class TimeSeries:
         Whether the series is deterministic.
         True if the feature representation is neither quantile nor sampled
         """
-        return self.representation == TimeSeries.DETERM_REP
+        return self._representation == TimeSeries.DETERM_REP
 
     @property
     def is_offset(self):
@@ -351,13 +357,13 @@ class TimeSeries:
             ]
             df.columns = df.columns.reorder_levels(order)
 
-        if self.representation == TimeSeries.DETERM_REP:
+        if self._representation == TimeSeries.DETERM_REP:
 
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
                 )
-        elif self.representation == TimeSeries.QUANTILE_REP:
+        elif self._representation == TimeSeries.QUANTILE_REP:
             if self.quantiles is None:
                 logger.error("Quantiles must be specified for quantile representation.")
                 raise ValueError(
@@ -389,7 +395,7 @@ class TimeSeries:
                     raise ValueError(
                         "Cannot map inner column levels to quantiles: mismatched length."
                     )
-        elif self.representation == TimeSeries.SAMPLE_REP:
+        elif self._representation == TimeSeries.SAMPLE_REP:
             # raise NotImplementedError("Sample representation not implemented yet.")
             logger.info(
                 "Aligning DataFrame for sample representation. At this point it is assumed that all the columns are samples."
@@ -982,11 +988,11 @@ class TimeSeries:
         """
 
         negated_data = self.data.copy()
-        if self.representation == TimeSeries.DETERM_REP:
+        if self._representation == TimeSeries.DETERM_REP:
             negated_data.loc[
                 :, (negated_data.columns.get_level_values(0), "value")
             ] *= -1
-        elif self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}:
+        elif self._representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}:
             for feature in negated_data.columns.get_level_values(0).unique():
                 # Get quantile names from the column itself to be robust
                 for sub_column in negated_data[feature].columns.unique():
@@ -997,11 +1003,11 @@ class TimeSeries:
             )
         ts_kwargs = {
             "data": negated_data,
-            "representation": self.representation,
+            "representation": self._representation,
             "freq": self.freq,
             "static_data": self.static_data,
         }
-        if self.representation == TimeSeries.QUANTILE_REP:
+        if self._representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles  # Preserve quantiles list
         return TimeSeries(**ts_kwargs)
 
@@ -1014,7 +1020,7 @@ class TimeSeries:
 
         # Handle mixed representations (QUANTILE/SAMPLE + DETERM)
         if (
-            self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            self._representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
             and other.representation == TimeSeries.DETERM_REP
         ):
             return self._perform_mixed_operation_core(
@@ -1022,7 +1028,7 @@ class TimeSeries:
             )
         elif (
             other.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
-            and self.representation == TimeSeries.DETERM_REP
+            and self._representation == TimeSeries.DETERM_REP
         ):
             return other._perform_mixed_operation_core(
                 self, operation_func=lambda x, y: x + y, inplace=False
@@ -1033,11 +1039,11 @@ class TimeSeries:
         new_data = self.data + other.data
         ts_kwargs = {
             "data": new_data,
-            "representation": self.representation,
+            "representation": self._representation,
             "freq": self.freq,
             "static_data": self.static_data,
         }
-        if self.representation == TimeSeries.QUANTILE_REP:
+        if self._representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles
         return TimeSeries(**ts_kwargs)
 
@@ -1089,7 +1095,7 @@ class TimeSeries:
             )
         return TimeSeries(
             data=new_data,
-            representation=self.representation,
+            representation=self._representation,
             quantiles=self.quantiles,
             freq=self.freq,
             static_data=self.static_data,
@@ -1158,11 +1164,11 @@ class TimeSeries:
         new_data = self.data.abs()
         ts_kwargs = {
             "data": new_data,
-            "representation": self.representation,
+            "representation": self._representation,
             "freq": self.freq,
             "static_data": self.static_data,
         }
-        if self.representation == TimeSeries.QUANTILE_REP:
+        if self._representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles
 
         return TimeSeries(**ts_kwargs)
@@ -1195,7 +1201,7 @@ class TimeSeries:
 
         # Handle mixed representations (QUANTILE/SAMPLE + DETERM)
         if (
-            self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            self._representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
             and other.representation == TimeSeries.DETERM_REP
         ):
             # If self is quantile/sample and other is deterministic, perform inplace operation
@@ -1204,7 +1210,7 @@ class TimeSeries:
             )
         elif (
             other.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
-            and self.representation == TimeSeries.DETERM_REP
+            and self._representation == TimeSeries.DETERM_REP
         ):
             temp_result = other._perform_mixed_operation_core(
                 self, operation_func=lambda x, y: x + y, inplace=False
@@ -1213,7 +1219,7 @@ class TimeSeries:
             # The caveat here is that if self is deterministic inplace addition to quantiles/sample, will change the data to quantile/sample representation
             logger.info("Attention the TS object's data is not Deterministic now")
             self.data = temp_result.data
-            self.representation = temp_result.representation
+            self._representation = temp_result.representation
             self.quantiles = temp_result.quantiles
             return self
 
