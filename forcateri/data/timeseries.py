@@ -74,22 +74,22 @@ class TimeSeries:
         )
 
     @property
-    def features(self):
-        "The features property"
+    def feature(self):
+        "The feature property"
         return list(
             self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
         )
 
     @property
-    def representations(self):
+    def representation(self):
         "The representation property"
         return list(
             self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique()
         )
 
     @property
-    def offsets(self):
-        "The offsets property"
+    def offset(self):
+        "The offset property"
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0]).unique()
 
     @property
@@ -110,7 +110,7 @@ class TimeSeries:
         """
         Whether the series has offsets other than 0.
         """
-        return (len(self.offsets) != 1) or (self.offsets[0] != pd.Timedelta(0))
+        return (len(self.offset) != 1) or (self.offset[0] != pd.Timedelta(0))
 
     @property
     def tz(self) -> tzinfo | None:
@@ -129,7 +129,7 @@ class TimeSeries:
 
         This method attempts to infer the frequency of the index using pandas'
         built-in `infer_freq`. If that fails, it manually computes the most
-        common difference between consecutive times. It then validates the
+        common difference between consecutive points in time. It then validates the
         inferred frequency against a user-provided frequency, if given.
 
         Parameters
@@ -170,7 +170,7 @@ class TimeSeries:
             if len(diffs) > 0:
                 most_common_delta = diffs.value_counts().idxmax()
                 logger.info(
-                    f"Most common delta between times: {most_common_delta}"
+                    f"Most common delta between point of 'time' index: {most_common_delta}"
                 )
                 try:
                     inferred_freq = pd.tseries.frequencies.to_offset(
@@ -440,9 +440,9 @@ class TimeSeries:
                     names=TimeSeries.ROW_INDEX_NAMES,
                 )
             except Exception as e:
-                logger.error(f"Failed to convert 'time' to datetime: {e}")
+                logger.error(f"Failed to cast the index indicating 'time' to a datetime format: {e}")
                 raise ValueError(
-                    f"Cannot convert index level 'time' to datetime: {e}"
+                    f"Failed to cast the index indicating 'time' to a datetime format: {e}"
                 )
         level0 = df.index.get_level_values(0)
         level1 = df.index.get_level_values(1)
@@ -537,7 +537,7 @@ class TimeSeries:
                 "A regular frequency must be defined in the TimeSeries instance."
             )
 
-        if len(self.offsets) > 1:
+        if len(self.offset) > 1:
             raise ValueError(
                 "Shifting is not supported for TimeSeries with offsets other than 0."
             )
