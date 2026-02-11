@@ -665,7 +665,7 @@ class TimeSeries:
         """
         if horizon is not None:
             if isinstance(horizon, int):
-                horizon = self.offsets[horizon]
+                horizon = self.offset[horizon]
             elif not isinstance(horizon, pd.Timedelta):
                 raise ValueError("Horizon must be an int or pd.Timedelta.")
 
