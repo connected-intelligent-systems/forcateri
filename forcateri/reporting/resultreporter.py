@@ -65,7 +65,7 @@ class ResultReporter:
                     reduced_df = met(gt_ts, pred_ts)
                     model_results.append(reduced_df)
 
-                met_results[model.model_name] = model_results
+                met_results[model] = model_results
 
             results[str(met)] = met_results
 
