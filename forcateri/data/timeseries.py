@@ -561,7 +561,7 @@ class TimeSeries:
                 data=shifted_data, freq=self.freq, static_data=self.static_data
             )
 
-    def shift_to_repeat_to_multihorizon(self, horizon: int = 1, in_place: bool = False):
+    def shift_repeat_to_multihorizon(self, horizon: int = 1, in_place: bool = False):
         """
         Creates a multi-horizon version of the time series by repeatedly applying
         `shift_to_horizon` for horizons 1 through `horizon`, and concatenating

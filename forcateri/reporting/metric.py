@@ -38,7 +38,7 @@ class Metric:
                 f"Horizon is expected to be 1 or greater but was {horizon}."
             )
 
-        ts_gt_shifted = ground_truth.shift_to_repeat_to_multihorizon(horizon=horizon)
+        ts_gt_shifted = ground_truth.shift_repeat_to_multihorizon(horizon=horizon)
         logger.debug(f"\ngt_shifted:\n{ts_gt_shifted}")
         common_index = ts_gt_shifted.data.index.intersection(prediction.data.index)
         logger.debug(
