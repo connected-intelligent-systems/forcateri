@@ -1,10 +1,8 @@
-from typing import List
 import logging
+from typing import List
 
-import matplotlib.pyplot as plt
 import pandas as pd
-import pickle
-
+import plotly.graph_objects as go
 
 from .metric import Metric
 from ..data.adapterinput import AdapterInput
@@ -46,26 +44,26 @@ class ResultReporter:
         for met in self.metrics:
             met_results = {}
 
-            for model, prediction_ts_list in self.model_predictions.items():
+            for model_name, prediction_ts_list in self.model_predictions.items():
                 model_results = []
                 # loop over test data & predictions
                 for i, (adapter_input, pred_ts) in enumerate(
                     zip(self.test_data, prediction_ts_list)
                 ):
                     logger.debug(
-                        f"Computing metrics for model {model.__class__.__name__} on test series {i}."
+                        f"Computing metrics for model {model_name.__class__.__name__} on test series {i}."
                     )
 
                     gt_ts = adapter_input.target
                     logger.debug(
                         f"Computing metric {met.__class__.__name__} "
-                        f"for model {model.__class__.__name__} "
+                        f"for model {model_name.__class__.__name__} "
                         f"on test series {i}..."
                     )
                     reduced_df = met(gt_ts, pred_ts)
                     model_results.append(reduced_df)
 
-                met_results[model.model_name] = model_results
+                met_results[model_name] = model_results
 
             results[str(met)] = met_results
 
@@ -76,43 +74,54 @@ class ResultReporter:
         if metric_results is None:
             metric_results = self.metric_results
 
+        figures = []
+
         for model_name, model_metrics in metric_results.items():
             for metric_name, metric_list in model_metrics.items():
-                fig, ax = plt.subplots(figsize=(10, 5))
+                fig = go.Figure()
+                xlabel = "Index"
+
                 for i, df in enumerate(metric_list):
-                    if isinstance(df, pd.DataFrame):
-                        # Skip single-point DataFrames
-                        if len(df) <= 1:
-                            continue
-                        # Dynamically select the second index level for x-axis if possible
-                        if (
-                            isinstance(df.index, pd.MultiIndex)
-                            and len(df.index.names) > 1
-                        ):
-                            x = df.index.get_level_values(df.index.names[1])
-                            xlabel = df.index.names[1]
-                        elif isinstance(df.index, pd.MultiIndex):
-                            x = df.index.get_level_values(df.index.names[0])
-                            xlabel = df.index.names[0]
-                        else:
-                            x = df.index
-                            xlabel = "Index"
-                        for col in df.columns:
-                            ax.plot(x, df[col], label=f"Test series id: {i} - {col}")
-                    else:
-                        # Skip plotting for non-DataFrame objects
+                    if not isinstance(df, pd.DataFrame) or len(df) <= 1:
                         continue
 
-                ax.set_title(f"{metric_name} for {model_name}")
-                ax.set_xlabel(xlabel)
-                ax.set_ylabel("Metric Value")
-                ax.legend()
-                plt.tight_layout()
-                plt.show()
-                plt.close()
+                    # Determine x-axis
+                    if isinstance(df.index, pd.MultiIndex):
+                        level = 1 if len(df.index.names) > 1 else 0
+                        x = df.index.get_level_values(level)
+                        xlabel = df.index.names[level]
+                    else:
+                        x = df.index
+
+                    # Add traces
+                    for col in df.columns:
+                        fig.add_trace(
+                            go.Scatter(
+                                x=x,
+                                y=df[col],
+                                mode="lines",
+                                name=f"Test series id: {i} - {col}",
+                            )
+                        )
+
+                # Set layout
+                fig.update_layout(
+                    title=f"{metric_name} for {model_name}",
+                    xaxis_title=xlabel,
+                    yaxis_title="Metric Value",
+                    legend_title="Series",
+                    template="plotly_white",
+                    autosize=True,
+                )
+
+                figures.append((fig, model_name, metric_name))
+
+        return figures
 
     def _plot_predictions(self):
         logger.info("Plotting model predictions...")
+        figures = []
+
         for model, prediction_ts_list in self.model_predictions.items():
             for i, (adapter_input, pred_ts) in enumerate(
                 zip(self.test_data, prediction_ts_list)
@@ -120,13 +129,12 @@ class ResultReporter:
                 gt_ts = adapter_input.target
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
 
-                print(f"offsets: {offsets}")
                 logger.debug(
                     f"Plotting predictions for model {model.__class__.__name__} on test series {i}."
                 )
+
                 if pred_ts.representation == TimeSeries.QUANTILE_REP:
                     for offset in offsets:
-                        logger.debug(f"Plotting predictions for offset {offset}.")
                         pred_df = pred_ts.by_time(offset).copy()
                         gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
 
@@ -141,100 +149,106 @@ class ResultReporter:
                             ).astype(float)
 
                         quantiles = sorted(pred_df.columns.astype(float))
-                        lower_q = quantiles[0]
-                        upper_q = quantiles[-1]
+                        lower_q, upper_q = quantiles[0], quantiles[-1]
                         median_q = min(quantiles, key=lambda q: abs(q - 0.5))
 
-                        fig, ax = plt.subplots(figsize=(12, 6))
+                        fig = go.Figure()
 
-                        # --- Plot lower quantile (dashed line)
-                        ax.plot(
-                            pred_df.index,
-                            pred_df[lower_q],
-                            linestyle="--",
-                            color="tab:blue",
-                            alpha=0.7,
-                            linewidth=1.0,
-                            label=f"Lower q={lower_q:.2f}",
+                        # Lower quantile
+                        fig.add_trace(
+                            go.Scatter(
+                                x=pred_df.index,
+                                y=pred_df[lower_q],
+                                mode="lines",
+                                name=f"Lower q={lower_q:.2f}",
+                                line=dict(dash="dash", color="blue", width=1),
+                                opacity=0.7,
+                            )
                         )
 
-                        # --- Plot upper quantile (dashed line)
-                        ax.plot(
-                            pred_df.index,
-                            pred_df[upper_q],
-                            linestyle="--",
-                            color="tab:blue",
-                            alpha=0.7,
-                            linewidth=1.0,
-                            label=f"Upper q={upper_q:.2f}",
+                        # Upper quantile
+                        fig.add_trace(
+                            go.Scatter(
+                                x=pred_df.index,
+                                y=pred_df[upper_q],
+                                mode="lines",
+                                name=f"Upper q={upper_q:.2f}",
+                                line=dict(dash="dash", color="blue", width=1),
+                                opacity=0.7,
+                            )
                         )
 
-                        # --- Plot median quantile (solid line)
+                        # Median quantile
                         if median_q in pred_df.columns:
-                            ax.plot(
-                                pred_df.index,
-                                pred_df[median_q],
-                                color="tab:blue",
-                                linewidth=1.5,
-                                label=f"Median q={median_q:.2f}",
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=pred_df.index,
+                                    y=pred_df[median_q],
+                                    mode="lines",
+                                    name=f"Median q={median_q:.2f}",
+                                    line=dict(color="blue", width=2),
+                                )
                             )
 
-                        # --- Plot ground truth (black dashed)
+                        # Ground truth
                         gt_df.columns = ["Ground Truth"]
-                        ax.plot(
-                            gt_df.index,
-                            gt_df["Ground Truth"],
-                            color="black",
-                            linestyle="--",
-                            linewidth=1.2,
-                            label="Ground Truth",
+                        fig.add_trace(
+                            go.Scatter(
+                                x=gt_df.index,
+                                y=gt_df["Ground Truth"],
+                                mode="lines",
+                                name="Ground Truth",
+                                line=dict(color="black", dash="dash", width=2),
+                            )
                         )
 
-                        # --- Aesthetics
-                        ax.set_title(
-                            f"{model.__class__.__name__} — Test Series {i} — Offset {offset}"
+                        # Layout
+                        fig.update_layout(
+                            title=f"{model} — Test Series {i} — Offset {offset}",
+                            xaxis_title="Time",
+                            yaxis_title="Value",
+                            legend_title="Series",
+                            template="plotly_white",
                         )
-                        ax.set_xlabel("Time")
-                        ax.set_ylabel("Value")
-                        ax.grid(True, linestyle="--", alpha=0.4)
-                        ax.legend(loc="upper left", fontsize=9)
-                        plt.xticks(rotation=30)
-                        plt.tight_layout()
-                        plt.show()
-                        plt.close()
+
+                        figures.append((fig, model, i, offset))
 
                 elif pred_ts.representation == TimeSeries.DETERM_REP:
                     for offset in offsets:
                         pred_df = pred_ts.by_time(offset).copy()
-                        logger.debug(f"pred_df:\n{pred_df.head()}")
-                        fig, ax = plt.subplots(figsize=(12, 6))
                         gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
-                        ax.plot(
-                            pred_df.index,
-                            pred_df.iloc[:, 0],
-                            color="tab:blue",
-                            linewidth=1.5,
-                            label="Prediction",
+
+                        fig = go.Figure()
+                        fig.add_trace(
+                            go.Scatter(
+                                x=pred_df.index,
+                                y=pred_df.iloc[:, 0],
+                                mode="lines",
+                                name="Prediction",
+                                line=dict(color="blue", width=2),
+                            )
                         )
-                        ax.plot(
-                            gt_df.index,
-                            gt_df.iloc[:, 0],
-                            color="black",
-                            linestyle="--",
-                            linewidth=1.2,
-                            label="Ground Truth",
+                        fig.add_trace(
+                            go.Scatter(
+                                x=gt_df.index,
+                                y=gt_df.iloc[:, 0],
+                                mode="lines",
+                                name="Ground Truth",
+                                line=dict(color="black", dash="dash", width=2),
+                            )
                         )
-                        ax.set_title(
-                            f"{model.__class__.__name__} — Test Series {i} — Offset {offset}"
+
+                        fig.update_layout(
+                            title=f"{model} — Test Series {i} — Offset {offset}",
+                            xaxis_title="Time",
+                            yaxis_title="Value",
+                            legend_title="Series",
+                            template="plotly_white",
                         )
-                        ax.set_xlabel("Time")
-                        ax.set_ylabel("Value")
-                        ax.grid(True, linestyle="--", alpha=0.4)
-                        ax.legend(loc="upper left", fontsize=9)
-                        plt.xticks(rotation=30)
-                        plt.tight_layout()
-                        plt.show()
-                        plt.close()
+
+                        figures.append((fig, model, i, offset))
+
+        return figures
 
     def report_metrics(self):
         """Reporting metrics"""
@@ -257,7 +271,7 @@ class ResultReporter:
             logger.debug(
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
-            self.model_predictions[model] = predictions_ts_list
+            self.model_predictions[model.model_name] = predictions_ts_list
 
     def report_plots(self):
         """Reporting plots"""
