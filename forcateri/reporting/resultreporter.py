@@ -1,7 +1,6 @@
 from typing import List
 import logging
-
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 import pandas as pd
 import pickle
 import plotly.graph_objects as go
@@ -70,47 +69,7 @@ class ResultReporter:
             results[str(met)] = met_results
 
         return results
-
-    # def _plot_metrics(self, metric_results=None):
-    #     logger.info("Plotting metrics results...")
-    #     if metric_results is None:
-    #         metric_results = self.metric_results
-    #     figures = []
-    #     for model_name, model_metrics in metric_results.items():
-    #         for metric_name, metric_list in model_metrics.items():
-    #             fig, ax = plt.subplots(figsize=(10, 5))
-    #             for i, df in enumerate(metric_list):
-    #                 if isinstance(df, pd.DataFrame):
-    #                     # Skip single-point DataFrames
-    #                     if len(df) <= 1:
-    #                         continue
-    #                     # Dynamically select the second index level for x-axis if possible
-    #                     if (
-    #                         isinstance(df.index, pd.MultiIndex)
-    #                         and len(df.index.names) > 1
-    #                     ):
-    #                         x = df.index.get_level_values(df.index.names[1])
-    #                         xlabel = df.index.names[1]
-    #                     elif isinstance(df.index, pd.MultiIndex):
-    #                         x = df.index.get_level_values(df.index.names[0])
-    #                         xlabel = df.index.names[0]
-    #                     else:
-    #                         x = df.index
-    #                         xlabel = "Index"
-    #                     for col in df.columns:
-    #                         ax.plot(x, df[col], label=f"Test series id: {i} - {col}")
-    #                 else:
-    #                     # Skip plotting for non-DataFrame objects
-    #                     continue
-
-    #             ax.set_title(f"{metric_name} for {model_name}")
-    #             ax.set_xlabel(xlabel)
-    #             ax.set_ylabel("Metric Value")
-    #             ax.legend()
-    #             fig.tight_layout()
-    #             figures.append((fig,model_name,metric_name))
-    #     return figures
-    import plotly.graph_objects as go
+   
 
     def _plot_metrics(self, metric_results=None):
         logger.info("Plotting metrics results...")
@@ -160,8 +119,6 @@ class ResultReporter:
                 figures.append((fig, model_name, metric_name))
 
         return figures
-
-    import plotly.graph_objects as go
 
     def _plot_predictions(self):
         logger.info("Plotting model predictions...")
@@ -280,130 +237,6 @@ class ResultReporter:
 
         return figures
 
-    # def _plot_predictions(self):
-    #     logger.info("Plotting model predictions...")
-    #     figures = []
-    #     for model, prediction_ts_list in self.model_predictions.items():
-    #         for i, (adapter_input, pred_ts) in enumerate(
-    #             zip(self.test_data, prediction_ts_list)
-    #         ):
-    #             gt_ts = adapter_input.target
-    #             offsets = pred_ts.data.index.get_level_values("offset").unique()
-
-    #             print(f"offsets: {offsets}")
-    #             logger.debug(
-    #                 f"Plotting predictions for model {model.__class__.__name__} on test series {i}."
-    #             )
-    #             if pred_ts.representation == TimeSeries.QUANTILE_REP:
-    #                 for offset in offsets:
-    #                     logger.debug(f"Plotting predictions for offset {offset}.")
-    #                     pred_df = pred_ts.by_time(offset).copy()
-    #                     gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
-
-    #                     # Skip if no data
-    #                     if len(pred_df) <= 1:
-    #                         continue
-
-    #                     # Flatten MultiIndex columns if needed
-    #                     if isinstance(pred_df.columns, pd.MultiIndex):
-    #                         pred_df.columns = pred_df.columns.get_level_values(
-    #                             1
-    #                         ).astype(float)
-
-    #                     quantiles = sorted(pred_df.columns.astype(float))
-    #                     lower_q = quantiles[0]
-    #                     upper_q = quantiles[-1]
-    #                     median_q = min(quantiles, key=lambda q: abs(q - 0.5))
-
-    #                     fig, ax = plt.subplots(figsize=(12, 6))
-
-    #                     # --- Plot lower quantile (dashed line)
-    #                     ax.plot(
-    #                         pred_df.index,
-    #                         pred_df[lower_q],
-    #                         linestyle="--",
-    #                         color="tab:blue",
-    #                         alpha=0.7,
-    #                         linewidth=1.0,
-    #                         label=f"Lower q={lower_q:.2f}",
-    #                     )
-
-    #                     # --- Plot upper quantile (dashed line)
-    #                     ax.plot(
-    #                         pred_df.index,
-    #                         pred_df[upper_q],
-    #                         linestyle="--",
-    #                         color="tab:blue",
-    #                         alpha=0.7,
-    #                         linewidth=1.0,
-    #                         label=f"Upper q={upper_q:.2f}",
-    #                     )
-
-    #                     # --- Plot median quantile (solid line)
-    #                     if median_q in pred_df.columns:
-    #                         ax.plot(
-    #                             pred_df.index,
-    #                             pred_df[median_q],
-    #                             color="tab:blue",
-    #                             linewidth=1.5,
-    #                             label=f"Median q={median_q:.2f}",
-    #                         )
-
-    #                     # --- Plot ground truth (black dashed)
-    #                     gt_df.columns = ["Ground Truth"]
-    #                     ax.plot(
-    #                         gt_df.index,
-    #                         gt_df["Ground Truth"],
-    #                         color="black",
-    #                         linestyle="--",
-    #                         linewidth=1.2,
-    #                         label="Ground Truth",
-    #                     )
-
-    #                     # --- Aesthetics
-    #                     ax.set_title(
-    #                         f"{model} — Test Series {i} — Offset {offset}"
-    #                     )
-    #                     ax.set_xlabel("Time")
-    #                     ax.set_ylabel("Value")
-    #                     ax.grid(True, linestyle="--", alpha=0.4)
-    #                     ax.legend(loc="upper left", fontsize=9)
-    #                     ax.tick_params(axis="x", rotation=30)
-    #                     fig.tight_layout()
-    #                     figures.append((fig, model, i, offset))
-
-    #             elif pred_ts.representation == TimeSeries.DETERM_REP:
-    #                 for offset in offsets:
-    #                     pred_df = pred_ts.by_time(offset).copy()
-    #                     logger.debug(f"pred_df:\n{pred_df.head()}")
-    #                     fig, ax = plt.subplots(figsize=(12, 6))
-    #                     gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
-    #                     ax.plot(
-    #                         pred_df.index,
-    #                         pred_df.iloc[:, 0],
-    #                         color="tab:blue",
-    #                         linewidth=1.5,
-    #                         label="Prediction",
-    #                     )
-    #                     ax.plot(
-    #                         gt_df.index,
-    #                         gt_df.iloc[:, 0],
-    #                         color="black",
-    #                         linestyle="--",
-    #                         linewidth=1.2,
-    #                         label="Ground Truth",
-    #                     )
-    #                     ax.set_title(
-    #                         f"{model} — Test Series {i} — Offset {offset}"
-    #                     )
-    #                     ax.set_xlabel("Time")
-    #                     ax.set_ylabel("Value")
-    #                     ax.grid(True, linestyle="--", alpha=0.4)
-    #                     ax.legend(loc="upper left", fontsize=9)
-    #                     ax.tick_params(axis="x", rotation=30)
-    #                     fig.tight_layout()
-    #                     figures.append((fig, model, i, offset))
-    #     return figures
 
     def report_metrics(self):
         """Reporting metrics"""
