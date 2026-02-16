@@ -1,8 +1,7 @@
-from typing import List
 import logging
-import plotly.graph_objects as go
+from typing import List
+
 import pandas as pd
-import pickle
 import plotly.graph_objects as go
 
 from .metric import Metric
@@ -45,31 +44,30 @@ class ResultReporter:
         for met in self.metrics:
             met_results = {}
 
-            for model, prediction_ts_list in self.model_predictions.items():
+            for model_name, prediction_ts_list in self.model_predictions.items():
                 model_results = []
                 # loop over test data & predictions
                 for i, (adapter_input, pred_ts) in enumerate(
                     zip(self.test_data, prediction_ts_list)
                 ):
                     logger.debug(
-                        f"Computing metrics for model {model.__class__.__name__} on test series {i}."
+                        f"Computing metrics for model {model_name.__class__.__name__} on test series {i}."
                     )
 
                     gt_ts = adapter_input.target
                     logger.debug(
                         f"Computing metric {met.__class__.__name__} "
-                        f"for model {model.__class__.__name__} "
+                        f"for model {model_name.__class__.__name__} "
                         f"on test series {i}..."
                     )
                     reduced_df = met(gt_ts, pred_ts)
                     model_results.append(reduced_df)
 
-                met_results[model] = model_results
+                met_results[model_name] = model_results
 
             results[str(met)] = met_results
 
         return results
-   
 
     def _plot_metrics(self, metric_results=None):
         logger.info("Plotting metrics results...")
@@ -102,7 +100,7 @@ class ResultReporter:
                                 x=x,
                                 y=df[col],
                                 mode="lines",
-                                name=f"Test series id: {i} - {col}"
+                                name=f"Test series id: {i} - {col}",
                             )
                         )
 
@@ -113,7 +111,7 @@ class ResultReporter:
                     yaxis_title="Metric Value",
                     legend_title="Series",
                     template="plotly_white",
-                    autosize=True
+                    autosize=True,
                 )
 
                 figures.append((fig, model_name, metric_name))
@@ -140,12 +138,15 @@ class ResultReporter:
                         pred_df = pred_ts.by_time(offset).copy()
                         gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
 
+                        # Skip if no data
                         if len(pred_df) <= 1:
                             continue
 
                         # Flatten MultiIndex columns if needed
                         if isinstance(pred_df.columns, pd.MultiIndex):
-                            pred_df.columns = pred_df.columns.get_level_values(1).astype(float)
+                            pred_df.columns = pred_df.columns.get_level_values(
+                                1
+                            ).astype(float)
 
                         quantiles = sorted(pred_df.columns.astype(float))
                         lower_q, upper_q = quantiles[0], quantiles[-1]
@@ -154,44 +155,52 @@ class ResultReporter:
                         fig = go.Figure()
 
                         # Lower quantile
-                        fig.add_trace(go.Scatter(
-                            x=pred_df.index,
-                            y=pred_df[lower_q],
-                            mode="lines",
-                            name=f"Lower q={lower_q:.2f}",
-                            line=dict(dash="dash", color="blue", width=1),
-                            opacity=0.7
-                        ))
+                        fig.add_trace(
+                            go.Scatter(
+                                x=pred_df.index,
+                                y=pred_df[lower_q],
+                                mode="lines",
+                                name=f"Lower q={lower_q:.2f}",
+                                line=dict(dash="dash", color="blue", width=1),
+                                opacity=0.7,
+                            )
+                        )
 
                         # Upper quantile
-                        fig.add_trace(go.Scatter(
-                            x=pred_df.index,
-                            y=pred_df[upper_q],
-                            mode="lines",
-                            name=f"Upper q={upper_q:.2f}",
-                            line=dict(dash="dash", color="blue", width=1),
-                            opacity=0.7
-                        ))
+                        fig.add_trace(
+                            go.Scatter(
+                                x=pred_df.index,
+                                y=pred_df[upper_q],
+                                mode="lines",
+                                name=f"Upper q={upper_q:.2f}",
+                                line=dict(dash="dash", color="blue", width=1),
+                                opacity=0.7,
+                            )
+                        )
 
                         # Median quantile
                         if median_q in pred_df.columns:
-                            fig.add_trace(go.Scatter(
-                                x=pred_df.index,
-                                y=pred_df[median_q],
-                                mode="lines",
-                                name=f"Median q={median_q:.2f}",
-                                line=dict(color="blue", width=2)
-                            ))
+                            fig.add_trace(
+                                go.Scatter(
+                                    x=pred_df.index,
+                                    y=pred_df[median_q],
+                                    mode="lines",
+                                    name=f"Median q={median_q:.2f}",
+                                    line=dict(color="blue", width=2),
+                                )
+                            )
 
                         # Ground truth
                         gt_df.columns = ["Ground Truth"]
-                        fig.add_trace(go.Scatter(
-                            x=gt_df.index,
-                            y=gt_df["Ground Truth"],
-                            mode="lines",
-                            name="Ground Truth",
-                            line=dict(color="black", dash="dash", width=2)
-                        ))
+                        fig.add_trace(
+                            go.Scatter(
+                                x=gt_df.index,
+                                y=gt_df["Ground Truth"],
+                                mode="lines",
+                                name="Ground Truth",
+                                line=dict(color="black", dash="dash", width=2),
+                            )
+                        )
 
                         # Layout
                         fig.update_layout(
@@ -199,7 +208,7 @@ class ResultReporter:
                             xaxis_title="Time",
                             yaxis_title="Value",
                             legend_title="Series",
-                            template="plotly_white"
+                            template="plotly_white",
                         )
 
                         figures.append((fig, model, i, offset))
@@ -210,33 +219,36 @@ class ResultReporter:
                         gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
 
                         fig = go.Figure()
-                        fig.add_trace(go.Scatter(
-                            x=pred_df.index,
-                            y=pred_df.iloc[:, 0],
-                            mode="lines",
-                            name="Prediction",
-                            line=dict(color="blue", width=2)
-                        ))
-                        fig.add_trace(go.Scatter(
-                            x=gt_df.index,
-                            y=gt_df.iloc[:, 0],
-                            mode="lines",
-                            name="Ground Truth",
-                            line=dict(color="black", dash="dash", width=2)
-                        ))
+                        fig.add_trace(
+                            go.Scatter(
+                                x=pred_df.index,
+                                y=pred_df.iloc[:, 0],
+                                mode="lines",
+                                name="Prediction",
+                                line=dict(color="blue", width=2),
+                            )
+                        )
+                        fig.add_trace(
+                            go.Scatter(
+                                x=gt_df.index,
+                                y=gt_df.iloc[:, 0],
+                                mode="lines",
+                                name="Ground Truth",
+                                line=dict(color="black", dash="dash", width=2),
+                            )
+                        )
 
                         fig.update_layout(
                             title=f"{model} — Test Series {i} — Offset {offset}",
                             xaxis_title="Time",
                             yaxis_title="Value",
                             legend_title="Series",
-                            template="plotly_white"
+                            template="plotly_white",
                         )
 
                         figures.append((fig, model, i, offset))
 
         return figures
-
 
     def report_metrics(self):
         """Reporting metrics"""
