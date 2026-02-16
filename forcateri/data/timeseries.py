@@ -357,16 +357,18 @@ class TimeSeries:
                 df.columns = pd.MultiIndex.from_product(
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
                 )
+            else:
+                #renaming the outer column levels to needed format
+                logger.info("Multiindex column level names are renamed to needed format")
+                df.columns.names = TimeSeries.COL_INDEX_NAMES
+
         elif self.representation == TimeSeries.QUANTILE_REP:
             if self.quantiles is None:
                 logger.error("Quantiles must be specified for quantile representation.")
                 raise ValueError(
                     "Quantiles must be specified for quantile representation."
                 )
-            # if not isinstance(df.index, pd.MultiIndex):
-            #     df.index = pd.MultiIndex.from_product(
-            #         [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
-            #     )
+
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [["target"], self.quantiles], names=TimeSeries.COL_INDEX_NAMES
