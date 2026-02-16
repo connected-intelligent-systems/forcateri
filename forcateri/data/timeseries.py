@@ -358,9 +358,15 @@ class TimeSeries:
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
                 )
             else:
-                #renaming the outer column levels to needed format
-                logger.info("Multiindex column level names are renamed to needed format")
+                # renaming the outer column levels to needed format
+                logger.info(
+                    "Multiindex column level names are renamed to needed format"
+                )
                 df.columns.names = TimeSeries.COL_INDEX_NAMES
+                df.columns = pd.MultiIndex.from_product(
+                    [df.columns.get_level_values(0), ["value"]],
+                    names=df.columns.names
+                )
 
         elif self.representation == TimeSeries.QUANTILE_REP:
             if self.quantiles is None:
