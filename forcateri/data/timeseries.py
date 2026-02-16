@@ -312,7 +312,7 @@ class TimeSeries:
                 df.index.get_level_values(0), pd.DatetimeIndex
             ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
             if not isinstance(df.columns, pd.MultiIndex):
-                if index_names_set == set(TimeSeries.ROW_INDEX_NAMES) and has_datetime:
+                if has_datetime:
                     logger.info("Index is MultiIndex with datetime values.")
                     return True
             else:
