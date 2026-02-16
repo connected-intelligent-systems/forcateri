@@ -10,39 +10,6 @@ from ..model.modeladapter import ModelAdapter
 from typing import List
 
 
-# def save_plots(save_dir="plots"):
-#     os.makedirs(save_dir, exist_ok=True)
-
-#     def decorator(func):
-#         @wraps(func)
-#         def wrapper(*args, **kwargs):
-#             original_show = plt.show
-
-#             def save_show(*s_args, **s_kwargs):
-#                 fig = plt.gcf()
-#                 # get the first axis of the figure
-#                 ax = fig.axes[0] if fig.axes else None
-#                 if ax and ax.get_title():
-#                     title = ax.get_title()
-#                 else:
-#                     title = "plot"
-#                 # sanitize filename
-#                 filename = title.replace(" ", "_").replace("/", "_") + ".png"
-#                 filepath = os.path.join(save_dir, filename)
-#                 fig.savefig(filepath)
-#                 plt.close(fig)
-
-#             plt.show = save_show
-#             try:
-#                 return func(*args, **kwargs)
-#             finally:
-#                 plt.show = original_show
-
-#         return wrapper
-
-#     return decorator
-
-
 class LocalResultReporter(ResultReporter):
     def __init__(self, models: List[ModelAdapter], metrics: List[Metric]):
         super().__init__(models, metrics)
@@ -64,7 +31,7 @@ class LocalResultReporter(ResultReporter):
         with open("reports/local_metric_results.pkl", "wb") as f:
             pickle.dump(self.metric_results, f)
 
-    #@save_plots(save_dir="my_saved_plots")
+
 
     def _plot_metrics(self, metric_results=None, save_dir="plots"):
         os.makedirs(save_dir,exist_ok=True)
@@ -72,7 +39,7 @@ class LocalResultReporter(ResultReporter):
         for fig, model_name, metric_name in figures:
             fig.write_html(f"{save_dir}/{model_name}_{metric_name}.html")
 
-    #@save_plots(save_dir="my_saved_plots")
+
     def _plot_predictions(self, save_dir="plots"):
         os.makedirs(save_dir,exist_ok=True)
         figures = super()._plot_predictions()
