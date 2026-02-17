@@ -84,15 +84,7 @@ class TimeSeries:
     def representation(self):
         "The representation property"
         return self._representation
-    
-    @representation.setter
-    def representation(self, value):
-        if value in (TimeSeries.DETERM_REP,TimeSeries.QUANTILE_REP,TimeSeries.SAMPLE_REP):
-            self._representation = value
-        else:
-            raise InvalidRepresentationFormat(
-                f"provided representation is not determ, quantile or sample"
-            )
+
     @property
     def offset(self):
         "The offset property"
