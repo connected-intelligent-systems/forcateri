@@ -168,7 +168,7 @@ class TimeSeries:
             if len(diffs) > 0:
                 most_common_delta = diffs.value_counts().idxmax()
                 logger.info(
-                    f"Most common delta between point of 'time' index: {most_common_delta}"
+                    f"Most common delta between points in 'time' index: {most_common_delta}"
                 )
                 try:
                     inferred_freq = pd.tseries.frequencies.to_offset(
