@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class DimwiseAggregatedMetric(Metric):
-    OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
+    OFFSET, TIME = TimeSeries.ROW_INDEX_NAMES
     FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
     def __init__(
@@ -43,7 +43,7 @@ class DimwiseAggregatedMetric(Metric):
             list(
                 {
                     DimwiseAggregatedMetric.OFFSET,
-                    DimwiseAggregatedMetric.TIME_STEP,
+                    DimwiseAggregatedMetric.TIME,
                     DimwiseAggregatedMetric.FEATURE,
                     DimwiseAggregatedMetric.REPRESENTATION,
                 }

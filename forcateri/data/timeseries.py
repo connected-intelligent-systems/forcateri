@@ -17,7 +17,7 @@ class TimeSeries:
     DETERM_REP = "determ"
     QUANTILE_REP = "quantile"
     SAMPLE_REP = "sample"
-    ROW_INDEX_NAMES: Tuple[str, str] = ("offset", "time_stamp")
+    ROW_INDEX_NAMES: Tuple[str, str] = ("offset", "time")
     COL_INDEX_NAMES: Tuple[str, str] = ("feature", "representation")
 
     def __init__(
@@ -35,7 +35,7 @@ class TimeSeries:
                 representation = TimeSeries.QUANTILE_REP
 
         self.quantiles = None
-        self.representation = representation
+        self._representation = representation
         if representation == TimeSeries.QUANTILE_REP:
             if not all(isinstance(x, float) for x in quantiles):
                 raise TypeError("Quantiles must be a list of floats.")
@@ -49,11 +49,11 @@ class TimeSeries:
             raise TypeError("Expected a pandas DataFrame")
 
         # If already in internal format (e.g. MultiIndex on both axes), just store it
-        if TimeSeries.is_matching_format(data, self.representation):
+        if TimeSeries.is_matching_format(data, self._representation):
             self.data = data.copy()
 
             logger.info("TimeSeries initialized from internal-format DataFrame.")
-        elif TimeSeries.is_compatible_format(data, self.representation):
+        elif TimeSeries.is_compatible_format(data, self._representation):
             # If the DataFrame is compatible but not in the expected format, align it
             self.data = data.copy()
             self.align_format(self.data)
@@ -64,7 +64,7 @@ class TimeSeries:
             raise InvalidDataFrameFormat(
                 f"Cannot build TimeSeries from the provided DataFrame: "
                 f"DataFrame is not in a matching or compatible format for representation '{representation}'. "
-                f"Expected MultiIndex with index names {['offset', 'time_stamp']} and column names {['feature', 'representation']}."
+                f"Expected MultiIndex with index names {['offset', 'time']} and column names {['feature', 'representation']}."
                 f"Or at least df with datetime index."
             )
         self.static_data = static_data if static_data is not None else {}
@@ -74,27 +74,25 @@ class TimeSeries:
         )
 
     @property
-    def features(self):
-        "The features property"
+    def feature(self):
+        "The feature property"
         return list(
             self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
         )
 
     @property
-    def representations(self):
+    def representation(self):
         "The representation property"
-        return list(
-            self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[1]).unique()
-        )
+        return self._representation
 
     @property
-    def offsets(self):
-        "The offsets property"
+    def offset(self):
+        "The offset property"
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0]).unique()
 
     @property
-    def timestamps(self):
-        "The timestamps property"
+    def time(self):
+        "The time property"
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).unique()
 
     @property
@@ -103,14 +101,14 @@ class TimeSeries:
         Whether the series is deterministic.
         True if the feature representation is neither quantile nor sampled
         """
-        return self.representation == TimeSeries.DETERM_REP
+        return self._representation == TimeSeries.DETERM_REP
 
     @property
     def is_offset(self):
         """
         Whether the series has offsets other than 0.
         """
-        return (len(self.offsets) != 1) or (self.offsets[0] != pd.Timedelta(0))
+        return (len(self.offset) != 1) or (self.offset[0] != pd.Timedelta(0))
 
     @property
     def tz(self) -> tzinfo | None:
@@ -129,7 +127,7 @@ class TimeSeries:
 
         This method attempts to infer the frequency of the index using pandas'
         built-in `infer_freq`. If that fails, it manually computes the most
-        common difference between consecutive timestamps. It then validates the
+        common difference between consecutive points in time. It then validates the
         inferred frequency against a user-provided frequency, if given.
 
         Parameters
@@ -170,7 +168,7 @@ class TimeSeries:
             if len(diffs) > 0:
                 most_common_delta = diffs.value_counts().idxmax()
                 logger.info(
-                    f"Most common delta between timestamps: {most_common_delta}"
+                    f"Most common delta between points in 'time' index: {most_common_delta}"
                 )
                 try:
                     inferred_freq = pd.tseries.frequencies.to_offset(
@@ -351,7 +349,7 @@ class TimeSeries:
             ]
             df.columns = df.columns.reorder_levels(order)
 
-        if self.representation == TimeSeries.DETERM_REP:
+        if self._representation == TimeSeries.DETERM_REP:
 
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
@@ -397,7 +395,7 @@ class TimeSeries:
                     raise ValueError(
                         "Cannot map inner column levels to quantiles: mismatched length."
                     )
-        elif self.representation == TimeSeries.SAMPLE_REP:
+        elif self._representation == TimeSeries.SAMPLE_REP:
             # raise NotImplementedError("Sample representation not implemented yet.")
             logger.info(
                 "Aligning DataFrame for sample representation. At this point it is assumed that all the columns are samples."
@@ -437,20 +435,20 @@ class TimeSeries:
             )
             return
 
-        if "time_stamp" in df.index.names:
+        if "time" in df.index.names:
             logger.info("Casting the index to datetime format")
             try:
                 df.index = pd.MultiIndex.from_arrays(
                     [
                         df.index.get_level_values("offset"),
-                        pd.to_datetime(df.index.get_level_values("time_stamp")),
+                        pd.to_datetime(df.index.get_level_values("time")),
                     ],
                     names=TimeSeries.ROW_INDEX_NAMES,
                 )
             except Exception as e:
-                logger.error(f"Failed to convert 'time_stamp' to datetime: {e}")
+                logger.error(f"Failed to cast the index indicating 'time' to a datetime format: {e}")
                 raise ValueError(
-                    f"Cannot convert index level 'time_stamp' to datetime: {e}"
+                    f"Failed to cast the index indicating 'time' to a datetime format: {e}"
                 )
         level0 = df.index.get_level_values(0)
         level1 = df.index.get_level_values(1)
@@ -515,7 +513,7 @@ class TimeSeries:
         Shifts the time series data forward by a specified horizon.
 
         This method moves the values in the time series `horizon` steps forward,
-        effectively aligning each timestamp with the value that occurs `horizon`
+        effectively aligning each time with the value that occurs `horizon`
         steps ahead. The index offsets are adjusted accordingly to reflect the shift.
 
         Parameters
@@ -537,7 +535,7 @@ class TimeSeries:
         -----
         - The shifting operation fills the vacated positions with NaNs.
         - The MultiIndex of the DataFrame is updated so that the first level (offsets)
-        is incremented by `horizon * freq`, while the second level (original timestamps)
+        is incremented by `horizon * freq`, while the second level (original times)
         remains unchanged.
         """
         if self.freq is None:
@@ -545,7 +543,7 @@ class TimeSeries:
                 "A regular frequency must be defined in the TimeSeries instance."
             )
 
-        if len(self.offsets) > 1:
+        if len(self.offset) > 1:
             raise ValueError(
                 "Shifting is not supported for TimeSeries with offsets other than 0."
             )
@@ -646,14 +644,14 @@ class TimeSeries:
 
     def by_time(self, horizon: Optional[Union[int, pd.Timedelta]] = None):
         """
-        Returns a DataFrame with 'time_stamp' as the outer index.
+        Returns a DataFrame with 'time' as the outer index.
 
         Parameters
         ----------
         horizon : int or pd.Timedelta, optional
             - If an `int` is provided, it is interpreted as an offset in hours.
             - If a `pd.Timedelta` is provided, it is used directly to select a specific offset.
-            - If None, the MultiIndex is reordered to make 'time_stamp' the outer index.
+            - If None, the MultiIndex is reordered to make 'time' the outer index.
 
         Returns
         -------
@@ -667,21 +665,21 @@ class TimeSeries:
         """
         if horizon is not None:
             if isinstance(horizon, int):
-                horizon = self.offsets[horizon]
+                horizon = self.offset[horizon]
             elif not isinstance(horizon, pd.Timedelta):
                 raise ValueError("Horizon must be an int or pd.Timedelta.")
 
             # Filter and return only that offset (drops 'offset' level)
             return self.data.xs(horizon, level="offset")
 
-        # Otherwise, reorder index to make time_stamp the outer index
-        return self.data.swaplevel("offset", "time_stamp").sort_index(
-            level="time_stamp"
+        # Otherwise, reorder index to make time the outer index
+        return self.data.swaplevel("offset", "time").sort_index(
+            level="time"
         )
 
     def by_horizon(self, t0):
         """
-        Return forecasts made at time `t0`, reindexed by their actual timestamps.
+        Return forecasts made at time `t0`, reindexed by their actual times.
 
         Parameters
         ----------
@@ -700,8 +698,8 @@ class TimeSeries:
         """
         try:
             forecasts = self.data.loc[t0]
-            forecasts["time_stamp"] = forecasts.index + t0
-            forecasts.set_index("time_stamp", inplace=True, drop=True)
+            forecasts["time"] = forecasts.index + t0
+            forecasts.set_index("time", inplace=True, drop=True)
             return forecasts
         except KeyError:
             logger.error(f"{t0} not found in forecast data.")
@@ -781,7 +779,7 @@ class TimeSeries:
                     f"Attempting to slice a timezone-aware time series ({self.tz}) via a timezone-naive index."
                 )
 
-        # conversion of various formats into timestamps
+        # conversion of various formats into times
         def to_dt(i) -> Optional[Union[pd.Timestamp, slice]]:
             match i:
                 case None:
@@ -802,7 +800,7 @@ class TimeSeries:
                 case datetime():
                     return to_dt(pd.Timestamp(i))
                 case int():
-                    return self.timestamps[i]
+                    return self.time[i]
                 case float():
                     if 0.0 <= i < 1.0:
                         return to_dt(int(np.round((len(self) - 1) * i)))
@@ -990,11 +988,11 @@ class TimeSeries:
         """
 
         negated_data = self.data.copy()
-        if self.representation == TimeSeries.DETERM_REP:
+        if self._representation == TimeSeries.DETERM_REP:
             negated_data.loc[
                 :, (negated_data.columns.get_level_values(0), "value")
             ] *= -1
-        elif self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}:
+        elif self._representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}:
             for feature in negated_data.columns.get_level_values(0).unique():
                 # Get quantile names from the column itself to be robust
                 for sub_column in negated_data[feature].columns.unique():
@@ -1005,11 +1003,11 @@ class TimeSeries:
             )
         ts_kwargs = {
             "data": negated_data,
-            "representation": self.representation,
+            "representation": self._representation,
             "freq": self.freq,
             "static_data": self.static_data,
         }
-        if self.representation == TimeSeries.QUANTILE_REP:
+        if self._representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles  # Preserve quantiles list
         return TimeSeries(**ts_kwargs)
 
@@ -1022,7 +1020,7 @@ class TimeSeries:
 
         # Handle mixed representations (QUANTILE/SAMPLE + DETERM)
         if (
-            self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            self._representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
             and other.representation == TimeSeries.DETERM_REP
         ):
             return self._perform_mixed_operation_core(
@@ -1030,7 +1028,7 @@ class TimeSeries:
             )
         elif (
             other.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
-            and self.representation == TimeSeries.DETERM_REP
+            and self._representation == TimeSeries.DETERM_REP
         ):
             return other._perform_mixed_operation_core(
                 self, operation_func=lambda x, y: x + y, inplace=False
@@ -1041,11 +1039,11 @@ class TimeSeries:
         new_data = self.data + other.data
         ts_kwargs = {
             "data": new_data,
-            "representation": self.representation,
+            "representation": self._representation,
             "freq": self.freq,
             "static_data": self.static_data,
         }
-        if self.representation == TimeSeries.QUANTILE_REP:
+        if self._representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles
         return TimeSeries(**ts_kwargs)
 
@@ -1097,7 +1095,7 @@ class TimeSeries:
             )
         return TimeSeries(
             data=new_data,
-            representation=self.representation,
+            representation=self._representation,
             quantiles=self.quantiles,
             freq=self.freq,
             static_data=self.static_data,
@@ -1166,11 +1164,11 @@ class TimeSeries:
         new_data = self.data.abs()
         ts_kwargs = {
             "data": new_data,
-            "representation": self.representation,
+            "representation": self._representation,
             "freq": self.freq,
             "static_data": self.static_data,
         }
-        if self.representation == TimeSeries.QUANTILE_REP:
+        if self._representation == TimeSeries.QUANTILE_REP:
             ts_kwargs["quantiles"] = self.quantiles
 
         return TimeSeries(**ts_kwargs)
@@ -1203,7 +1201,7 @@ class TimeSeries:
 
         # Handle mixed representations (QUANTILE/SAMPLE + DETERM)
         if (
-            self.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
+            self._representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
             and other.representation == TimeSeries.DETERM_REP
         ):
             # If self is quantile/sample and other is deterministic, perform inplace operation
@@ -1212,7 +1210,7 @@ class TimeSeries:
             )
         elif (
             other.representation in {TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP}
-            and self.representation == TimeSeries.DETERM_REP
+            and self._representation == TimeSeries.DETERM_REP
         ):
             temp_result = other._perform_mixed_operation_core(
                 self, operation_func=lambda x, y: x + y, inplace=False
@@ -1221,7 +1219,7 @@ class TimeSeries:
             # The caveat here is that if self is deterministic inplace addition to quantiles/sample, will change the data to quantile/sample representation
             logger.info("Attention the TS object's data is not Deterministic now")
             self.data = temp_result.data
-            self.representation = temp_result.representation
+            self._representation = temp_result.representation
             self.quantiles = temp_result.quantiles
             return self
 
