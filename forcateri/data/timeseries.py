@@ -310,9 +310,8 @@ class TimeSeries:
                 df.index.get_level_values(0), pd.DatetimeIndex
             ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
             if not isinstance(df.columns, pd.MultiIndex):
-                if has_datetime:
-                    logger.info("Index is MultiIndex with datetime values.")
-                    return True
+                #If not multiindex datetimeindex is enough, if no datetimeindex then it is not compatible
+                return has_datetime
             else:
                 has_datetime = isinstance(
                     df.index.get_level_values(0), pd.DatetimeIndex
