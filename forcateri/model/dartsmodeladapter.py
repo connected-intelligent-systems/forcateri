@@ -195,7 +195,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         - For rolling window predictions, the forecast_horizon parameter in kwargs controls
           the prediction horizon at each step.
         - Predictions are automatically converted from Darts format back to the custom
-          TimeSeries format with proper offset and timestamp indexing.
+          TimeSeries format with proper offset and time indexing.
         """
         target, known, observed, static = self.convert_input(data)
         #predict_args = self._prepare_predict_args(target, known, observed, static)
@@ -285,7 +285,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         -------
         List[TimeSeries]
             A list of TimeSeries objects with:
-            - Proper offset and timestamp indexing
+            - Proper offset and time indexing
             - MultiIndex columns with (feature, representation) structure
             - Original target column names restored
             - Appropriate representation type (quantile, sample, or deterministic)
@@ -385,12 +385,12 @@ class DartsModelAdapter(ModelAdapter, ABC):
         - Resetting the MultiIndex to regular columns
         - Removing the 'offset' column (not needed for Darts)
         - Flattening MultiIndex columns to single-level columns
-        - Ensuring 'time_stamp' is the first column
+        - Ensuring 'time' is the first column
 
         Parameters
         ----------
         df : pd.DataFrame
-            A TimeSeries DataFrame with MultiIndex rows (offset, time_stamp) and potentially
+            A TimeSeries DataFrame with MultiIndex rows (offset, time) and potentially
             MultiIndex columns (feature, representation).
 
         Returns
@@ -398,7 +398,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         pd.DataFrame
             A flattened DataFrame with:
             - Regular (non-MultiIndex) row index
-            - 'time_stamp' as the first column
+            - 'time' as the first column
             - Single-level column names
             - No 'offset' column
 
@@ -406,7 +406,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         -----
         - The input DataFrame is sorted lexicographically to avoid pandas PerformanceWarning.
         - MultiIndex columns are flattened by taking the first level (feature name).
-        - The 'offset' column is dropped as Darts uses time_stamp directly for indexing.
+        - The 'offset' column is dropped as Darts uses time directly for indexing.
         - This method is typically called as part of the to_model_format conversion pipeline.
 
         Examples
@@ -417,7 +417,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         Output DataFrame:
             Index: [0, 1, ...]
-            Columns: ['time_stamp', 'feature1', 'feature2']
+            Columns: ['time', 'feature1', 'feature2']
         """
         # Sort index lexicographically to avoid PerformanceWarning
         df = df.sort_index(level=list(df.index.names), sort_remaining=True)
@@ -434,10 +434,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
             col if not isinstance(col, tuple) else col[0] for col in df_reset.columns
         ]
 
-        # Ensure 'time_stamp' is the first column
+        # Ensure 'time' is the first column
         cols = df_reset.columns.tolist()
-        if "time_stamp" in cols:
-            cols.insert(0, cols.pop(cols.index("time_stamp")))
+        if "time" in cols:
+            cols.insert(0, cols.pop(cols.index("time")))
             df_reset = df_reset[cols]
 
         return df_reset
@@ -447,7 +447,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         Converts a TimeSeries object into a DartsTimeSeries object.
 
         This method processes the input TimeSeries object by flattening its data,
-        removing timezone information from the 'time_stamp' column, and identifying
+        removing timezone information from the 'time' column, and identifying
         the value columns. It then creates and returns a DartsTimeSeries object
         using the processed data.
 
@@ -462,17 +462,17 @@ class DartsModelAdapter(ModelAdapter, ABC):
                         required columns are missing.
 
         Notes:
-            - The 'time_stamp' column in the input data is expected to contain
+            - The 'time' column in the input data is expected to contain
               datetime values.
-            - The method assumes that all columns except 'time_stamp' are value
+            - The method assumes that all columns except 'time' are value
               columns.
         """
         data = DartsModelAdapter.flatten_timeseries_df(t.data)
         logger.debug(f"Data after flattening in to_model_format: {data.head()}")
-        data["time_stamp"] = pd.to_datetime(data["time_stamp"]).dt.tz_localize(None)
-        value_cols = [col for col in data.columns if col != "time_stamp"]
+        data["time"] = pd.to_datetime(data["time"]).dt.tz_localize(None)
+        value_cols = [col for col in data.columns if col != "time"]
         return DartsTimeSeries.from_dataframe(
-            data, time_col="time_stamp", value_cols=value_cols, freq=self.freq
+            data, time_col="time", value_cols=value_cols, freq=self.freq
         )
 
     @staticmethod
@@ -514,9 +514,9 @@ class DartsModelAdapter(ModelAdapter, ABC):
         -------
         TimeSeries
             A TimeSeries object with:
-            - MultiIndex rows: (offset, time_stamp)
+            - MultiIndex rows: (offset, time)
               * offset: pd.Timedelta representing forecast horizon
-              * time_stamp: actual timestamp adjusted by subtracting offset
+              * time: actual time adjusted by subtracting offset
             - Appropriate representation type:
               * QUANTILE_REP if is_likelihood=True and quantiles provided
               * SAMPLE_REP if num_samples > 1
