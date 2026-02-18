@@ -87,7 +87,7 @@ class ClearMLReporter(ResultReporter):
             logger.info(f"Saved model {model.model_name} to {save_path}")
             Task.current_task().upload_artifact(
                 name=model.model_name,
-                artifact_object=save_path
+                artifact_object=f"{save_path}.pkl"
         )
 
     def report_metrics(self):
