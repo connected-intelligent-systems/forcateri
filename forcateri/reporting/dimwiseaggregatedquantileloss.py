@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 import logging
 from .dimwiseaggregatedmetric import DimwiseAggregatedMetric
 from .metric_aggregations import quantile_metric
@@ -12,8 +12,9 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
     def __init__(
         self,
         axes: List[str],
+        name: Optional[str],
     ):
-        super().__init__(axes, None)
+        super().__init__(name=name or str(self),axes=axes)
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
 

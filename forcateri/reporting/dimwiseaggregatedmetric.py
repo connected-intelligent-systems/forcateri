@@ -1,4 +1,4 @@
-from typing import Callable, List, Union
+from typing import Callable, List, Union, Optional
 import numpy as np
 import pandas as pd
 import logging
@@ -16,11 +16,14 @@ class DimwiseAggregatedMetric(Metric):
 
     def __init__(
         self,
+        name:Optional[str],
         axes: List[str],
         reduction: Callable[
             [np.ndarray, np.ndarray], Union[np.ndarray, float]
         ] = column_wise_mae,
+        
     ):
+        super().__init__(name or str(self))
         self.axes = axes
         self.reduction = reduction
 
