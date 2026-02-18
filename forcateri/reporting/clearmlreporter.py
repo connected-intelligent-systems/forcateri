@@ -37,6 +37,11 @@ class ClearMLReporter(ResultReporter):
         Task.current_task().upload_artifact(
             name="Model Predictions", artifact_object=self.model_predictions
         )
+        for model in self.models:
+            Task.current_task().upload_artifact(
+                name=model.model_name,
+                artifact_object=model
+        )
 
     def report_metrics(self):
         super().report_metrics()

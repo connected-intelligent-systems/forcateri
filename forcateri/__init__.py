@@ -7,6 +7,8 @@ from .controls.pipeline import Pipeline as Pipeline
 from .reporting.resultreporter import ResultReporter as ResultReporter
 from .data.seriesrole import SeriesRole as SeriesRole
 from .data.timeseries import TimeSeries as TimeSeries
+from .reporting.clearmlreporter import ClearMLReporter as ClearMLReporter
+from .reporting.localresultreporter import LocalResultReporter as LocalResultReporter
 
 __all__ = [
     "AdapterInput",
@@ -18,4 +20,6 @@ __all__ = [
     "ResultReporter",
     "SeriesRole",
     "TimeSeries",
+    "ClearMLReporter",
+    "LocalResultReporter",
 ]
