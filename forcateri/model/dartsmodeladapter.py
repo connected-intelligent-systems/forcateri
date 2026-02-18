@@ -664,7 +664,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         try:
             if not os.path.exists(path):
                 os.makedirs(os.path.dirname(path), exist_ok=True)
-            self.model.save(path)
+            self.model.save(f"{path}.pkl")
             logging.info(f"Model saved to {path}")
         except Exception as e:
             logging.error(f"Failed to save the model to {path}")

@@ -13,13 +13,16 @@ from .metric import Metric
 from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from typing import List
-
-logger = logging.getLogger(__name__)
-
+from pathlib import Path
 import os
 import matplotlib.pyplot as plt
 from functools import wraps
 from clearml import Task
+
+
+logger = logging.getLogger(__name__)
+
+
 
 
 def save_interactive_plots(save_dir="plots", upload=True):
@@ -77,6 +80,11 @@ class ClearMLReporter(ResultReporter):
         )
         Task.current_task().upload_artifact(
             name="Model Predictions", artifact_object=self.model_predictions
+        )
+        for model in self.models:
+            Task.current_task().upload_artifact(
+                name=model.model_name,
+                artifact_object=model
         )
 
     def report_metrics(self):
