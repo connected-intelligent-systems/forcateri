@@ -88,7 +88,7 @@ class ClearMLReporter(ResultReporter):
             Task.current_task().upload_artifact(
                 name=model.model_name,
                 artifact_object=save_path
-)
+        )
 
     def report_metrics(self):
         super().report_metrics()
