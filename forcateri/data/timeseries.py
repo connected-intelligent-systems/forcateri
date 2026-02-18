@@ -310,9 +310,8 @@ class TimeSeries:
                 df.index.get_level_values(0), pd.DatetimeIndex
             ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
             if not isinstance(df.columns, pd.MultiIndex):
-                if index_names_set == set(TimeSeries.ROW_INDEX_NAMES) and has_datetime:
-                    logger.info("Index is MultiIndex with datetime values.")
-                    return True
+                #If not multiindex datetimeindex is enough, if no datetimeindex then it is not compatible
+                return has_datetime
             else:
                 has_datetime = isinstance(
                     df.index.get_level_values(0), pd.DatetimeIndex
@@ -355,16 +354,24 @@ class TimeSeries:
                 df.columns = pd.MultiIndex.from_product(
                     [df.columns, ["value"]], names=TimeSeries.COL_INDEX_NAMES
                 )
-        elif self._representation == TimeSeries.QUANTILE_REP:
+            else:
+                # renaming the outer column levels to needed format
+                logger.info(
+                    "Multiindex column level names are renamed to needed format"
+                )
+                df.columns.names = TimeSeries.COL_INDEX_NAMES
+                df.columns = pd.MultiIndex.from_product(
+                    [df.columns.get_level_values(0), ["value"]],
+                    names=df.columns.names
+                )
+
+        elif self.representation == TimeSeries.QUANTILE_REP:
             if self.quantiles is None:
                 logger.error("Quantiles must be specified for quantile representation.")
                 raise ValueError(
                     "Quantiles must be specified for quantile representation."
                 )
-            # if not isinstance(df.index, pd.MultiIndex):
-            #     df.index = pd.MultiIndex.from_product(
-            #         [[pd.Timedelta(0)], df.index], names=TimeSeries.ROW_INDEX_NAMES
-            #     )
+
             if not isinstance(df.columns, pd.MultiIndex):
                 df.columns = pd.MultiIndex.from_product(
                     [["target"], self.quantiles], names=TimeSeries.COL_INDEX_NAMES
