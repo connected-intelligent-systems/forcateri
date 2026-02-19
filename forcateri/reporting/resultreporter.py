@@ -271,7 +271,7 @@ class ResultReporter:
             logger.debug(
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
-            self.model_predictions[model.model_name] = predictions_ts_list
+            self.model_predictions[model.name] = predictions_ts_list
 
     def report_plots(self):
         """Reporting plots"""

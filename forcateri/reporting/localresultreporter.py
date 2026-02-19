@@ -23,9 +23,9 @@ class LocalResultReporter(ResultReporter):
 
         super().report_all(test_data)
         for model in self.models:
-            save_path = Path("models") / f"{model.model_name}"
+            save_path = Path("models") / f"{model.name}"
             model.save(save_path)
-            logger.info(f"Saved model {model.model_name} to {save_path}")
+            logger.info(f"Saved model {model.name} to {save_path}")
 
     def report_metrics(self):
         super().report_metrics()
