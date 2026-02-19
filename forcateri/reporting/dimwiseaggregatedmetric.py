@@ -22,9 +22,10 @@ class DimwiseAggregatedMetric(Metric):
         ] = column_wise_mae,
         name: Optional[str] = None,
     ):
-        super().__init__(name or str(self))
         self.axes = axes
         self.reduction = reduction
+        super().__init__(name or str(self))
+        
 
     @staticmethod
     def get_level_values(df, axis):
