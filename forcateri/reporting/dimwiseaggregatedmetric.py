@@ -16,12 +16,11 @@ class DimwiseAggregatedMetric(Metric):
 
     def __init__(
         self,
-        name:Optional[str],
         axes: List[str],
         reduction: Callable[
             [np.ndarray, np.ndarray], Union[np.ndarray, float]
         ] = column_wise_mae,
-        
+        name: Optional[str] = None,
     ):
         super().__init__(name or str(self))
         self.axes = axes
@@ -37,7 +36,7 @@ class DimwiseAggregatedMetric(Metric):
             raise ValueError("Axis not found neither in row nor in column index.")
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
-        
+
         ground_truth, prediction = Metric.align(ground_truth, prediction)
         flat_pred = prediction.data.copy().stack(level=0, future_stack=True)
         flat_gt = ground_truth.data.copy().stack(level=0, future_stack=True)
@@ -74,7 +73,9 @@ class DimwiseAggregatedMetric(Metric):
 
             reduced_index = pd.MultiIndex.from_product(
                 [
-                    DimwiseAggregatedMetric.get_level_values(ground_truth.data, axis).unique()
+                    DimwiseAggregatedMetric.get_level_values(
+                        ground_truth.data, axis
+                    ).unique()
                     for axis in group_by
                 ]
             )
