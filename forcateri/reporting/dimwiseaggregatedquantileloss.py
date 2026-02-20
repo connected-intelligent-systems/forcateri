@@ -16,7 +16,7 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
         super().__init__(axes, None)
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
-        ground_truth, prediction = Metric.align(ground_truth, prediction)  # for alignment 
+
         if prediction.quantiles is None:
             logger.error(
                 "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
