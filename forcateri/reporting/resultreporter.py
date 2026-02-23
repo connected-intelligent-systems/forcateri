@@ -55,7 +55,7 @@ class ResultReporter:
                 self.add_metric(metric)
 
     def report_all(self, test_data: List[AdapterInput]):
-        ResultReporter.add_test_data(test_data)
+        self.add_test_data(test_data)
         # self.metric_results = self._report_metrics()
         logger.info("Reporting all results...")
         # dont forget to remove predictions after testing
