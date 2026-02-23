@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Union
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -14,6 +14,26 @@ logger = logging.getLogger(__name__)
 
 
 class ResultReporter:
+    """
+    Handles model predictions, metric computation, and plotting.
+
+    Test data, models, and metrics can be registered either at initialization
+    or incrementally using `add_test_data`, `add_model_adapter`, and `add_metric`.
+
+    Constructor Arguments:
+        test_data (AdapterInput or list of AdapterInput, optional):
+            Test datasets to register immediately.
+        models (list of ModelAdapter, optional):
+            Models to register immediately.
+        metrics (list of Metric, optional):
+            Metrics to register immediately.
+
+    Note:
+        Using the constructor arguments is convenient for simple initialization
+        when all entities are already available. Calling the `add_*` methods
+        separately can be useful for lazy loading or dynamically adding new
+        test data, models, or metrics after the reporter has been created.
+    """
 
     def __init__(
         self,
@@ -21,14 +41,21 @@ class ResultReporter:
         models: List[ModelAdapter],
         metrics: List[Metric],
     ):
-        self.test_data = None  # to be set when report_all is called
-        self.models = models
-        self.metrics = metrics
-        self.model_predictions = None  # to be filled after predictions
-        self.metric_results = None  # to be filled after metric computation
+        self.test_data: List[AdapterInput] = []  # to be set when report_all is called
+        self.models: List[ModelAdapter] = []
+        self.metrics: List[Metric] = []
+        self.model_predictions = None
+        self.metric_results = None
+
+        if models is not None:
+            for model in models:
+                self.add_model_adapter(model)
+        if metrics is not None:
+            for metric in metrics:
+                self.add_metric(metric)
 
     def report_all(self, test_data: List[AdapterInput]):
-        self.test_data = test_data
+        ResultReporter.add_test_data(test_data)
         # self.metric_results = self._report_metrics()
         logger.info("Reporting all results...")
         # dont forget to remove predictions after testing
@@ -140,12 +167,55 @@ class ResultReporter:
                             gt_df=gt_df,
                             offset=offset,
                             model_name=model_name,
-                            test_series_id=id
+                            test_series_id=id,
                         )
 
                         figures.append((fig, model_name, id, offset))
 
         return figures
+
+    def add_test_data(self, test_data: Union[AdapterInput, List[AdapterInput]]):
+        """
+        Register one or more test datasets to the reporter.
+
+        Args:
+            test_data (AdapterInput or list of AdapterInput):
+                A single test dataset or a list of datasets to add.
+
+        Note:
+            Useful for incrementally adding test data after initialization,
+            e.g., when loading data lazily or in multiple batches.
+        """
+        if isinstance(test_data, AdapterInput):
+            self.test_data.append(test_data)
+        else:
+            self.test_data.extend(test_data)
+
+    def add_model_adapter(self, model_adapter: ModelAdapter):
+        """
+        Register a model adapter to the reporter.
+
+        Args:
+            model_adapter (ModelAdapter): The model to add.
+
+        Note:
+            Useful for incrementally adding models after initialization,
+            for example when models are created or loaded dynamically.
+        """
+        self.models.append(model_adapter)
+
+    def add_metric(self, metric: Metric):
+        """
+        Register a metric to the reporter.
+
+        Args:
+            metric (Metric): The metric to add.
+
+        Note:
+            Useful for incrementally adding metrics after initialization,
+            e.g., when metrics are defined or loaded later.
+        """
+        self.metrics.append(metric)
 
     def report_metrics(self):
         """Reporting metrics"""
