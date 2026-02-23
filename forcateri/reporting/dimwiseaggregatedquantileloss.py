@@ -31,6 +31,22 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
         )
         return super().__call__(ground_truth, prediction)
 
+
     def __str__(self):
-        axes_str = "_".join(map(str, self.axes))
-        return f"{self.__class__.__name__}_on_{axes_str}_using_quantile_metric"
+        """
+        Return a compact string identifier describing the aggregation.
+
+        Format:
+            DimwAgg_on_<axis>_using_<reduction>
+
+        where:
+            axes_abr : first char of each axis
+            reduction : name of the reduction function
+
+        Axis abbreviations:
+            T = time
+            O = offset
+            F = feature
+        """
+        axes_abr = "".join(str(a)[0] for a in self.axes)
+        return f"DimwAgg_{axes_abr}_quantile_metric_{self.reduction.__name__}"
