@@ -8,6 +8,7 @@ from .metric import Metric
 from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from ..data.timeseries import TimeSeries
+from .plotting import plot_metric, plot_quantile_predictions, plot_determ_predictions
 
 logger = logging.getLogger(__name__)
 
@@ -78,40 +79,10 @@ class ResultReporter:
 
         for model_name, model_metrics in metric_results.items():
             for metric_name, metric_list in model_metrics.items():
-                fig = go.Figure()
-                xlabel = "Index"
-
-                for i, df in enumerate(metric_list):
-                    if not isinstance(df, pd.DataFrame) or len(df) <= 1:
-                        continue
-
-                    # Determine x-axis
-                    if isinstance(df.index, pd.MultiIndex):
-                        level = 1 if len(df.index.names) > 1 else 0
-                        x = df.index.get_level_values(level)
-                        xlabel = df.index.names[level]
-                    else:
-                        x = df.index
-
-                    # Add traces
-                    for col in df.columns:
-                        fig.add_trace(
-                            go.Scatter(
-                                x=x,
-                                y=df[col],
-                                mode="lines",
-                                name=f"Test series id: {i} - {col}",
-                            )
-                        )
-
-                # Set layout
-                fig.update_layout(
-                    title=f"{metric_name} for {model_name}",
-                    xaxis_title=xlabel,
-                    yaxis_title="Metric Value",
-                    legend_title="Series",
-                    template="plotly_white",
-                    autosize=True,
+                fig = plot_metric(
+                    metric_name=metric_name,
+                    metric_list=metric_list,
+                    model_name=model_name,
                 )
 
                 figures.append((fig, model_name, metric_name))
@@ -122,15 +93,15 @@ class ResultReporter:
         logger.info("Plotting model predictions...")
         figures = []
 
-        for model, prediction_ts_list in self.model_predictions.items():
-            for i, (adapter_input, pred_ts) in enumerate(
+        for model_name, prediction_ts_list in self.model_predictions.items():
+            for id, (adapter_input, pred_ts) in enumerate(
                 zip(self.test_data, prediction_ts_list)
             ):
                 gt_ts = adapter_input.target
                 offsets = pred_ts.data.index.get_level_values("offset").unique()
 
                 logger.debug(
-                    f"Plotting predictions for model {model.__class__.__name__} on test series {i}."
+                    f"Plotting predictions for model {model_name} on test series {id}."
                 )
 
                 if pred_ts.representation == TimeSeries.QUANTILE_REP:
@@ -149,104 +120,30 @@ class ResultReporter:
                             ).astype(float)
 
                         quantiles = sorted(pred_df.columns.astype(float))
-                        lower_q, upper_q = quantiles[0], quantiles[-1]
-                        median_q = min(quantiles, key=lambda q: abs(q - 0.5))
-
-                        fig = go.Figure()
-
-                        # Lower quantile
-                        fig.add_trace(
-                            go.Scatter(
-                                x=pred_df.index,
-                                y=pred_df[lower_q],
-                                mode="lines",
-                                name=f"Lower q={lower_q:.2f}",
-                                line=dict(dash="dash", color="blue", width=1),
-                                opacity=0.7,
-                            )
+                        fig = plot_quantile_predictions(
+                            quantiles=quantiles,
+                            pred_ts=pred_df,
+                            gt_ts=gt_df,
+                            offset=offset,
+                            model_name=model_name,
+                            test_series_id=id,
                         )
 
-                        # Upper quantile
-                        fig.add_trace(
-                            go.Scatter(
-                                x=pred_df.index,
-                                y=pred_df[upper_q],
-                                mode="lines",
-                                name=f"Upper q={upper_q:.2f}",
-                                line=dict(dash="dash", color="blue", width=1),
-                                opacity=0.7,
-                            )
-                        )
-
-                        # Median quantile
-                        if median_q in pred_df.columns:
-                            fig.add_trace(
-                                go.Scatter(
-                                    x=pred_df.index,
-                                    y=pred_df[median_q],
-                                    mode="lines",
-                                    name=f"Median q={median_q:.2f}",
-                                    line=dict(color="blue", width=2),
-                                )
-                            )
-
-                        # Ground truth
-                        gt_df.columns = ["Ground Truth"]
-                        fig.add_trace(
-                            go.Scatter(
-                                x=gt_df.index,
-                                y=gt_df["Ground Truth"],
-                                mode="lines",
-                                name="Ground Truth",
-                                line=dict(color="black", dash="dash", width=2),
-                            )
-                        )
-
-                        # Layout
-                        fig.update_layout(
-                            title=f"{model} — Test Series {i} — Offset {offset}",
-                            xaxis_title="Time",
-                            yaxis_title="Value",
-                            legend_title="Series",
-                            template="plotly_white",
-                        )
-
-                        figures.append((fig, model, i, offset))
+                        figures.append((fig, model_name, id, offset))
 
                 elif pred_ts.representation == TimeSeries.DETERM_REP:
                     for offset in offsets:
                         pred_df = pred_ts.by_time(offset).copy()
                         gt_df = gt_ts.by_time(horizon=0).loc[pred_df.index]
-
-                        fig = go.Figure()
-                        fig.add_trace(
-                            go.Scatter(
-                                x=pred_df.index,
-                                y=pred_df.iloc[:, 0],
-                                mode="lines",
-                                name="Prediction",
-                                line=dict(color="blue", width=2),
-                            )
-                        )
-                        fig.add_trace(
-                            go.Scatter(
-                                x=gt_df.index,
-                                y=gt_df.iloc[:, 0],
-                                mode="lines",
-                                name="Ground Truth",
-                                line=dict(color="black", dash="dash", width=2),
-                            )
+                        fig = plot_determ_predictions(
+                            pred_df=pred_df,
+                            gt_df=gt_df,
+                            offset=offset,
+                            model_name=model_name,
+                            test_series_id=id
                         )
 
-                        fig.update_layout(
-                            title=f"{model} — Test Series {i} — Offset {offset}",
-                            xaxis_title="Time",
-                            yaxis_title="Value",
-                            legend_title="Series",
-                            template="plotly_white",
-                        )
-
-                        figures.append((fig, model, i, offset))
+                        figures.append((fig, model_name, id, offset))
 
         return figures
 
