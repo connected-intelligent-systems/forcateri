@@ -122,8 +122,8 @@ class ResultReporter:
                         quantiles = sorted(pred_df.columns.astype(float))
                         fig = plot_quantile_predictions(
                             quantiles=quantiles,
-                            pred_ts=pred_df,
-                            gt_ts=gt_df,
+                            pred_df=pred_df,
+                            gt_df=gt_df,
                             offset=offset,
                             model_name=model_name,
                             test_series_id=id,
