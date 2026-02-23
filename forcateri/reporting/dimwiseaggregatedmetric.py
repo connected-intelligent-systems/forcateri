@@ -119,5 +119,5 @@ class DimwiseAggregatedMetric(Metric):
             O = offset
             F = feature
         """
-        axes_abr = "".join(str(a)[0] for a in self.axes)
+        axes_abr = "".join(str(a)[0] for a in self.axes).upper()
         return f"DimwAgg_on_{axes_abr}_{self.reduction.__name__}"

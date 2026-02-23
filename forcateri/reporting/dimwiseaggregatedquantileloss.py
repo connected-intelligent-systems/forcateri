@@ -48,5 +48,5 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
             O = offset
             F = feature
         """
-        axes_abr = "".join(str(a)[0] for a in self.axes)
-        return f"DimwAgg_{axes_abr}_quantile_metric_{self.reduction.__name__}"
+        axes_abr = "".join(str(a)[0] for a in self.axes).upper()
+        return f"DimwAgg_{axes_abr}_quantile_metric"
