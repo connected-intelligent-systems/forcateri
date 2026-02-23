@@ -1,7 +1,7 @@
 import plotly.graph_objects as go
 from typing import List
 import pandas as pd
-from forcateri import TimeSeries
+
 
 
 def plot_metric(
