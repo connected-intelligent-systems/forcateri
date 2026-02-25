@@ -11,6 +11,24 @@ logger = logging.getLogger(__name__)
 
 
 class DimwiseAggregatedMetric(Metric):
+    """Applies a reduction function across a given set of axes.
+
+    Produces a data frame with one reduced value,
+    i.e., the return value of the reduction function,
+    for every index of every unreduced axis.
+    If reduced across all axes, the result
+    is the total reduced value insetad (usually a scalar).
+    If there is more than one unreduced axis
+    or the reduction function has a non-scalar output,
+    the resulting data frame has a MultiIndex.
+
+    For shorter and more informative string representations
+    we use the following convention for axis abbreviation:
+        T: time
+        O: offset
+        F: feature
+    """
+
     OFFSET, TIME = TimeSeries.ROW_INDEX_NAMES
     FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
@@ -25,7 +43,6 @@ class DimwiseAggregatedMetric(Metric):
         self.axes = axes
         self.reduction = reduction
         super().__init__(name or str(self))
-        
 
     @staticmethod
     def get_level_values(df, axis):
@@ -113,11 +130,6 @@ class DimwiseAggregatedMetric(Metric):
         where:
             axes_abr : first char of each axis
             reduction : name of the reduction function
-
-        Axis abbreviations:
-            T = time
-            O = offset
-            F = feature
         """
         axes_abr = "".join(str(a)[0] for a in self.axes).upper()
         return f"DimwAgg_on_{axes_abr}_{self.reduction.__name__}"
