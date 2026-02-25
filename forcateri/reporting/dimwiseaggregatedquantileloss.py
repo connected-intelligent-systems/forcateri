@@ -4,6 +4,7 @@ from .dimwiseaggregatedmetric import DimwiseAggregatedMetric
 from .metric_aggregations import quantile_metric
 from ..data.timeseries import TimeSeries
 from .metric import Metric
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -26,27 +27,17 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
             raise ValueError(
                 "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
             )
-        self.reduction = lambda gt, pred: quantile_metric(
-            gt, pred, prediction.quantiles
-        )
+        def quantile_loss(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
+            return quantile_metric(gt, pred, prediction.quantiles)
+
+        self.reduction = quantile_loss
         return super().__call__(ground_truth, prediction)
 
 
     def __str__(self):
         """
-        Return a compact string identifier describing the aggregation.
+        Return string representation.
 
-        Format:
-            DimwAgg_on_<axis>_using_<reduction>
-
-        where:
-            axes_abr : first char of each axis
-            reduction : name of the reduction function
-
-        Axis abbreviations:
-            T = time
-            O = offset
-            F = feature
+        See `DimwiseAggregatedMetric.__str__` for full details.
         """
-        axes_abr = "".join(str(a)[0] for a in self.axes).upper()
-        return f"DimwAgg_{axes_abr}_quantile_metric"
+        return super().__str__()
