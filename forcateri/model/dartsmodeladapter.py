@@ -23,12 +23,12 @@ class DartsModelAdapter(ModelAdapter, ABC):
     def __init__(
         self,
         freq: str = "60min",
-        model_name: Optional[str] = None,
+        name: Optional[str] = None,
         quantiles: Optional[List[float]] = None,
         is_likelihood: bool = False,
         num_samples: Optional[int] = None,
     ):
-        super().__init__(model_name=model_name)
+        super().__init__(name=name)
         self.freq = freq
         self.model = None
         self.quantiles = quantiles
@@ -118,10 +118,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
         - Validation covariates are automatically prefixed with 'val_' to match Darts API
           requirements.
         """
-        logger.debug(f"Starting model fit for {self.model_name}")
+        logger.debug(f"Starting model fit for {self.name}")
         target, known, observed, static = self.convert_input(train_data)
         self.target_col_names = [t.components[0] for t in target]
-        logger.debug(f"Converted training data to darts format for {self.model_name}")
+        logger.debug(f"Converted training data to darts format for {self.name}")
 
 
         future_covariates, past_covariates = self._get_covariate_args(known, observed)
@@ -133,7 +133,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             )
 
             logger.debug(
-                f"Converted validation data to darts format for {self.model_name}"
+                f"Converted validation data to darts format for {self.name}"
             )
             
             val_future_covariate, val_past_covariates = self._get_covariate_args(

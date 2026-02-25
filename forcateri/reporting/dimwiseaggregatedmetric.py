@@ -1,4 +1,4 @@
-from typing import Callable, List, Union
+from typing import Callable, List, Union, Optional
 import numpy as np
 import pandas as pd
 import logging
@@ -11,6 +11,24 @@ logger = logging.getLogger(__name__)
 
 
 class DimwiseAggregatedMetric(Metric):
+    """Applies a reduction function across a given set of axes.
+
+    Produces a data frame with one reduced value,
+    i.e., the return value of the reduction function,
+    for every index of every unreduced axis.
+    If reduced across all axes, the result
+    is the total reduced value insetad (usually a scalar).
+    If there is more than one unreduced axis
+    or the reduction function has a non-scalar output,
+    the resulting data frame has a MultiIndex.
+
+    For shorter and more informative string representations
+    we use the following convention for axis abbreviation:
+        T: time
+        O: offset
+        F: feature
+    """
+
     OFFSET, TIME = TimeSeries.ROW_INDEX_NAMES
     FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
@@ -20,9 +38,11 @@ class DimwiseAggregatedMetric(Metric):
         reduction: Callable[
             [np.ndarray, np.ndarray], Union[np.ndarray, float]
         ] = column_wise_mae,
+        name: Optional[str] = None,
     ):
         self.axes = axes
         self.reduction = reduction
+        super().__init__(name or str(self))
 
     @staticmethod
     def get_level_values(df, axis):
@@ -34,7 +54,7 @@ class DimwiseAggregatedMetric(Metric):
             raise ValueError("Axis not found neither in row nor in column index.")
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
-        
+
         ground_truth, prediction = Metric.align(ground_truth, prediction)
         flat_pred = prediction.data.copy().stack(level=0, future_stack=True)
         flat_gt = ground_truth.data.copy().stack(level=0, future_stack=True)
@@ -71,7 +91,9 @@ class DimwiseAggregatedMetric(Metric):
 
             reduced_index = pd.MultiIndex.from_product(
                 [
-                    DimwiseAggregatedMetric.get_level_values(ground_truth.data, axis).unique()
+                    DimwiseAggregatedMetric.get_level_values(
+                        ground_truth.data, axis
+                    ).unique()
                     for axis in group_by
                 ]
             )
@@ -99,7 +121,15 @@ class DimwiseAggregatedMetric(Metric):
             return reduced_df
 
     def __str__(self):
-        axes_str = "_".join(map(str, self.axes))
-        return (
-            f"{self.__class__.__name__}_on_{axes_str}_using_{self.reduction.__name__}"
-        )
+        """
+        Return a compact string identifier describing the aggregation.
+
+        Format:
+            DimwAgg_on_<axis>_using_<reduction>
+
+        where:
+            axes_abr : first char of each axis
+            reduction : name of the reduction function
+        """
+        axes_abr = "".join(str(a)[0] for a in self.axes).upper()
+        return f"DimwAgg_{axes_abr}_{self.reduction.__name__}"

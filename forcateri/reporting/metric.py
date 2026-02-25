@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Tuple
+from typing import Any, Tuple, Optional
 
 import pandas as pd
 
@@ -10,6 +10,14 @@ logger = logging.getLogger(__name__)
 
 class Metric:
 
+    def __init__(self, name: Optional[str]):
+        
+        self._name = name or self.__class__.__name__
+
+    @property
+    def name(self):
+        return self._name
+    
     @staticmethod
     def align( ground_truth: TimeSeries, prediction: TimeSeries) -> Tuple[TimeSeries, TimeSeries]:
         """Brings ground truth and prediction into a similar format.

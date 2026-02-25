@@ -1,9 +1,10 @@
-from typing import List
+from typing import List, Optional
 import logging
 from .dimwiseaggregatedmetric import DimwiseAggregatedMetric
 from .metric_aggregations import quantile_metric
 from ..data.timeseries import TimeSeries
 from .metric import Metric
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -12,8 +13,10 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
     def __init__(
         self,
         axes: List[str],
+        name: Optional[str] = None,
     ):
-        super().__init__(axes, None)
+        self.axes = axes
+        super().__init__(name=name or str(self), axes=axes)
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
 
@@ -24,9 +27,17 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
             raise ValueError(
                 "Predicted TimeSeries must have quantiles defined for DimwiseAggregatedQuantileLoss."
             )
-        self.reduction = lambda gt, pred: quantile_metric(gt, pred, prediction.quantiles)
+        def quantile_loss(gt: np.ndarray, pred: np.ndarray) -> np.ndarray:
+            return quantile_metric(gt, pred, prediction.quantiles)
+
+        self.reduction = quantile_loss
         return super().__call__(ground_truth, prediction)
 
+
     def __str__(self):
-        axes_str = "_".join(map(str, self.axes))
-        return f"{self.__class__.__name__}_on_{axes_str}_using_quantile_metric"
+        """
+        Return string representation.
+
+        See `DimwiseAggregatedMetric.__str__` for full details.
+        """
+        return super().__str__()
