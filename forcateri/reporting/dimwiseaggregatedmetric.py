@@ -132,4 +132,4 @@ class DimwiseAggregatedMetric(Metric):
             reduction : name of the reduction function
         """
         axes_abr = "".join(str(a)[0] for a in self.axes).upper()
-        return f"DimwAgg_on_{axes_abr}_{self.reduction.__name__}"
+        return f"DimwAgg_{axes_abr}_{self.reduction.__name__}"
