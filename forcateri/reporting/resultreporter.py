@@ -79,16 +79,19 @@ class ResultReporter:
                     zip(self.test_data, prediction_ts_list)
                 ):
                     logger.debug(
-                        f"Computing metrics for model {model_name.__class__.__name__} on test series {i}."
+                        f"Computing metrics for model {model_name} on test series {i}."
                     )
 
                     gt_ts = adapter_input.target
                     logger.debug(
-                        f"Computing metric {met.__class__.__name__} "
-                        f"for model {model_name.__class__.__name__} "
+                        f"Computing metric {str(met)} "
+                        f"for model {model_name} "
                         f"on test series {i}..."
                     )
                     reduced_df = met(gt_ts, pred_ts)
+                    reduced_df['series_id'] = i 
+                    reduced_df['model'] = model_name
+                    reduced_df['metric'] = met.reduction.__name__
                     model_results.append(reduced_df)
 
                 met_results[model_name] = model_results
@@ -224,7 +227,26 @@ class ResultReporter:
             self._make_predictions()
         self.metric_results = self._compute_metrics()
         # self._plot_metrics(self.metric_results)
-        print(self.metric_results)
+        all_results = []
+        for metric_name, model_results in self.metric_results.items():
+            for model_name, result_df_list in model_results.items():
+                result = pd.concat(result_df_list, axis=0).copy()
+                result["model"] = model_name
+                result["metric"] = metric_name
+                all_results.append(result)
+
+        final_df = pd.concat(all_results, axis=0).reset_index()
+
+        index_cols = [c for c in final_df.columns if c not in ["value", "model"]]
+
+        pivot_df = final_df.pivot_table(
+            index=index_cols,
+            columns="model",
+            values="value",
+            sort=False
+        )
+
+        return pivot_df
         # return self.metric_results
 
     def _make_predictions(self):
