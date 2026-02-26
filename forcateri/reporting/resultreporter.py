@@ -231,8 +231,8 @@ class ResultReporter:
         for metric_name, model_results in self.metric_results.items():
             for model_name, result_df_list in model_results.items():
                 result = pd.concat(result_df_list, axis=0).copy()
-                result["model"] = model_name
-                result["metric"] = metric_name
+                #result["model"] = model_name
+                #result["metric"] = metric_name
                 all_results.append(result)
 
         final_df = pd.concat(all_results, axis=0).reset_index()
