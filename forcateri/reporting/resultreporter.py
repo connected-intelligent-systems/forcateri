@@ -237,14 +237,15 @@ class ResultReporter:
 
         final_df = pd.concat(all_results, axis=0).reset_index()
 
-        index_cols = [c for c in final_df.columns if c not in ["value", "model"]]
+        #Here also, need to take into account quantile columns 
+        index_cols = [c for c in final_df.columns if c not in ["value", "model", 0.1, 0.6, 0.9]]
 
         pivot_df = final_df.pivot_table(
             index=index_cols,
             columns="model",
             values="value",
             sort=False
-        )
+        ).reset_index()
 
         return pivot_df
         # return self.metric_results
