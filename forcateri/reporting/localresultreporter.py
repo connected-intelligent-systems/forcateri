@@ -8,16 +8,16 @@ from functools import wraps
 from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from typing import List
-import logging 
+import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
+
 
 class LocalResultReporter(ResultReporter):
 
     def __init__(self, models: List[ModelAdapter], metrics: List[Metric]):
         super().__init__(models, metrics)
-
 
     def report_all(self, test_data):
 
@@ -28,7 +28,7 @@ class LocalResultReporter(ResultReporter):
             logger.info(f"Saved model {model.name} to {save_path}")
 
     def report_metrics(self):
-        pivot_df =super().report_metrics()
+        pivot_df = super().report_metrics()
         os.makedirs("reports", exist_ok=True)
         logger.info(f"Metric results: {self.metric_results}")
 
@@ -44,15 +44,15 @@ class LocalResultReporter(ResultReporter):
             pickle.dump(pivot_df, f)
 
     def _plot_metrics(self, metric_results=None, save_dir="plots"):
-        os.makedirs(save_dir,exist_ok=True)
+        os.makedirs(save_dir, exist_ok=True)
         figures = super()._plot_metrics(metric_results)
         for fig, model_name, metric_name in figures:
             fig.write_html(f"{save_dir}/{model_name}_{metric_name}.html")
 
-
     def _plot_predictions(self, save_dir="plots"):
-        os.makedirs(save_dir,exist_ok=True)
+        os.makedirs(save_dir, exist_ok=True)
         figures = super()._plot_predictions()
-        for fig, model_name,test_idx,offset in figures:
-            fig.write_html(f"{save_dir}/{model_name}_test{test_idx}_offset{offset}.html")
-            
+        for fig, model_name, test_idx, offset in figures:
+            fig.write_html(
+                f"{save_dir}/{model_name}_test{test_idx}_offset{offset}.html"
+            )

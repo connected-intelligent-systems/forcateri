@@ -89,9 +89,9 @@ class ResultReporter:
                         f"on test series {i}..."
                     )
                     reduced_df = met(gt_ts, pred_ts)
-                    reduced_df['series_id'] = i 
-                    reduced_df['model'] = model_name
-                    reduced_df['metric'] = met.reduction.__name__
+                    reduced_df["series_id"] = i
+                    reduced_df["model"] = model_name
+                    reduced_df["metric"] = met.reduction.__name__
                     model_results.append(reduced_df)
 
                 met_results[model_name] = model_results
@@ -231,20 +231,19 @@ class ResultReporter:
         for metric_name, model_results in self.metric_results.items():
             for model_name, result_df_list in model_results.items():
                 result = pd.concat(result_df_list, axis=0).copy()
-                #result["model"] = model_name
-                #result["metric"] = metric_name
+                # result["model"] = model_name
+                # result["metric"] = metric_name
                 all_results.append(result)
 
         final_df = pd.concat(all_results, axis=0).reset_index()
 
-        #Here also, need to take into account quantile columns 
-        index_cols = [c for c in final_df.columns if c not in ["value", "model", 0.1, 0.6, 0.9]]
+        # Here also, need to take into account quantile columns
+        index_cols = [
+            c for c in final_df.columns if c not in ["value", "model", 0.1, 0.6, 0.9]
+        ]
 
         pivot_df = final_df.pivot_table(
-            index=index_cols,
-            columns="model",
-            values="value",
-            sort=False
+            index=index_cols, columns="model", values="value", sort=False
         ).reset_index()
 
         return pivot_df

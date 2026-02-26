@@ -19,6 +19,7 @@ from clearml import Task
 
 logger = logging.getLogger(__name__)
 
+
 class ClearMLReporter(ResultReporter):
 
     def __init__(
@@ -39,9 +40,8 @@ class ClearMLReporter(ResultReporter):
         )
         for model in self.models:
             Task.current_task().upload_artifact(
-                name=model.model_name,
-                artifact_object=model
-        )
+                name=model.model_name, artifact_object=model
+            )
 
     def report_metrics(self):
         pivot_df = super().report_metrics()
@@ -49,9 +49,6 @@ class ClearMLReporter(ResultReporter):
             name="Metric results all", artifact_object=pivot_df
         )
 
-
-    
-    
     def _plot_metrics(self, metric_results=None):
 
         figures = super()._plot_metrics(metric_results)
@@ -59,17 +56,11 @@ class ClearMLReporter(ResultReporter):
         for fig, model_name, metric_name in figures:
             filename = f"{model_name}_{metric_name}.html"
             fig.write_html(filename)
-            Task.current_task().upload_artifact(
-                name=filename,
-                artifact_object=filename
-            )
-        
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
+
     def _plot_predictions(self):
         figures = super()._plot_predictions()
-        for fig, model_name,test_idx,offset in figures:
+        for fig, model_name, test_idx, offset in figures:
             filename = f"{model_name}_test{test_idx}_offset{offset}.html"
             fig.write_html(filename)
-            Task.current_task().upload_artifact(
-                name = filename,
-                artifact_object = filename
-            )
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
