@@ -1,11 +1,20 @@
 import numpy as np
 
+def column_wise_mape(ground_truth: np.ndarray, prediction: np.ndarray) -> np.ndarray:
+    err = np.abs((ground_truth - prediction) / ground_truth)
+
+    # avoid division by zero
+    err = np.where(ground_truth == 0, np.nan, err)
+
+    mape = np.mean(err, axis=0) * 100
+    return mape
+
 
 def column_wise_mae(ground_truth: np.ndarray, prediction: np.ndarray) -> np.ndarray:
     err = ground_truth - prediction
     sq_err = np.abs(err)
-    mse = sq_err.mean(axis=0)
-    return mse
+    mae = sq_err.mean(axis=0)
+    return mae
 
 
 def quantile_metric(
