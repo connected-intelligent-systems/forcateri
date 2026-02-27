@@ -6,8 +6,9 @@ def column_wise_mape(ground_truth: np.ndarray, prediction: np.ndarray) -> np.nda
     # avoid division by zero
     err = np.where(ground_truth == 0, np.nan, err)
 
-    mape = np.nanmean(err, axis=0) * 100
+    mape = np.mean(err, axis=0) * 100
     return mape
+
 
 def column_wise_mae(ground_truth: np.ndarray, prediction: np.ndarray) -> np.ndarray:
     err = ground_truth - prediction
