@@ -1,19 +1,37 @@
 import numpy as np
 
-def column_wise_mape(ground_truth: np.ndarray, prediction: np.ndarray) -> np.ndarray:
-    err = np.abs((ground_truth - prediction) / ground_truth)
-
-    # avoid division by zero
-    err = np.where(ground_truth == 0, np.nan, err)
-
+def column_wise_mape(
+    ground_truth: np.ndarray, 
+    prediction: np.ndarray, 
+    epsilon: float = 1e-8
+) -> np.ndarray:
+    
+    #Handling the cases where ground truth is 0.
+    denom = np.where(ground_truth == 0, epsilon, ground_truth)
+    err = np.abs((ground_truth - prediction) / denom)
+    
     mape = np.mean(err, axis=0) * 100
     return mape
 
+def column_wise_wmape(
+    ground_truth: np.ndarray, 
+    prediction: np.ndarray, 
+    epsilon: float = 1e-8
+) -> np.ndarray:
+    
+    numerator = np.sum(np.abs(ground_truth - prediction), axis=0)
+    denominator = np.sum(np.abs(ground_truth), axis=0)
+    
+    #the case where ground truth is zero.
+    denominator = np.where(denominator == 0, epsilon, denominator)
+    
+    return (numerator / denominator) * 100
+    
 
 def column_wise_mae(ground_truth: np.ndarray, prediction: np.ndarray) -> np.ndarray:
     err = ground_truth - prediction
-    sq_err = np.abs(err)
-    mae = sq_err.mean(axis=0)
+    abs_err = np.abs(err)
+    mae = abs_err.mean(axis=0)
     return mae
 
 
