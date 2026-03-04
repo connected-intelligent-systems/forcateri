@@ -239,11 +239,12 @@ class ResultReporter:
 
         # Here also, need to take into account quantile columns
         index_cols = [
-            c for c in final_df.columns if c not in ["value", "model", 0.1, 0.6, 0.9]
+            c for c in final_df.columns
+            if c not in ["value", "model"] and not isinstance(c, (int, float))
         ]
-
+        values_cols = [c for c in final_df.columns if c not in index_cols + ["model"]]
         pivot_df = final_df.pivot_table(
-            index=index_cols, columns="model", values="value", sort=False
+            index=index_cols, columns="model", values=values_cols, sort=False
         ).reset_index()
 
         return pivot_df
