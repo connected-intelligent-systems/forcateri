@@ -16,6 +16,7 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
         name: Optional[str] = None,
     ):
         self.axes = axes
+        self.reduction = None
         super().__init__(name=name or str(self), axes=axes)
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
