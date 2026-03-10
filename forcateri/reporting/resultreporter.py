@@ -1,6 +1,6 @@
 import logging
 from typing import List, Union
-
+from collections import defaultdict
 import pandas as pd
 import plotly.graph_objects as go
 
@@ -226,28 +226,40 @@ class ResultReporter:
             logger.debug("report metrics is called before predictions made.")
             self._make_predictions()
         self.metric_results = self._compute_metrics()
-        # self._plot_metrics(self.metric_results)
+        
         all_results = []
+
         for metric_name, model_results in self.metric_results.items():
             for model_name, result_df_list in model_results.items():
                 result = pd.concat(result_df_list, axis=0).copy()
-                # result["model"] = model_name
-                # result["metric"] = metric_name
+                result["model"] = model_name
+                result["metric"] = metric_name
                 all_results.append(result)
 
-        final_df = pd.concat(all_results, axis=0).reset_index()
+        
+        groups = defaultdict(list)
 
-        # Here also, need to take into account quantile columns
-        index_cols = [
-            c for c in final_df.columns
-            if c not in ["value", "model"] and not isinstance(c, (int, float))
-        ]
-        values_cols = [c for c in final_df.columns if c not in index_cols + ["model"]]
-        pivot_df = final_df.pivot_table(
-            index=index_cols, columns="model", values=values_cols, sort=False
-        ).reset_index()
+        for df in all_results:
+            # use a tuple of column names as the key
+            key = tuple(df.columns)
+            groups[key].append(df)
 
-        return pivot_df
+        final_dfs = []
+
+        for dfs in groups.values():
+            df_concat = pd.concat(dfs, axis=0)
+            
+            # reset any index to preserve all data as columns
+            df_concat = df_concat.reset_index()
+            
+            # reorder columns: metric/model/series_id first, everything else after
+            id_cols = ["metric", "model", "series_id"]
+            other_cols = [c for c in df_concat.columns if c not in id_cols]
+            df_concat = df_concat[id_cols + other_cols]
+            
+            final_dfs.append(df_concat)
+
+        return final_dfs
         # return self.metric_results
 
     def _make_predictions(self):

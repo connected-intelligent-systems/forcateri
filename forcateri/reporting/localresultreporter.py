@@ -28,13 +28,20 @@ class LocalResultReporter(ResultReporter):
             logger.info(f"Saved model {model.name} to {save_path}")
 
     def report_metrics(self):
-        pivot_df = super().report_metrics()
+        # call parent, which now returns a list of DataFrames
+        df_list = super().report_metrics()
+
         os.makedirs("reports", exist_ok=True)
         logger.info(f"Metric results: {self.metric_results}")
 
-        pivot_df.to_csv(f"reports/all_metrics_results.csv", index=False)
+        # save each DataFrame separately if there are multiple
+        for i, df in enumerate(df_list):
+            filename = f"reports/all_metrics_results_{i}.csv" if len(df_list) > 1 else "reports/all_metrics_results.csv"
+            df.to_csv(filename, index=False)
+
+        # optionally save a single pickle with the list
         with open("reports/local_metric_results.pkl", "wb") as f:
-            pickle.dump(pivot_df, f)
+            pickle.dump(df_list, f)
 
     def _save_metrics(self, pivot_df):
         os.makedirs("reports", exist_ok=True)
