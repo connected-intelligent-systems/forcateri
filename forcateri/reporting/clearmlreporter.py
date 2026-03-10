@@ -44,10 +44,11 @@ class ClearMLReporter(ResultReporter):
             )
 
     def report_metrics(self):
-        pivot_df = super().report_metrics()
-        Task.current_task().upload_artifact(
-            name="Metric results all", artifact_object=pivot_df
-        )
+        df_list = super().report_metrics()
+        for i, df in enumerate(df_list):
+            filename = f"metric_results_{i}.csv"
+            df.to_csv(filename)
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
     def _plot_metrics(self, metric_results=None):
 
