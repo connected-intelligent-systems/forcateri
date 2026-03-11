@@ -133,7 +133,7 @@ class DimwiseAggregatedMetric(Metric):
         """
         axes_abr = "".join(str(a)[0] for a in self.axes).upper()
         string_format = f"DimwAgg_{axes_abr}"
-        if self.reduction is not None and self.reduction.__name__ != "<lambda>":
+        if self.reduction is not None:
 
             string_format += f"_{self.reduction.__name__}"
 
