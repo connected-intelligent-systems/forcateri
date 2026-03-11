@@ -46,14 +46,14 @@ class ResultReporter:
         self.metrics: List[Metric] = []
         self.model_predictions = None
         self.metric_results = None
-
+        self.is_computed = False
         if models is not None:
             for model in models:
                 self.add_model_adapter(model)
         if metrics is not None:
             for metric in metrics:
                 self.add_metric(metric)
-        self.is_computed = False
+        
 
     def report_all(self, test_data: List[AdapterInput]):
         self.add_test_data(test_data)
