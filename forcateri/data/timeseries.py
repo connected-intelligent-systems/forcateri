@@ -718,7 +718,7 @@ class TimeSeries:
             If `t0` is not in the index.
         """
         try:
-            forecasts = self.data.loc[t0]
+            forecasts = self.data.xs(t0, level="time").copy()
             forecasts["time"] = forecasts.index + t0
             forecasts.set_index("time", inplace=True, drop=True)
             return forecasts
