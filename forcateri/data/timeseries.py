@@ -74,29 +74,29 @@ class TimeSeries:
         )
 
     @property
-    def feature(self):
+    def feature(self) -> List[str]:
         "The feature property"
         return list(
             self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
         )
 
     @property
-    def representation(self):
+    def representation(self) -> str:
         "The representation property"
         return self._representation
 
     @property
-    def offset(self):
+    def offset(self) -> pd.TimedeltaIndex:
         "The offset property"
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0]).unique()
 
     @property
-    def time(self):
+    def time(self) -> pd.DatetimeIndex:
         "The time property"
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).unique()
 
     @property
-    def is_deterministic(self):
+    def is_deterministic(self) -> bool:
         """
         Whether the series is deterministic.
         True if the feature representation is neither quantile nor sampled
@@ -104,7 +104,7 @@ class TimeSeries:
         return self._representation == TimeSeries.DETERM_REP
 
     @property
-    def is_offset(self):
+    def is_offset(self) -> bool:
         """
         Whether the series has offsets other than 0.
         """
@@ -120,6 +120,28 @@ class TimeSeries:
             The time zone of the time series or None if the series is timezone-naive.
         """
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).tz
+
+
+    @property
+    def canonical(self) -> pd.DataFrame:
+        """The canonical represantion of time series.
+        
+        Returns
+
+        _______
+        pd.DataFrame
+            Defined only for time series with a single offset or single time point.        
+        """
+        if self.representation in (TimeSeries.QUANTILE_REP,TimeSeries.SAMPLE_REP):
+            raise Exception("Canonical representation is not defined for quantile or sample representations.")
+        n_offsets = len(self.offset)
+        n_times = len(self.time)
+        if n_offsets == 1:
+            return self.by_time(self.offset[0])
+        if n_times == 1:
+            return self.by_horizon(self.time[0])
+        
+        raise Exception("Canonical representation is only defined for time series with a single offset or a single time point.")
 
     def _check_freq_format(self, index: pd.Index, freq: Optional[str] = None) -> None:
         """
