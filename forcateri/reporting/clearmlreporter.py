@@ -19,6 +19,7 @@ from clearml import Task
 
 logger = logging.getLogger(__name__)
 
+
 class ClearMLReporter(ResultReporter):
 
     def __init__(
@@ -39,27 +40,16 @@ class ClearMLReporter(ResultReporter):
         )
         for model in self.models:
             Task.current_task().upload_artifact(
-                name=model.model_name,
-                artifact_object=model
-        )
+                name=model.model_name, artifact_object=model
+            )
 
     def report_metrics(self):
-        super().report_metrics()
-        for metric_name, model_results in self.metric_results.items():
-            all_results = []
-            for model_name, result_df_list in model_results.items():
-                result = pd.concat(result_df_list, axis=0)
-                result["model"] = model_name
-                all_results.append(result)
+        df_list = super().report_metrics()
+        for i, df in enumerate(df_list):
+            filename = f"metric_results_{i}.csv"
+            df.to_csv(filename)
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
-            final_df = pd.concat(all_results, axis=0)
-            final_df.reset_index(inplace=True)
-
-            final_df.to_csv(f"{metric_name}_results.csv", index=False)
-            Task.current_task().upload_artifact(
-                name=f"{metric_name}_results.csv", artifact_object=f"{metric_name}_results.csv"
-            )
-    
     def _plot_metrics(self, metric_results=None):
 
         figures = super()._plot_metrics(metric_results)
@@ -67,17 +57,11 @@ class ClearMLReporter(ResultReporter):
         for fig, model_name, metric_name in figures:
             filename = f"{model_name}_{metric_name}.html"
             fig.write_html(filename)
-            Task.current_task().upload_artifact(
-                name=filename,
-                artifact_object=filename
-            )
-        
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
+
     def _plot_predictions(self):
         figures = super()._plot_predictions()
-        for fig, model_name,test_idx,offset in figures:
+        for fig, model_name, test_idx, offset in figures:
             filename = f"{model_name}_test{test_idx}_offset{offset}.html"
             fig.write_html(filename)
-            Task.current_task().upload_artifact(
-                name = filename,
-                artifact_object = filename
-            )
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
