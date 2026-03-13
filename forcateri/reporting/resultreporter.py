@@ -46,14 +46,17 @@ class ResultReporter:
         self.metrics: List[Metric] = []
         self.model_predictions = None
         self.metric_results = None
-        self.is_computed = False
+        self._results_computed = False
         if models is not None:
             for model in models:
                 self.add_model_adapter(model)
         if metrics is not None:
             for metric in metrics:
                 self.add_metric(metric)
-        
+
+    @property
+    def results_computed(self) -> bool:
+        return self._results_computed  
 
     def report_all(self, test_data: List[AdapterInput]):
         self.add_test_data(test_data)
@@ -98,7 +101,7 @@ class ResultReporter:
                 met_results[model_name] = model_results
 
             results[str(met)] = met_results
-        self.is_computed = True
+        self._results_computed = True
         return results
 
     def _plot_metrics(self, metric_results=None):
@@ -206,7 +209,7 @@ class ResultReporter:
             Useful for incrementally adding models after initialization,
             for example when models are created or loaded dynamically.
         """
-        if self.is_computed:
+        if self._results_computed:
             raise RuntimeError(
                 "Cannot add new model after computations have been done. "
                 "Please add all models before calling report_all or report_metrics."
@@ -224,7 +227,7 @@ class ResultReporter:
             Useful for incrementally adding metrics after initialization,
             e.g., when metrics are defined or loaded later.
         """
-        if self.is_computed:
+        if self._results_computed:
             raise RuntimeError(
                 "Cannot add new metric after computations have been done. "
                 "Please add all metrics before calling report_all or report_metrics."
