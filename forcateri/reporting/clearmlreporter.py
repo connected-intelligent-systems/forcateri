@@ -44,8 +44,8 @@ class ClearMLReporter(ResultReporter):
             )
 
     def report_metrics(self):
-        df_list = super().report_metrics()
-        for i, df in enumerate(df_list):
+        df_metrics = super().report_metrics()
+        for i, df in enumerate(df_metrics):
             filename = f"metric_results_{i}.csv"
             df.to_csv(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)

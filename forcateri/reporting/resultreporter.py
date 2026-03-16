@@ -37,11 +37,12 @@ class ResultReporter:
 
     def __init__(
         self,
-        # test_data: List[AdapterInput],
+        
         models: List[ModelAdapter],
         metrics: List[Metric],
+        test_data: List[AdapterInput] = None,
     ):
-        self.test_data: List[AdapterInput] = []  # to be set when report_all is called
+        self.test_data: List[AdapterInput] = test_data if test_data is not None else []
         self.models: List[ModelAdapter] = []
         self.metrics: List[Metric] = []
         self.model_predictions = None
@@ -63,7 +64,6 @@ class ResultReporter:
         # self.metric_results = self._report_metrics()
         logger.info("Reporting all results...")
         # dont forget to remove predictions after testing
-        self._make_predictions()
         self.report_metrics()
         self.report_plots()
         # self.report_debug_samples()
@@ -193,6 +193,12 @@ class ResultReporter:
             Useful for incrementally adding test data after initialization,
             e.g., when loading data lazily or in multiple batches.
         """
+        if self._results_computed:
+            raise RuntimeError(
+                "Cannot add new test data after computations have been done. "
+                "Please add all test data before calling report_all or report_metrics."
+            )
+        
         if isinstance(test_data, AdapterInput):
             self.test_data.append(test_data)
         else:
@@ -236,9 +242,9 @@ class ResultReporter:
 
     def report_metrics(self):
         """Reporting metrics"""
-        if self.model_predictions is None:
-            logger.debug("report metrics is called before predictions made.")
-            self._make_predictions()
+        
+        logger.debug("report metrics is called before predictions made.")
+        self._make_predictions()
         self.metric_results = self._compute_metrics()
         
         all_results = []
