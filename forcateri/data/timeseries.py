@@ -143,7 +143,7 @@ class TimeSeries:
             canonical_df = self.by_horizon(self.time[0])
         else:
             raise Exception(
-                "Canonical representation is only defined for time series with a single offset or a single time point."
+                "TimeSeries with multiple offsets and time steps have no cannonical representation"
             )
         canonical_df.columns = canonical_df.columns.droplevel(1)
         return canonical_df
