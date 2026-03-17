@@ -46,7 +46,7 @@ class ResultReporter:
         self.models: List[ModelAdapter] = []
         self.metrics: List[Metric] = []
         self.model_predictions = None
-        self.metric_results = None
+        self._metric_results = None
         self._results_computed = False
         if models is not None:
             for model in models:
@@ -61,10 +61,10 @@ class ResultReporter:
 
     @property
     def metric_results(self):
-        if self.metric_results is None:
-            self.metric_results = self._compute_metrics(self.predictions)
-        return self.metric_results
-    
+        if self._metric_results is None:
+            self._metric_results = self._compute_metrics(self.predictions)
+        return self._metric_results
+
     @property
     def predictions(self):
         if self.model_predictions is None:

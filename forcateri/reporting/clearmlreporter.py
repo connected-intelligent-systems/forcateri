@@ -59,8 +59,9 @@ class ClearMLReporter(ResultReporter):
             fig.write_html(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
-    def _plot_predictions(self):
-        figures = super()._plot_predictions()
+    def _plot_predictions(self, model_predictions=None):
+        model_predictions = self.predictions if model_predictions is None else model_predictions
+        figures = super()._plot_predictions(model_predictions)
         for fig, model_name, test_idx, offset in figures:
             filename = f"{model_name}_test{test_idx}_offset{offset}.html"
             fig.write_html(filename)

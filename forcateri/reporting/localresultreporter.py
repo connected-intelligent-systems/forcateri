@@ -54,9 +54,10 @@ class LocalResultReporter(ResultReporter):
         for fig, model_name, metric_name in figures:
             fig.write_html(f"{save_dir}/{model_name}_{metric_name}.html")
 
-    def _plot_predictions(self, save_dir="plots"):
+    def _plot_predictions(self,predictions=None, save_dir="plots"):
+        predictions = self.predictions if predictions is None else predictions
         os.makedirs(save_dir, exist_ok=True)
-        figures = super()._plot_predictions()
+        figures = super()._plot_predictions(predictions)
         for fig, model_name, test_idx, offset in figures:
             fig.write_html(
                 f"{save_dir}/{model_name}_test{test_idx}_offset{offset}.html"
