@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union, Dict
+from typing import Any, List, Tuple, Union, Dict
 from collections import defaultdict
 import pandas as pd
 import plotly.graph_objects as go
@@ -57,16 +57,60 @@ class ResultReporter:
 
     @property
     def results_computed(self) -> bool:
-        return self._results_computed  
+        """
+        Indicates whether the metric computation pipeline has been completed.
+
+        This flag is set to True only after `_compute_metrics` has successfully
+        finished processing all registered models and test datasets. It is
+        used to lock the reporter state, preventing the addition of new 
+        models, data, or metrics once results are finalized.
+
+        Returns:
+            bool: True if metrics have been computed, False otherwise.
+        """
+        return self._results_computed
 
     @property
-    def metric_results(self):
+    def metric_results(self) -> Dict[str, Dict[str, List[pd.DataFrame]]]:
+        """
+        Provides lazy access to computed metric results.
+
+        Accessing this property triggers the computation of metrics across all 
+        registered models and test datasets. If model predictions have not 
+        yet been generated, this will automatically trigger `self.predictions` 
+        first.
+
+        Returns:
+            Dict[str, Dict[str, List[pd.DataFrame]]]: A nested dictionary where:
+                - The outer key is the string representation of the Metric.
+                - The inner key is the Model name.
+                - The value is a list of DataFrames (one per test series).
+
+        Note:
+            The results are cached in `self._metric_results` after the first 
+            computation to avoid redundant processing.
+        """
         if self._metric_results is None:
             self._metric_results = self._compute_metrics(self.predictions)
         return self._metric_results
 
     @property
-    def predictions(self):
+    def predictions(self) -> Dict[str, List[TimeSeries]]:
+        """
+        Provides lazy access to model predictions.
+
+        If predictions have not been generated yet, this property triggers
+        `_make_predictions()`, which runs inference for all registered models 
+        across all test datasets. Subsequent accesses return the cached results.
+
+        Returns:
+            Dict[str, List[TimeSeries]]: A dictionary mapping model names to 
+                lists of TimeSeries objects (one per test data entry).
+
+        Note:
+            Accessing this property for the first time is a heavy operation 
+            proportional to the number of models and the size of the test data.
+        """
         if self.model_predictions is None:
             self.model_predictions = self._make_predictions()
         return self.model_predictions
@@ -74,11 +118,11 @@ class ResultReporter:
     def report_all(self, test_data: List[AdapterInput]):
         self.add_test_data(test_data)
         logger.info("Reporting all results...")
-        self.report_metrics()
-        self.report_plots()
+        metric_reports = self.report_metrics()
+        metric_figures, prediction_figures = self.report_plots()
         # self.report_debug_samples()
 
-    def _compute_metrics(self, model_predictions: Dict[str, List[TimeSeries]]):
+    def _compute_metrics(self, model_predictions: Dict[str, List[TimeSeries]]) -> Dict[str, Dict[str, List[pd.DataFrame]]]:
         logger.info("Computing merics...")
         results = {}
 
@@ -116,8 +160,6 @@ class ResultReporter:
 
     def _plot_metrics(self, metric_results=None):
         logger.info("Plotting metrics results...")
-        if metric_results is None:
-            metric_results = self.metric_results
 
         figures = []
 
@@ -203,7 +245,7 @@ class ResultReporter:
             Useful for incrementally adding test data after initialization,
             e.g., when loading data lazily or in multiple batches.
         """
-        if self._results_computed:
+        if self.results_computed:
             raise RuntimeError(
                 "Cannot add new test data after computations have been done. "
                 "Please add all test data before calling report_all or report_metrics."
@@ -225,7 +267,7 @@ class ResultReporter:
             Useful for incrementally adding models after initialization,
             for example when models are created or loaded dynamically.
         """
-        if self._results_computed:
+        if self.results_computed:
             raise RuntimeError(
                 "Cannot add new model after computations have been done. "
                 "Please add all models before calling report_all or report_metrics."
@@ -243,15 +285,34 @@ class ResultReporter:
             Useful for incrementally adding metrics after initialization,
             e.g., when metrics are defined or loaded later.
         """
-        if self._results_computed:
+        if self.results_computed:
             raise RuntimeError(
                 "Cannot add new metric after computations have been done. "
                 "Please add all metrics before calling report_all or report_metrics."
             )
         self.metrics.append(metric)
 
-    def report_metrics(self):
-        """Reporting metrics"""
+    def report_metrics(self) -> List[pd.DataFrame]:
+        """
+        Computes, aggregates, and formats metric results into digestible DataFrames.
+
+        This method triggers the computation of model predictions and metrics 
+        (if not already cached) and then flattens the nested results into 
+        consolidated pandas DataFrames, grouped by their column structure.
+
+        The grouping logic ensures that metrics with different output shapes 
+        (e.g., scalar metrics vs. vector-based metrics) are returned as 
+        separate DataFrames to maintain tabular integrity.
+
+        Returns:
+            List[pd.DataFrame]: A list of DataFrames where each DataFrame 
+                contains results for a specific set of metrics. Each DataFrame 
+                includes 'metric', 'model', and 'series_id' as leading columns.
+
+        Note:
+            Accessing this method will trigger `self.metric_results`, which in 
+            turn triggers `self.predictions` if they have not been computed yet.
+        """
         
         logger.debug("report metrics is called before predictions made.")
         
@@ -290,7 +351,7 @@ class ResultReporter:
             final_dfs.append(df_concat)
 
         return final_dfs
-        # return self.metric_results
+        
 
     def _make_predictions(self):
         logger.debug("Making predictions...")
@@ -307,13 +368,37 @@ class ResultReporter:
 
         return model_predictions
 
-    def report_plots(self):
-        """Reporting plots"""
+    def report_plots(self) -> Tuple[
+        List[Tuple[go.Figure, str, str]], 
+        List[Tuple[go.Figure, str, int, Any]]
+    ]:
+        """
+        Generates and returns visualization plots for metrics and predictions.
+
+        This method acts as the primary visualization interface, triggering 
+        the full computation pipeline (inference and metric calculation) 
+        if results are not already cached. It produces two categories 
+        of plots:
+        1. Metric comparisons across models.
+        2. Time-series visualizations comparing predictions against 
+           ground truth (handling both deterministic and quantile formats).
+
+        Returns:
+        List[Tuple[go.Figure, str, str]], 
+        List[Tuple[go.Figure, str, int, Any]]: A list of tuples containing 
+                Plotly Figure objects and their associated metadata 
+                (e.g., model_name, metric_name, or series_id).
+
+        Note:
+            Accessing this method triggers `self.metric_results`, which 
+            in turn triggers `self.predictions`. Heavy computations will 
+            only occur during the first call.
+        """
         predictions = self.predictions
         metric_results = self.metric_results
-        self._plot_metrics(metric_results)
-        self._plot_predictions(predictions)
-        # logger.error("Function _report_plots not implemented.")
+        metric_plots = self._plot_metrics(metric_results)
+        prediction_plots = self._plot_predictions(predictions)
+        return metric_plots, prediction_plots
 
     def _persist_artifacts(self):
         logger.error("Function _persist_artifacts not implemented.")
