@@ -159,6 +159,9 @@ class ResultReporter:
         return results
 
     def _plot_metrics(self, metric_results=None):
+        '''
+        Note that in child classes returned figure objects are saved or uploaded to clearml
+        '''
         logger.info("Plotting metrics results...")
 
         figures = []
@@ -176,6 +179,9 @@ class ResultReporter:
         return figures
 
     def _plot_predictions(self,model_predictions: Dict[str, List[TimeSeries]]):
+        '''
+        Note that in child classes returned figure objects are saved or uploaded to clearml
+        '''
         logger.info("Plotting model predictions...")
         figures = []
 
@@ -312,6 +318,7 @@ class ResultReporter:
         Note:
             Accessing this method will trigger `self.metric_results`, which in 
             turn triggers `self.predictions` if they have not been computed yet.
+            In child classes report results are either saved to disk or uploaded to ClearML, so the returned DataFrames are not necessarily used.
         """
         
         logger.debug("report metrics is called before predictions made.")
