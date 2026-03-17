@@ -1,5 +1,5 @@
 import logging
-from typing import List, Union
+from typing import List, Union, Dict
 from collections import defaultdict
 import pandas as pd
 import plotly.graph_objects as go
@@ -59,16 +59,26 @@ class ResultReporter:
     def results_computed(self) -> bool:
         return self._results_computed  
 
+    @property
+    def metric_results(self):
+        if self.metric_results is None:
+            self.metric_results = self._compute_metrics(self.predictions)
+        return self.metric_results
+    
+    @property
+    def predictions(self):
+        if self.model_predictions is None:
+            self.model_predictions = self._make_predictions()
+        return self.model_predictions
+
     def report_all(self, test_data: List[AdapterInput]):
         self.add_test_data(test_data)
-        # self.metric_results = self._report_metrics()
         logger.info("Reporting all results...")
-        # dont forget to remove predictions after testing
         self.report_metrics()
         self.report_plots()
         # self.report_debug_samples()
 
-    def _compute_metrics(self):
+    def _compute_metrics(self, model_predictions: Dict[str, List[TimeSeries]]):
         logger.info("Computing merics...")
         results = {}
 
@@ -76,7 +86,7 @@ class ResultReporter:
         for met in self.metrics:
             met_results = {}
 
-            for model_name, prediction_ts_list in self.model_predictions.items():
+            for model_name, prediction_ts_list in model_predictions.items():
                 model_results = []
                 # loop over test data & predictions
                 for i, (adapter_input, pred_ts) in enumerate(
@@ -123,11 +133,11 @@ class ResultReporter:
 
         return figures
 
-    def _plot_predictions(self):
+    def _plot_predictions(self,model_predictions: Dict[str, List[TimeSeries]]):
         logger.info("Plotting model predictions...")
         figures = []
 
-        for model_name, prediction_ts_list in self.model_predictions.items():
+        for model_name, prediction_ts_list in model_predictions.items():
             for id, (adapter_input, pred_ts) in enumerate(
                 zip(self.test_data, prediction_ts_list)
             ):
@@ -244,12 +254,12 @@ class ResultReporter:
         """Reporting metrics"""
         
         logger.debug("report metrics is called before predictions made.")
-        self._make_predictions()
-        self.metric_results = self._compute_metrics()
+        
+        metric_results = self.metric_results
         
         all_results = []
 
-        for metric_name, model_results in self.metric_results.items():
+        for metric_name, model_results in metric_results.items():
             for model_name, result_df_list in model_results.items():
                 result = pd.concat(result_df_list, axis=0).copy()
                 result["model"] = model_name
@@ -284,7 +294,7 @@ class ResultReporter:
 
     def _make_predictions(self):
         logger.debug("Making predictions...")
-        self.model_predictions = {}
+        model_predictions = {}
         for model in self.models:
             logger.debug(
                 f"Applying model {model.__class__.__name__} to the test data..."
@@ -293,16 +303,16 @@ class ResultReporter:
             logger.debug(
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
-            self.model_predictions[model.name] = predictions_ts_list
+            model_predictions[model.name] = predictions_ts_list
+
+        return model_predictions
 
     def report_plots(self):
         """Reporting plots"""
-        if self.model_predictions is None:
-            self._make_predictions()
-        if self.metric_results is None:
-            self.metric_results = self._compute_metrics()
-        self._plot_metrics(self.metric_results)
-        self._plot_predictions()
+        predictions = self.predictions
+        metric_results = self.metric_results
+        self._plot_metrics(metric_results)
+        self._plot_predictions(predictions)
         # logger.error("Function _report_plots not implemented.")
 
     def _persist_artifacts(self):
