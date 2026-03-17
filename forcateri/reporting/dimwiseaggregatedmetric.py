@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class DimwiseAggregatedMetric(Metric):
-    OFFSET, TIME_STEP = TimeSeries.ROW_INDEX_NAMES
+    OFFSET, TIME = TimeSeries.ROW_INDEX_NAMES
     FEATURE, REPRESENTATION = TimeSeries.COL_INDEX_NAMES
 
     def __init__(
@@ -33,15 +33,17 @@ class DimwiseAggregatedMetric(Metric):
         else:
             raise ValueError("Axis not found neither in row nor in column index.")
 
-    def __call__(self, ts_gt: TimeSeries, ts_pred: TimeSeries):
-        flat_pred = ts_pred.data.copy().stack(level=0, future_stack=True)
-        flat_gt = ts_gt.data.copy().stack(level=0, future_stack=True)
+    def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
+        
+        ground_truth, prediction = Metric.align(ground_truth, prediction)
+        flat_pred = prediction.data.copy().stack(level=0, future_stack=True)
+        flat_gt = ground_truth.data.copy().stack(level=0, future_stack=True)
         logger.info(f"Reducing axes {self.axes}")
         group_by = sorted(
             list(
                 {
                     DimwiseAggregatedMetric.OFFSET,
-                    DimwiseAggregatedMetric.TIME_STEP,
+                    DimwiseAggregatedMetric.TIME,
                     DimwiseAggregatedMetric.FEATURE,
                     DimwiseAggregatedMetric.REPRESENTATION,
                 }
@@ -69,7 +71,7 @@ class DimwiseAggregatedMetric(Metric):
 
             reduced_index = pd.MultiIndex.from_product(
                 [
-                    DimwiseAggregatedMetric.get_level_values(ts_gt.data, axis).unique()
+                    DimwiseAggregatedMetric.get_level_values(ground_truth.data, axis).unique()
                     for axis in group_by
                 ]
             )

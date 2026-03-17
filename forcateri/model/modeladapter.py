@@ -18,14 +18,17 @@ class ModelAdapter(ABC):
     def fit(
         self,
         train_data: List[AdapterInput],
-        val_data: Optional[List[AdapterInput]],
-        **kwargs,
+        val_data: Optional[List[AdapterInput]]=None,
     ):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
         )
 
-    def predict(self, data: List[AdapterInput], rolling_window: bool):
+    def predict(
+        self,
+        data: List[AdapterInput],
+        use_rolling_window: bool = True,
+    ):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
         )
@@ -33,8 +36,7 @@ class ModelAdapter(ABC):
     def tune(
         self,
         train_data: List[AdapterInput],
-        val_data: Optional[List[AdapterInput]],
-        **kwargs,
+        val_data: Optional[List[AdapterInput]] = None,
     ):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
