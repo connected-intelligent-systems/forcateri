@@ -19,11 +19,11 @@ class Pipeline:
         self,
         data_provider: DataProvider,
         model_adapter: Union[ModelAdapter, List[ModelAdapter]],
-        reporter: Union[ResultReporter, List[ResultReporter]],
+        result_reporter: Union[ResultReporter, List[ResultReporter]],
     ):
         self.data_provider = data_provider
         self.model_adapters = model_adapter if isinstance(model_adapter, list) else [model_adapter]
-        self.reporters = reporter if isinstance(reporter, list) else [reporter]
+        self.result_reporter = result_reporter if isinstance(result_reporter, list) else [result_reporter]
         
     def run(self):
         """
@@ -46,7 +46,7 @@ class Pipeline:
 
         # Evaluate and report results
         # results = []
-        for reporter in self.reporters:
+        for reporter in self.result_reporter:
             reporter.report_all(test_data=test_set)
             # results.append(res)
         # return results

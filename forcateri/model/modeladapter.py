@@ -11,10 +11,14 @@ logger = logging.getLogger(__name__)
 
 class ModelAdapter(ABC):
 
-    def __init__(self, model_name: Optional[str] = None):
+    def __init__(self, name: Optional[str] = None):
         # default to the class name
-        self.model_name = model_name or self.__class__.__name__
+        self._name = name or self.__class__.__name__
 
+    @property
+    def name(self):
+        return self._name
+    
     def fit(
         self,
         train_data: List[AdapterInput],
