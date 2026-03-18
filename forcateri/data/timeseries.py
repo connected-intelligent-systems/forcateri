@@ -74,29 +74,29 @@ class TimeSeries:
         )
 
     @property
-    def feature(self):
+    def feature(self) -> List[str]:
         "The feature property"
         return list(
             self.data.columns.get_level_values(TimeSeries.COL_INDEX_NAMES[0]).unique()
         )
 
     @property
-    def representation(self):
+    def representation(self) -> str:
         "The representation property"
         return self._representation
 
     @property
-    def offset(self):
+    def offset(self) -> pd.TimedeltaIndex:
         "The offset property"
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[0]).unique()
 
     @property
-    def time(self):
+    def time(self) -> pd.DatetimeIndex:
         "The time property"
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).unique()
 
     @property
-    def is_deterministic(self):
+    def is_deterministic(self) -> bool:
         """
         Whether the series is deterministic.
         True if the feature representation is neither quantile nor sampled
@@ -104,7 +104,7 @@ class TimeSeries:
         return self._representation == TimeSeries.DETERM_REP
 
     @property
-    def is_offset(self):
+    def is_offset(self) -> bool:
         """
         Whether the series has offsets other than 0.
         """
@@ -120,6 +120,33 @@ class TimeSeries:
             The time zone of the time series or None if the series is timezone-naive.
         """
         return self.data.index.get_level_values(TimeSeries.ROW_INDEX_NAMES[1]).tz
+
+    @property
+    def canonical(self) -> pd.DataFrame:
+        """The canonical represantion of time series.
+
+        Returns
+
+        _______
+        pd.DataFrame
+            Defined only for time series with a single offset or single time point.
+        """
+        if self.representation in (TimeSeries.QUANTILE_REP, TimeSeries.SAMPLE_REP):
+            raise Exception(
+                "Canonical representation is not defined for quantile or sample representations."
+            )
+        n_offsets = len(self.offset)
+        n_times = len(self.time)
+        if n_offsets == 1:
+            canonical_df = self.by_time(self.offset[0])
+        elif n_times == 1:
+            canonical_df = self.by_horizon(self.time[0])
+        else:
+            raise Exception(
+                "TimeSeries with multiple offsets and time steps have no cannonical representation"
+            )
+        canonical_df.columns = canonical_df.columns.droplevel(1)
+        return canonical_df
 
     def _check_freq_format(self, index: pd.Index, freq: Optional[str] = None) -> None:
         """
@@ -310,7 +337,7 @@ class TimeSeries:
                 df.index.get_level_values(0), pd.DatetimeIndex
             ) or isinstance(df.index.get_level_values(1), pd.DatetimeIndex)
             if not isinstance(df.columns, pd.MultiIndex):
-                #If not multiindex datetimeindex is enough, if no datetimeindex then it is not compatible
+                # If not multiindex datetimeindex is enough, if no datetimeindex then it is not compatible
                 return has_datetime
             else:
                 has_datetime = isinstance(
@@ -361,8 +388,7 @@ class TimeSeries:
                 )
                 df.columns.names = TimeSeries.COL_INDEX_NAMES
                 df.columns = pd.MultiIndex.from_product(
-                    [df.columns.get_level_values(0), ["value"]],
-                    names=df.columns.names
+                    [df.columns.get_level_values(0), ["value"]], names=df.columns.names
                 )
 
         elif self.representation == TimeSeries.QUANTILE_REP:
@@ -445,7 +471,9 @@ class TimeSeries:
                     names=TimeSeries.ROW_INDEX_NAMES,
                 )
             except Exception as e:
-                logger.error(f"Failed to cast the index indicating 'time' to a datetime format: {e}")
+                logger.error(
+                    f"Failed to cast the index indicating 'time' to a datetime format: {e}"
+                )
                 raise ValueError(
                     f"Failed to cast the index indicating 'time' to a datetime format: {e}"
                 )
@@ -672,9 +700,7 @@ class TimeSeries:
             return self.data.xs(horizon, level="offset")
 
         # Otherwise, reorder index to make time the outer index
-        return self.data.swaplevel("offset", "time").sort_index(
-            level="time"
-        )
+        return self.data.swaplevel("offset", "time").sort_index(level="time")
 
     def by_horizon(self, t0):
         """
@@ -696,7 +722,7 @@ class TimeSeries:
             If `t0` is not in the index.
         """
         try:
-            forecasts = self.data.loc[t0]
+            forecasts = self.data.xs(t0, level="time").copy()
             forecasts["time"] = forecasts.index + t0
             forecasts.set_index("time", inplace=True, drop=True)
             return forecasts
