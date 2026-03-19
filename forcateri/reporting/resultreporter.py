@@ -125,7 +125,8 @@ class ResultReporter:
         self.compute_metrics()
         self.report_metrics()
         
-        self.report_plots()
+        self.plot_predictions()
+        self.plot_metrics()
         self.compute_debug_samples()
         self.report_debug_samples()
 
@@ -168,7 +169,7 @@ class ResultReporter:
         self._metric_results = results
         return self
 
-    def _plot_metrics(self):
+    def plot_metrics(self):
         '''
         Note that in child classes returned figure objects are saved or uploaded to clearml
         '''
@@ -188,7 +189,7 @@ class ResultReporter:
 
         return figures
 
-    def _plot_predictions(self):
+    def plot_predictions(self):
         '''
         Note that in child classes returned figure objects are saved or uploaded to clearml
         '''
@@ -389,37 +390,37 @@ class ResultReporter:
         logger.info("Reporting model predictions...")
         return self.predictions
 
-    def report_plots(self) -> Tuple[
-        List[Tuple[go.Figure, str, str]], 
-        List[Tuple[go.Figure, str, int, Any]]
-    ]:
-        """
-        Generates and returns visualization plots for metrics and predictions.
+    # def report_plots(self) -> Tuple[
+    #     List[Tuple[go.Figure, str, str]], 
+    #     List[Tuple[go.Figure, str, int, Any]]
+    # ]:
+    #     """
+    #     Generates and returns visualization plots for metrics and predictions.
 
-        This method acts as the primary visualization interface, triggering 
-        the full computation pipeline (inference and metric calculation) 
-        if results are not already cached. It produces two categories 
-        of plots:
-        1. Metric comparisons across models.
-        2. Time-series visualizations comparing predictions against 
-           ground truth (handling both deterministic and quantile formats).
+    #     This method acts as the primary visualization interface, triggering 
+    #     the full computation pipeline (inference and metric calculation) 
+    #     if results are not already cached. It produces two categories 
+    #     of plots:
+    #     1. Metric comparisons across models.
+    #     2. Time-series visualizations comparing predictions against 
+    #        ground truth (handling both deterministic and quantile formats).
 
-        Returns:
-        List[Tuple[go.Figure, str, str]], 
-        List[Tuple[go.Figure, str, int, Any]]: A list of tuples containing 
-                Plotly Figure objects and their associated metadata 
-                (e.g., model_name, metric_name, or series_id).
+    #     Returns:
+    #     List[Tuple[go.Figure, str, str]], 
+    #     List[Tuple[go.Figure, str, int, Any]]: A list of tuples containing 
+    #             Plotly Figure objects and their associated metadata 
+    #             (e.g., model_name, metric_name, or series_id).
 
-        Note:
-            Accessing this method triggers `self.metric_results`, which 
-            in turn triggers `self.predictions`. Heavy computations will 
-            only occur during the first call.
-        """
+    #     Note:
+    #         Accessing this method triggers `self.metric_results`, which 
+    #         in turn triggers `self.predictions`. Heavy computations will 
+    #         only occur during the first call.
+    #     """
         
         
-        metric_plots = self._plot_metrics()
-        prediction_plots = self._plot_predictions()
-        return metric_plots, prediction_plots
+    #     metric_plots = self._plot_metrics()
+    #     prediction_plots = self._plot_predictions()
+    #     return metric_plots, prediction_plots
 
     def _persist_artifacts(self):
         logger.error("Function _persist_artifacts not implemented.")

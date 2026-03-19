@@ -41,23 +41,16 @@ class LocalResultReporter(ResultReporter):
 
 
 
-    def _save_metrics(self, pivot_df):
-        os.makedirs("reports", exist_ok=True)
-
-        pivot_df.to_csv("reports/all_metrics_results.csv", index=False)
-        with open("reports/local_metric_results.pkl", "wb") as f:
-            pickle.dump(pivot_df, f)
-
-    def _plot_metrics(self, save_dir="plots"):
+    def plot_metrics(self, save_dir="plots"):
         os.makedirs(save_dir, exist_ok=True)
-        figures = super()._plot_metrics()
+        figures = super().plot_metrics()
         for fig, model_name, metric_name in figures:
             fig.write_html(f"{save_dir}/{model_name}_{metric_name}.html")
 
-    def _plot_predictions(self, save_dir="plots"):
+    def plot_predictions(self, save_dir="plots"):
         
         os.makedirs(save_dir, exist_ok=True)
-        figures = super()._plot_predictions()
+        figures = super().plot_predictions()
         for fig, model_name, test_idx, offset in figures:
             fig.write_html(
                 f"{save_dir}/{model_name}_test{test_idx}_offset{offset}.html"
