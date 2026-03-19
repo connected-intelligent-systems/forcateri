@@ -45,9 +45,10 @@ class ResultReporter:
         self.test_data: List[AdapterInput] = test_data if test_data is not None else []
         self.models: List[ModelAdapter] = []
         self.metrics: List[Metric] = []
-        self.model_predictions = None
+        self._model_predictions = None
         self._metric_results = None
         self._results_computed = False
+        self._metric_reports = None
         if models is not None:
             for model in models:
                 self.add_model_adapter(model)
@@ -91,7 +92,7 @@ class ResultReporter:
             computation to avoid redundant processing.
         """
         if self._metric_results is None:
-            self._metric_results = self._compute_metrics(self.predictions)
+            self.compute_metrics()
         return self._metric_results
 
     @property
@@ -111,18 +112,26 @@ class ResultReporter:
             Accessing this property for the first time is a heavy operation 
             proportional to the number of models and the size of the test data.
         """
-        if self.model_predictions is None:
-            self.model_predictions = self._make_predictions()
-        return self.model_predictions
+        if self._model_predictions is None:
+            self.compute_predictions()
+        return self._model_predictions
 
-    def report_all(self, test_data: List[AdapterInput]):
-        self.add_test_data(test_data)
+    def report_all(self):
+        
         logger.info("Reporting all results...")
-        metric_reports = self.report_metrics()
-        metric_figures, prediction_figures = self.report_plots()
+        self.compute_predictions()
+        self.report_predictions()
+
+        self.compute_metrics()
+        self.report_metrics()
+        
+        self.report_plots()
+        self.compute_debug_samples()
+        self.report_debug_samples()
+
         # self.report_debug_samples()
 
-    def _compute_metrics(self, model_predictions: Dict[str, List[TimeSeries]]) -> Dict[str, Dict[str, List[pd.DataFrame]]]:
+    def compute_metrics(self):
         logger.info("Computing merics...")
         results = {}
 
@@ -130,7 +139,7 @@ class ResultReporter:
         for met in self.metrics:
             met_results = {}
 
-            for model_name, prediction_ts_list in model_predictions.items():
+            for model_name, prediction_ts_list in self.predictions.items():
                 model_results = []
                 # loop over test data & predictions
                 for i, (adapter_input, pred_ts) in enumerate(
@@ -156,9 +165,10 @@ class ResultReporter:
 
             results[str(met)] = met_results
         self._results_computed = True
-        return results
+        self._metric_results = results
+        return self
 
-    def _plot_metrics(self, metric_results=None):
+    def _plot_metrics(self):
         '''
         Note that in child classes returned figure objects are saved or uploaded to clearml
         '''
@@ -166,7 +176,7 @@ class ResultReporter:
 
         figures = []
 
-        for model_name, model_metrics in metric_results.items():
+        for model_name, model_metrics in self.metric_results.items():
             for metric_name, metric_list in model_metrics.items():
                 fig = plot_metric(
                     metric_name=metric_name,
@@ -178,14 +188,14 @@ class ResultReporter:
 
         return figures
 
-    def _plot_predictions(self,model_predictions: Dict[str, List[TimeSeries]]):
+    def _plot_predictions(self):
         '''
         Note that in child classes returned figure objects are saved or uploaded to clearml
         '''
         logger.info("Plotting model predictions...")
         figures = []
 
-        for model_name, prediction_ts_list in model_predictions.items():
+        for model_name, prediction_ts_list in self.predictions.items():
             for id, (adapter_input, pred_ts) in enumerate(
                 zip(self.test_data, prediction_ts_list)
             ):
@@ -323,11 +333,11 @@ class ResultReporter:
         
         logger.debug("report metrics is called before predictions made.")
         
-        metric_results = self.metric_results
+        
         
         all_results = []
 
-        for metric_name, model_results in metric_results.items():
+        for metric_name, model_results in self.metric_results.items():
             for model_name, result_df_list in model_results.items():
                 result = pd.concat(result_df_list, axis=0).copy()
                 result["model"] = model_name
@@ -360,7 +370,7 @@ class ResultReporter:
         return final_dfs
         
 
-    def _make_predictions(self):
+    def compute_predictions(self):
         logger.debug("Making predictions...")
         model_predictions = {}
         for model in self.models:
@@ -372,8 +382,12 @@ class ResultReporter:
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
             model_predictions[model.name] = predictions_ts_list
-
-        return model_predictions
+        self._model_predictions = model_predictions
+        return self
+    
+    def report_predictions(self):
+        logger.info("Reporting model predictions...")
+        return self.predictions
 
     def report_plots(self) -> Tuple[
         List[Tuple[go.Figure, str, str]], 
@@ -401,10 +415,10 @@ class ResultReporter:
             in turn triggers `self.predictions`. Heavy computations will 
             only occur during the first call.
         """
-        predictions = self.predictions
-        metric_results = self.metric_results
-        metric_plots = self._plot_metrics(metric_results)
-        prediction_plots = self._plot_predictions(predictions)
+        
+        
+        metric_plots = self._plot_metrics()
+        prediction_plots = self._plot_predictions()
         return metric_plots, prediction_plots
 
     def _persist_artifacts(self):
@@ -415,3 +429,6 @@ class ResultReporter:
 
     def report_debug_samples(self):
         logger.error("Function _report_debug_samples not implemented.")
+
+    def compute_debug_samples(self):
+        logger.error("Function _compute_debug_samples not implemented.")
