@@ -50,18 +50,18 @@ class ClearMLReporter(ResultReporter):
             df.to_csv(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
-    def _plot_metrics(self, metric_results=None):
+    def _plot_metrics(self, ):
 
-        figures = super()._plot_metrics(metric_results)
+        figures = super()._plot_metrics()
 
         for fig, model_name, metric_name in figures:
             filename = f"{model_name}_{metric_name}.html"
             fig.write_html(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
-    def _plot_predictions(self, model_predictions=None):
-        model_predictions = self.predictions if model_predictions is None else model_predictions
-        figures = super()._plot_predictions(model_predictions)
+    def _plot_predictions(self, ):
+        
+        figures = super()._plot_predictions()
         for fig, model_name, test_idx, offset in figures:
             filename = f"{model_name}_test{test_idx}_offset{offset}.html"
             fig.write_html(filename)
