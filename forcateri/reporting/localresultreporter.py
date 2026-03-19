@@ -19,9 +19,9 @@ class LocalResultReporter(ResultReporter):
     def __init__(self, models: List[ModelAdapter], metrics: List[Metric]):
         super().__init__(models, metrics)
 
-    def report_all(self, test_data):
+    def report_all(self):
 
-        super().report_all(test_data)
+        super().report_all()
         for model in self.models:
             save_path = Path("models") / f"{model.name}"
             model.save(save_path)
