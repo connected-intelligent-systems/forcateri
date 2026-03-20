@@ -34,31 +34,31 @@ class LocalResultReporter(ResultReporter):
 
     def report_metrics(self, save_dir="reports"):
         # call parent, which now returns a list of DataFrames
-        df_list = super().report_metrics()
+        super().report_metrics()
 
         os.makedirs(save_dir, exist_ok=True)
         logger.info(f"Metric results: {self.metric_results}")
 
         # save each DataFrame separately if there are multiple
-        for i, df in enumerate(df_list):
+        for i, df in enumerate(self.reported_metrics):
             filename = (
                 f"{save_dir}/all_metrics_results_{i}.csv"
-                if len(df_list) > 1
+                if len(self.reported_metrics) > 1
                 else f"{save_dir}/all_metrics_results.csv"
             )
             df.to_csv(filename, index=False)
 
     def plot_metrics(self, save_dir="plots"):
         os.makedirs(save_dir, exist_ok=True)
-        figures = super().plot_metrics()
-        for fig, model_name, metric_name in figures:
+        super().plot_metrics()
+        for fig, model_name, metric_name in self.metric_figures:
             fig.write_html(f"{save_dir}/{model_name}_{metric_name}.html")
 
     def plot_predictions(self, save_dir="plots"):
 
         os.makedirs(save_dir, exist_ok=True)
-        figures = super().plot_predictions()
-        for fig, model_name, test_idx, offset in figures:
+        super().plot_predictions()
+        for fig, model_name, test_idx, offset in self.prediction_figures:
             fig.write_html(
                 f"{save_dir}/{model_name}_test{test_idx}_offset{offset}.html"
             )

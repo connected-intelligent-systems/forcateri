@@ -45,25 +45,25 @@ class ClearMLReporter(ResultReporter):
             )
 
     def report_metrics(self):
-        df_metrics = super().report_metrics()
-        for i, df in enumerate(df_metrics):
+        super().report_metrics()
+        for i, df in enumerate(self.reported_metrics):
             filename = f"metric_results_{i}.csv"
             df.to_csv(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
     def plot_metrics(self):
 
-        figures = super().plot_metrics()
+        super().plot_metrics()
 
-        for fig, model_name, metric_name in figures:
+        for fig, model_name, metric_name in self.metric_figures:
             filename = f"{model_name}_{metric_name}.html"
             fig.write_html(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
     def plot_predictions(self):
         
-        figures = super().plot_predictions()
-        for fig, model_name, test_idx, offset in figures:
+        super().plot_predictions()
+        for fig, model_name, test_idx, offset in self.prediction_figures:
             filename = f"{model_name}_test{test_idx}_offset{offset}.html"
             fig.write_html(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
