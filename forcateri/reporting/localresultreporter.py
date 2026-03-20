@@ -16,8 +16,13 @@ logger = logging.getLogger(__name__)
 
 class LocalResultReporter(ResultReporter):
 
-    def __init__(self, models: List[ModelAdapter], metrics: List[Metric]):
-        super().__init__(models, metrics)
+    def __init__(
+        self,
+        models: List[ModelAdapter],
+        metrics: List[Metric],
+        test_data: List[AdapterInput] = None,
+    ):
+        super().__init__(models, metrics, test_data=test_data)
 
     def report_all(self):
 
@@ -27,7 +32,7 @@ class LocalResultReporter(ResultReporter):
             model.save(save_path)
             logger.info(f"Saved model {model.name} to {save_path}")
 
-    def report_metrics(self,save_dir="reports"):
+    def report_metrics(self, save_dir="reports"):
         # call parent, which now returns a list of DataFrames
         df_list = super().report_metrics()
 
@@ -36,10 +41,12 @@ class LocalResultReporter(ResultReporter):
 
         # save each DataFrame separately if there are multiple
         for i, df in enumerate(df_list):
-            filename = f"{save_dir}/all_metrics_results_{i}.csv" if len(df_list) > 1 else f"{save_dir}/all_metrics_results.csv"
+            filename = (
+                f"{save_dir}/all_metrics_results_{i}.csv"
+                if len(df_list) > 1
+                else f"{save_dir}/all_metrics_results.csv"
+            )
             df.to_csv(filename, index=False)
-
-
 
     def plot_metrics(self, save_dir="plots"):
         os.makedirs(save_dir, exist_ok=True)
@@ -48,7 +55,7 @@ class LocalResultReporter(ResultReporter):
             fig.write_html(f"{save_dir}/{model_name}_{metric_name}.html")
 
     def plot_predictions(self, save_dir="plots"):
-        
+
         os.makedirs(save_dir, exist_ok=True)
         figures = super().plot_predictions()
         for fig, model_name, test_idx, offset in figures:

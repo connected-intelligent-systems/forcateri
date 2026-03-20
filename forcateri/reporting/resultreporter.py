@@ -45,10 +45,12 @@ class ResultReporter:
         self.test_data: List[AdapterInput] = test_data if test_data is not None else []
         self.models: List[ModelAdapter] = []
         self.metrics: List[Metric] = []
-        self._model_predictions = None
-        self._metric_results = None
+        self.computed_predictions = None
+        self._computed_metrics = None
         self._results_computed = False
-        self._metric_reports = None
+        self.reported_metrics = None
+        self.prediction_figures = None
+        self.metric_figures = None
         if models is not None:
             for model in models:
                 self.add_model_adapter(model)
@@ -88,12 +90,12 @@ class ResultReporter:
                 - The value is a list of DataFrames (one per test series).
 
         Note:
-            The results are cached in `self._metric_results` after the first 
+            The results are cached in `self._computed_metrics` after the first 
             computation to avoid redundant processing.
         """
-        if self._metric_results is None:
+        if self._computed_metrics is None:
             self.compute_metrics()
-        return self._metric_results
+        return self._computed_metrics
 
     @property
     def predictions(self) -> Dict[str, List[TimeSeries]]:
@@ -112,9 +114,9 @@ class ResultReporter:
             Accessing this property for the first time is a heavy operation 
             proportional to the number of models and the size of the test data.
         """
-        if self._model_predictions is None:
+        if self.computed_predictions is None:
             self.compute_predictions()
-        return self._model_predictions
+        return self.computed_predictions
 
     def report_all(self):
         
@@ -166,7 +168,7 @@ class ResultReporter:
 
             results[str(met)] = met_results
         self._results_computed = True
-        self._metric_results = results
+        self._computed_metrics = results
         return self
 
     def plot_metrics(self):
@@ -187,7 +189,8 @@ class ResultReporter:
 
                 figures.append((fig, model_name, metric_name))
 
-        return figures
+        self.metric_figures = figures
+        return self
 
     def plot_predictions(self):
         '''
@@ -248,7 +251,8 @@ class ResultReporter:
 
                         figures.append((fig, model_name, id, offset))
 
-        return figures
+        self.prediction_figures = figures
+        return self
 
     def add_test_data(self, test_data: Union[AdapterInput, List[AdapterInput]]):
         """
@@ -367,8 +371,8 @@ class ResultReporter:
             df_concat = df_concat[id_cols + other_cols]
             
             final_dfs.append(df_concat)
-
-        return final_dfs
+        self.reported_metrics = final_dfs
+        return self
         
 
     def compute_predictions(self):
@@ -383,7 +387,7 @@ class ResultReporter:
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
             model_predictions[model.name] = predictions_ts_list
-        self._model_predictions = model_predictions
+        self.computed_predictions = model_predictions
         return self
     
     def report_predictions(self):
@@ -422,14 +426,12 @@ class ResultReporter:
     #     prediction_plots = self._plot_predictions()
     #     return metric_plots, prediction_plots
 
-    def _persist_artifacts(self):
-        logger.error("Function _persist_artifacts not implemented.")
+    # def _persist_artifacts(self):
+    #     logger.error("Function _persist_artifacts not implemented.")
 
-    def _select_debug_samples(self):
-        logger.error("Function _select_debug_samples not implemented.")
 
     def report_debug_samples(self):
-        logger.error("Function _report_debug_samples not implemented.")
+        logger.warning("Function _report_debug_samples not implemented.")
 
     def compute_debug_samples(self):
-        logger.error("Function _compute_debug_samples not implemented.")
+        logger.warning("Function _compute_debug_samples not implemented.")

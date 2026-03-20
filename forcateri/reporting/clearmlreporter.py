@@ -26,8 +26,9 @@ class ClearMLReporter(ResultReporter):
         self,
         models: List[ModelAdapter],
         metrics: List[Metric],
+        test_data: List[AdapterInput] = None,
     ):
-        super().__init__(models, metrics)
+        super().__init__(models, metrics, test_data=test_data)
 
     def report_all(self):
         super().report_all()
