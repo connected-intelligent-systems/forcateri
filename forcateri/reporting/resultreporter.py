@@ -382,7 +382,7 @@ class ResultReporter:
 
                 figures.append((fig, model_name, metric_name))
 
-        self.metric_figures = figures
+        self._metric_plots = figures
         
 
     def plot_predictions(self):
@@ -444,7 +444,7 @@ class ResultReporter:
 
                         figures.append((fig, model_name, id, offset))
 
-        self.prediction_figures = figures
+        self._prediction_plots = figures
         
         
 
