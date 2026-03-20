@@ -124,7 +124,7 @@ class ResultReporter:
         return self._computed_metrics
     
     @property
-    def computed_debug_samples(self) -> Dict[Any]:
+    def computed_debug_samples(self) -> Dict[str,Any]:
         """
         Provides lazy access to computed debug samples.
 
@@ -134,7 +134,7 @@ class ResultReporter:
         first.
 
         Returns:
-            Dict[Any]: 
+            Dict[str, Any]: A dictionary mapping debug sample names to their corresponding data.
 
         Note:
             The results are cached in `self._computed_debug_samples` after the first 
