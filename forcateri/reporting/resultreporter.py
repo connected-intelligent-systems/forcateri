@@ -198,7 +198,7 @@ class ResultReporter:
             Useful for incrementally adding test data after initialization,
             e.g., when loading data lazily or in multiple batches.
         """
-        if self.results_computed:
+        if self.is_frozen:
             raise RuntimeError(
                 "Cannot add new test data after computations have been done. "
                 "Please add all test data before calling report_all or report_metrics."
@@ -220,7 +220,7 @@ class ResultReporter:
             Useful for incrementally adding models after initialization,
             for example when models are created or loaded dynamically.
         """
-        if self.results_computed:
+        if self.is_frozen:
             raise RuntimeError(
                 "Cannot add new model after computations have been done. "
                 "Please add all models before calling report_all or report_metrics."
@@ -238,7 +238,7 @@ class ResultReporter:
             Useful for incrementally adding metrics after initialization,
             e.g., when metrics are defined or loaded later.
         """
-        if self.results_computed:
+        if self.is_frozen:
             raise RuntimeError(
                 "Cannot add new metric after computations have been done. "
                 "Please add all metrics before calling report_all or report_metrics."
