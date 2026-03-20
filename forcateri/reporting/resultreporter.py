@@ -42,15 +42,20 @@ class ResultReporter:
         metrics: List[Metric],
         test_data: List[AdapterInput] = None,
     ):
+        self._is_frozen = False
+
         self.test_data: List[AdapterInput] = test_data if test_data is not None else []
         self.models: List[ModelAdapter] = []
         self.metrics: List[Metric] = []
-        self.computed_predictions = None
+
+        self._computed_predictions = None
         self._computed_metrics = None
-        self._results_computed = False
-        self.reported_metrics = None
-        self.prediction_figures = None
-        self.metric_figures = None
+        self._computed_debug_samples = None
+
+        
+        self._prediction_plots = None
+        self._metric_plots = None
+        self._debug_sample_plots = None
         if models is not None:
             for model in models:
                 self.add_model_adapter(model)
@@ -59,7 +64,7 @@ class ResultReporter:
                 self.add_metric(metric)
 
     @property
-    def results_computed(self) -> bool:
+    def is_frozen(self) -> bool:
         """
         Indicates whether the metric computation pipeline has been completed.
 
@@ -71,10 +76,31 @@ class ResultReporter:
         Returns:
             bool: True if metrics have been computed, False otherwise.
         """
-        return self._results_computed
+        return self._is_frozen
+    
+    @property
+    def computed_predictions(self) -> Dict[str, List[TimeSeries]]:
+        """
+        Provides lazy access to model predictions.
+
+        If predictions have not been generated yet, this property triggers
+        `_make_predictions()`, which runs inference for all registered models 
+        across all test datasets. Subsequent accesses return the cached results.
+
+        Returns:
+            Dict[str, List[TimeSeries]]: A dictionary mapping model names to 
+                lists of TimeSeries objects (one per test data entry).
+
+        Note:
+            Accessing this property for the first time is a heavy operation 
+            proportional to the number of models and the size of the test data.
+        """
+        if self._computed_predictions is None:
+            self.compute_predictions()
+        return self._computed_predictions
 
     @property
-    def metric_results(self) -> Dict[str, Dict[str, List[pd.DataFrame]]]:
+    def computed_metrics(self) -> Dict[str, Dict[str, List[pd.DataFrame]]]:
         """
         Provides lazy access to computed metric results.
 
@@ -96,27 +122,128 @@ class ResultReporter:
         if self._computed_metrics is None:
             self.compute_metrics()
         return self._computed_metrics
-
+    
     @property
-    def predictions(self) -> Dict[str, List[TimeSeries]]:
+    def computed_debug_samples(self) -> Dict[Any]:
         """
-        Provides lazy access to model predictions.
+        Provides lazy access to computed debug samples.
 
-        If predictions have not been generated yet, this property triggers
-        `_make_predictions()`, which runs inference for all registered models 
-        across all test datasets. Subsequent accesses return the cached results.
+        Accessing this property triggers the computation of debug samples across all 
+        registered models and test datasets. If model predictions have not 
+        yet been generated, this will automatically trigger `self.predictions` 
+        first.
 
         Returns:
-            Dict[str, List[TimeSeries]]: A dictionary mapping model names to 
-                lists of TimeSeries objects (one per test data entry).
+            Dict[Any]: 
 
         Note:
-            Accessing this property for the first time is a heavy operation 
-            proportional to the number of models and the size of the test data.
+            The results are cached in `self._computed_debug_samples` after the first 
+            computation to avoid redundant processing.
         """
-        if self.computed_predictions is None:
-            self.compute_predictions()
-        return self.computed_predictions
+        if self._computed_debug_samples is None:
+            self.compute_debug_samples()
+        return self._computed_debug_samples
+    
+    @property
+    def prediction_plots(self) -> List[Any]:
+        """
+        Provides access to generated prediction plots.
+
+        Returns:
+            List[Any]: A list of figures
+
+        Note:
+            This property assumes that `plot_predictions()` has been called 
+            beforehand to generate and store the figures in `self._prediction_plots`.
+        """
+        return self._prediction_plots
+    
+    @property
+    def metric_plots(self) -> List[Any]:
+        """
+        Provides access to generated metric plots.
+
+        Returns:
+            List[Any]: A list of figures
+
+        Note:
+            This property assumes that `plot_metrics()` has been called 
+            beforehand to generate and store the figures in `self._metric_plots`.
+        """
+        return self._metric_plots
+    
+    @property
+    def debug_sample_plots(self) -> List[Any]:
+        """
+        Provides access to generated debug sample plots.
+
+        Returns:
+            List[Any]: A list of figures
+
+        Note:
+            This property assumes that `plot_debug_samples()` has been called 
+            beforehand to generate and store the figures in `self._debug_sample_plots`.
+        """
+        return self._debug_sample_plots
+
+    def add_test_data(self, test_data: Union[AdapterInput, List[AdapterInput]]):
+        """
+        Register one or more test datasets to the reporter.
+
+        Args:
+            test_data (AdapterInput or list of AdapterInput):
+                A single test dataset or a list of datasets to add.
+
+        Note:
+            Useful for incrementally adding test data after initialization,
+            e.g., when loading data lazily or in multiple batches.
+        """
+        if self.results_computed:
+            raise RuntimeError(
+                "Cannot add new test data after computations have been done. "
+                "Please add all test data before calling report_all or report_metrics."
+            )
+        
+        if isinstance(test_data, AdapterInput):
+            self.test_data.append(test_data)
+        else:
+            self.test_data.extend(test_data)
+
+    def add_model_adapter(self, model_adapter: ModelAdapter):
+        """
+        Register a model adapter to the reporter.
+
+        Args:
+            model_adapter (ModelAdapter): The model to add.
+
+        Note:
+            Useful for incrementally adding models after initialization,
+            for example when models are created or loaded dynamically.
+        """
+        if self.results_computed:
+            raise RuntimeError(
+                "Cannot add new model after computations have been done. "
+                "Please add all models before calling report_all or report_metrics."
+            )
+        self.models.append(model_adapter)
+
+    def add_metric(self, metric: Metric):
+        """
+        Register a metric to the reporter.
+
+        Args:
+            metric (Metric): The metric to add.
+
+        Note:
+            Useful for incrementally adding metrics after initialization,
+            e.g., when metrics are defined or loaded later.
+        """
+        if self.results_computed:
+            raise RuntimeError(
+                "Cannot add new metric after computations have been done. "
+                "Please add all metrics before calling report_all or report_metrics."
+            )
+        self.metrics.append(metric)
 
     def report_all(self):
         
@@ -132,10 +259,72 @@ class ResultReporter:
         self.compute_debug_samples()
         self.report_debug_samples()
 
-        # self.report_debug_samples()
+    def compute_all(self):
+        logger.info("Computing all results...")
+        self.compute_predictions()
+        self.compute_metrics()
+        self.compute_debug_samples()
 
     def compute_metrics(self):
         logger.info("Computing merics...")
+
+        def _format_metrics(metric_results) -> List[pd.DataFrame]:
+            """
+            Computes, aggregates, and formats metric results into digestible DataFrames.
+
+            This method triggers the computation of model predictions and metrics 
+            (if not already cached) and then flattens the nested results into 
+            consolidated pandas DataFrames, grouped by their column structure.
+
+            The grouping logic ensures that metrics with different output shapes 
+            (e.g., scalar metrics vs. vector-based metrics) are returned as 
+            separate DataFrames to maintain tabular integrity.
+
+            Returns:
+                List[pd.DataFrame]: A list of DataFrames where each DataFrame 
+                    contains results for a specific set of metrics. Each DataFrame 
+                    includes 'metric', 'model', and 'series_id' as leading columns.
+
+            Note:
+                Accessing this method will trigger `self.metric_results`, which in 
+                turn triggers `self.predictions` if they have not been computed yet.
+                In child classes report results are either saved to disk or uploaded to ClearML, so the returned DataFrames are not necessarily used.
+            """         
+            
+            
+            all_results = []
+
+            for metric_name, model_results in metric_results.items():
+                for model_name, result_df_list in model_results.items():
+                    result = pd.concat(result_df_list, axis=0).copy()
+                    result["model"] = model_name
+                    result["metric"] = metric_name
+                    all_results.append(result)
+
+            
+            groups = defaultdict(list)
+
+            for df in all_results:
+                # use a tuple of column names as the key
+                key = tuple(df.columns)
+                groups[key].append(df)
+
+            final_dfs = []
+
+            for dfs in groups.values():
+                df_concat = pd.concat(dfs, axis=0)
+                
+                # reset any index to preserve all data as columns
+                df_concat = df_concat.reset_index()
+                
+                # reorder columns: metric/model/series_id first, everything else after
+                id_cols = ["metric", "model", "series_id"]
+                other_cols = [c for c in df_concat.columns if c not in id_cols]
+                df_concat = df_concat[id_cols + other_cols]
+                
+                final_dfs.append(df_concat)
+            return final_dfs
+        
         results = {}
 
         # loop over each metrics
@@ -167,9 +356,13 @@ class ResultReporter:
                 met_results[model_name] = model_results
 
             results[str(met)] = met_results
-        self._results_computed = True
-        self._computed_metrics = results
-        return self
+        self._is_frozen = True
+        formatted_results = _format_metrics(results)
+        self._computed_metrics = formatted_results
+
+    def report_metrics(self) -> List[pd.DataFrame]:
+        logger.info("Reporting metric results...")
+        return self.computed_metrics     
 
     def plot_metrics(self):
         '''
@@ -190,7 +383,7 @@ class ResultReporter:
                 figures.append((fig, model_name, metric_name))
 
         self.metric_figures = figures
-        return self
+        
 
     def plot_predictions(self):
         '''
@@ -252,127 +445,7 @@ class ResultReporter:
                         figures.append((fig, model_name, id, offset))
 
         self.prediction_figures = figures
-        return self
-
-    def add_test_data(self, test_data: Union[AdapterInput, List[AdapterInput]]):
-        """
-        Register one or more test datasets to the reporter.
-
-        Args:
-            test_data (AdapterInput or list of AdapterInput):
-                A single test dataset or a list of datasets to add.
-
-        Note:
-            Useful for incrementally adding test data after initialization,
-            e.g., when loading data lazily or in multiple batches.
-        """
-        if self.results_computed:
-            raise RuntimeError(
-                "Cannot add new test data after computations have been done. "
-                "Please add all test data before calling report_all or report_metrics."
-            )
         
-        if isinstance(test_data, AdapterInput):
-            self.test_data.append(test_data)
-        else:
-            self.test_data.extend(test_data)
-
-    def add_model_adapter(self, model_adapter: ModelAdapter):
-        """
-        Register a model adapter to the reporter.
-
-        Args:
-            model_adapter (ModelAdapter): The model to add.
-
-        Note:
-            Useful for incrementally adding models after initialization,
-            for example when models are created or loaded dynamically.
-        """
-        if self.results_computed:
-            raise RuntimeError(
-                "Cannot add new model after computations have been done. "
-                "Please add all models before calling report_all or report_metrics."
-            )
-        self.models.append(model_adapter)
-
-    def add_metric(self, metric: Metric):
-        """
-        Register a metric to the reporter.
-
-        Args:
-            metric (Metric): The metric to add.
-
-        Note:
-            Useful for incrementally adding metrics after initialization,
-            e.g., when metrics are defined or loaded later.
-        """
-        if self.results_computed:
-            raise RuntimeError(
-                "Cannot add new metric after computations have been done. "
-                "Please add all metrics before calling report_all or report_metrics."
-            )
-        self.metrics.append(metric)
-
-    def report_metrics(self) -> List[pd.DataFrame]:
-        """
-        Computes, aggregates, and formats metric results into digestible DataFrames.
-
-        This method triggers the computation of model predictions and metrics 
-        (if not already cached) and then flattens the nested results into 
-        consolidated pandas DataFrames, grouped by their column structure.
-
-        The grouping logic ensures that metrics with different output shapes 
-        (e.g., scalar metrics vs. vector-based metrics) are returned as 
-        separate DataFrames to maintain tabular integrity.
-
-        Returns:
-            List[pd.DataFrame]: A list of DataFrames where each DataFrame 
-                contains results for a specific set of metrics. Each DataFrame 
-                includes 'metric', 'model', and 'series_id' as leading columns.
-
-        Note:
-            Accessing this method will trigger `self.metric_results`, which in 
-            turn triggers `self.predictions` if they have not been computed yet.
-            In child classes report results are either saved to disk or uploaded to ClearML, so the returned DataFrames are not necessarily used.
-        """
-        
-        logger.debug("report metrics is called before predictions made.")
-        
-        
-        
-        all_results = []
-
-        for metric_name, model_results in self.metric_results.items():
-            for model_name, result_df_list in model_results.items():
-                result = pd.concat(result_df_list, axis=0).copy()
-                result["model"] = model_name
-                result["metric"] = metric_name
-                all_results.append(result)
-
-        
-        groups = defaultdict(list)
-
-        for df in all_results:
-            # use a tuple of column names as the key
-            key = tuple(df.columns)
-            groups[key].append(df)
-
-        final_dfs = []
-
-        for dfs in groups.values():
-            df_concat = pd.concat(dfs, axis=0)
-            
-            # reset any index to preserve all data as columns
-            df_concat = df_concat.reset_index()
-            
-            # reorder columns: metric/model/series_id first, everything else after
-            id_cols = ["metric", "model", "series_id"]
-            other_cols = [c for c in df_concat.columns if c not in id_cols]
-            df_concat = df_concat[id_cols + other_cols]
-            
-            final_dfs.append(df_concat)
-        self.reported_metrics = final_dfs
-        return self
         
 
     def compute_predictions(self):
@@ -387,47 +460,12 @@ class ResultReporter:
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
             model_predictions[model.name] = predictions_ts_list
-        self.computed_predictions = model_predictions
-        return self
+        self._computed_predictions = model_predictions
+        
     
     def report_predictions(self):
         logger.info("Reporting model predictions...")
-        return self.predictions
-
-    # def report_plots(self) -> Tuple[
-    #     List[Tuple[go.Figure, str, str]], 
-    #     List[Tuple[go.Figure, str, int, Any]]
-    # ]:
-    #     """
-    #     Generates and returns visualization plots for metrics and predictions.
-
-    #     This method acts as the primary visualization interface, triggering 
-    #     the full computation pipeline (inference and metric calculation) 
-    #     if results are not already cached. It produces two categories 
-    #     of plots:
-    #     1. Metric comparisons across models.
-    #     2. Time-series visualizations comparing predictions against 
-    #        ground truth (handling both deterministic and quantile formats).
-
-    #     Returns:
-    #     List[Tuple[go.Figure, str, str]], 
-    #     List[Tuple[go.Figure, str, int, Any]]: A list of tuples containing 
-    #             Plotly Figure objects and their associated metadata 
-    #             (e.g., model_name, metric_name, or series_id).
-
-    #     Note:
-    #         Accessing this method triggers `self.metric_results`, which 
-    #         in turn triggers `self.predictions`. Heavy computations will 
-    #         only occur during the first call.
-    #     """
-        
-        
-    #     metric_plots = self._plot_metrics()
-    #     prediction_plots = self._plot_predictions()
-    #     return metric_plots, prediction_plots
-
-    # def _persist_artifacts(self):
-    #     logger.error("Function _persist_artifacts not implemented.")
+        return self.computed_predictions
 
 
     def report_debug_samples(self):
