@@ -62,6 +62,8 @@ class ResultReporter:
         if metrics is not None:
             for metric in metrics:
                 self.add_metric(metric)
+        
+        self._raw_metric_results = None
 
     @property
     def is_frozen(self) -> bool:
@@ -359,6 +361,7 @@ class ResultReporter:
         self._is_frozen = True
         formatted_results = _format_metrics(results)
         self._computed_metrics = formatted_results
+        self._raw_metric_results = results
 
     def report_metrics(self) -> List[pd.DataFrame]:
         logger.info("Reporting metric results...")
@@ -371,8 +374,9 @@ class ResultReporter:
         logger.info("Plotting metrics results...")
 
         figures = []
-
-        for model_name, model_metrics in self.computed_metrics.items():
+        if self._raw_metric_results is None:
+            self.compute_metrics()
+        for model_name, model_metrics in self._raw_metric_results.items():
             for metric_name, metric_list in model_metrics.items():
                 fig = plot_metric(
                     metric_name=metric_name,
