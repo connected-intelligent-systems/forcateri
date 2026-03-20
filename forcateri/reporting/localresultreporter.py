@@ -37,13 +37,13 @@ class LocalResultReporter(ResultReporter):
         super().report_metrics()
 
         os.makedirs(save_dir, exist_ok=True)
-        logger.info(f"Metric results: {self.metric_results}")
+        logger.info(f"Reporting metrics to {save_dir}...")
 
         # save each DataFrame separately if there are multiple
-        for i, df in enumerate(self.reported_metrics):
+        for i, df in enumerate(self.computed_metrics):
             filename = (
                 f"{save_dir}/all_metrics_results_{i}.csv"
-                if len(self.reported_metrics) > 1
+                if len(self.computed_metrics) > 1
                 else f"{save_dir}/all_metrics_results.csv"
             )
             df.to_csv(filename, index=False)
@@ -51,14 +51,14 @@ class LocalResultReporter(ResultReporter):
     def plot_metrics(self, save_dir="plots"):
         os.makedirs(save_dir, exist_ok=True)
         super().plot_metrics()
-        for fig, model_name, metric_name in self.metric_figures:
+        for fig, model_name, metric_name in self.metric_plots:
             fig.write_html(f"{save_dir}/{model_name}_{metric_name}.html")
 
     def plot_predictions(self, save_dir="plots"):
 
         os.makedirs(save_dir, exist_ok=True)
         super().plot_predictions()
-        for fig, model_name, test_idx, offset in self.prediction_figures:
+        for fig, model_name, test_idx, offset in self.prediction_plots:
             fig.write_html(
                 f"{save_dir}/{model_name}_test{test_idx}_offset{offset}.html"
             )

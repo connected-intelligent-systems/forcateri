@@ -331,7 +331,7 @@ class ResultReporter:
         for met in self.metrics:
             met_results = {}
 
-            for model_name, prediction_ts_list in self.predictions.items():
+            for model_name, prediction_ts_list in self.computed_predictions.items():
                 model_results = []
                 # loop over test data & predictions
                 for i, (adapter_input, pred_ts) in enumerate(
@@ -372,7 +372,7 @@ class ResultReporter:
 
         figures = []
 
-        for model_name, model_metrics in self.metric_results.items():
+        for model_name, model_metrics in self.computed_metrics.items():
             for metric_name, metric_list in model_metrics.items():
                 fig = plot_metric(
                     metric_name=metric_name,
@@ -392,7 +392,7 @@ class ResultReporter:
         logger.info("Plotting model predictions...")
         figures = []
 
-        for model_name, prediction_ts_list in self.predictions.items():
+        for model_name, prediction_ts_list in self.computed_predictions.items():
             for id, (adapter_input, pred_ts) in enumerate(
                 zip(self.test_data, prediction_ts_list)
             ):

@@ -32,12 +32,12 @@ class ClearMLReporter(ResultReporter):
 
     def report_all(self):
         super().report_all()
-        print(f"Test of the metric results {self.metric_results}")
+        print(f"Test of the metric results {self.computed_metrics}")
+        # Task.current_task().upload_artifact(
+        #     name="Report", artifact_object=self.computed_metrics
+        # )
         Task.current_task().upload_artifact(
-            name="Report", artifact_object=self.metric_results
-        )
-        Task.current_task().upload_artifact(
-            name="Model Predictions", artifact_object=self.model_predictions
+            name="Model Predictions", artifact_object=self.computed_predictions
         )
         for model in self.models:
             Task.current_task().upload_artifact(
@@ -46,7 +46,7 @@ class ClearMLReporter(ResultReporter):
 
     def report_metrics(self):
         super().report_metrics()
-        for i, df in enumerate(self.reported_metrics):
+        for i, df in enumerate(self.computed_metrics):
             filename = f"metric_results_{i}.csv"
             df.to_csv(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
@@ -55,7 +55,7 @@ class ClearMLReporter(ResultReporter):
 
         super().plot_metrics()
 
-        for fig, model_name, metric_name in self.metric_figures:
+        for fig, model_name, metric_name in self.metric_plots:
             filename = f"{model_name}_{metric_name}.html"
             fig.write_html(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
@@ -63,7 +63,7 @@ class ClearMLReporter(ResultReporter):
     def plot_predictions(self):
         
         super().plot_predictions()
-        for fig, model_name, test_idx, offset in self.prediction_figures:
+        for fig, model_name, test_idx, offset in self.prediction_plots:
             filename = f"{model_name}_test{test_idx}_offset{offset}.html"
             fig.write_html(filename)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
