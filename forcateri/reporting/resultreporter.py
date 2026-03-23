@@ -314,7 +314,11 @@ class ResultReporter:
             final_dfs = []
 
             for dfs in groups.values():
-                df_concat = pd.concat(dfs, axis=0)
+                df_concat = pd.concat(dfs, axis=0, ignore_index=True)
+                logger.warning(
+                    "Formatted metrics may contain mixed time types (Timestamp and Timedelta), "
+                    "depending on the metric and aggregation column."
+                )
                 
                 # reset any index to preserve all data as columns
                 df_concat = df_concat.reset_index()
