@@ -1,3 +1,4 @@
+from datetime import timezone
 import logging
 import os
 from abc import ABC
@@ -79,7 +80,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
             args[key] = value
 
-        return args['future_covariates'], args['past_covariates'] #, args['static_covariates']
+        return (
+            args["future_covariates"],
+            args["past_covariates"],
+        )  # , args['static_covariates']
 
     def fit(
         self,
@@ -123,7 +127,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.target_col_names = [t.components[0] for t in target]
         logger.debug(f"Converted training data to darts format for {self.name}")
 
-
         future_covariates, past_covariates = self._get_covariate_args(known, observed)
 
         val_target, val_future_covariate, val_past_covariates = None, None, None
@@ -132,22 +135,20 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 val_data
             )
 
-            logger.debug(
-                f"Converted validation data to darts format for {self.name}"
-            )
-            
+            logger.debug(f"Converted validation data to darts format for {self.name}")
+
             val_future_covariate, val_past_covariates = self._get_covariate_args(
                 val_known, val_observed
             )
 
-
-        
-        self.model.fit(series=target, 
-                       future_covariates=future_covariates, 
-                       past_covariates=past_covariates, 
-                       val_series=val_target, 
-                       val_future_covariates=val_future_covariate, 
-                       val_past_covariates=val_past_covariates)
+        self.model.fit(
+            series=target,
+            future_covariates=future_covariates,
+            past_covariates=past_covariates,
+            val_series=val_target,
+            val_future_covariates=val_future_covariate,
+            val_past_covariates=val_past_covariates,
+        )
 
     def predict(
         self,
@@ -198,17 +199,24 @@ class DartsModelAdapter(ModelAdapter, ABC):
           TimeSeries format with proper offset and time indexing.
         """
         target, known, observed, static = self.convert_input(data)
-        #predict_args = self._prepare_predict_args(target, known, observed, static)
+        # predict_args = self._prepare_predict_args(target, known, observed, static)
         future_covariates, past_covariates = self._get_covariate_args(known, observed)
-        #print(f"Predict args: {predict_args.keys()}")
+        # print(f"Predict args: {predict_args.keys()}")
         if use_rolling_window:
             logger.debug("Using rolling window prediction.")
-            return self._historical_forecasts(n=n, series=target, future_covariates=future_covariates, past_covariates=past_covariates)
+            return self._historical_forecasts(
+                n=n,
+                series=target,
+                future_covariates=future_covariates,
+                past_covariates=past_covariates,
+            )
         else:
-            preds = self.model.predict(n=n, future_covariates=future_covariates, past_covariates=past_covariates)
-            return self.convert_output(
-                output=preds
-            )  
+            preds = self.model.predict(
+                n=n,
+                future_covariates=future_covariates,
+                past_covariates=past_covariates,
+            )
+            return self.convert_output(output=preds)
 
     def convert_input(self, input):
         """
@@ -469,7 +477,11 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         data = DartsModelAdapter.flatten_timeseries_df(t.data)
         logger.debug(f"Data after flattening in to_model_format: {data.head()}")
-        data["time"] = pd.to_datetime(data["time"]).dt.tz_localize(None)
+        data["time"] = pd.to_datetime(data["time"])
+        if (data["time"].dt.tz is not None) and (data["time"].dt.tz != timezone.utc):
+            data["time"] = data["time"].dt.tz_convert("UTC")
+        data["time"] = data["time"].dt.tz_localize(None)
+
         value_cols = [col for col in data.columns if col != "time"]
         return DartsTimeSeries.from_dataframe(
             data, time_col="time", value_cols=value_cols, freq=self.freq
