@@ -8,54 +8,57 @@ from functools import wraps
 from ..data.adapterinput import AdapterInput
 from ..model.modeladapter import ModelAdapter
 from typing import List
-import logging 
+import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+
 class LocalResultReporter(ResultReporter):
 
-    def __init__(self, models: List[ModelAdapter], metrics: List[Metric]):
-        super().__init__(models, metrics)
+    def __init__(
+        self,
+        models: List[ModelAdapter],
+        metrics: List[Metric],
+        test_data: List[AdapterInput] = None,
+    ):
+        super().__init__(models, metrics, test_data=test_data)
 
+    def report_all(self):
 
-    def report_all(self, test_data):
-
-        super().report_all(test_data)
+        super().report_all()
         for model in self.models:
             save_path = Path("models") / f"{model.name}"
             model.save(save_path)
             logger.info(f"Saved model {model.name} to {save_path}")
 
-    def report_metrics(self):
+    def report_metrics(self, save_dir="reports"):
+        # call parent, which now returns a list of DataFrames
         super().report_metrics()
-        os.makedirs("reports", exist_ok=True)
-        logger.info(f"Metric results: {self.metric_results}")
-        for metric_name, model_results in self.metric_results.items():
-            all_results = []
-            for model_name, result_df_list in model_results.items():
-                result = pd.concat(result_df_list, axis=0)
-                result["model"] = model_name
-                all_results.append(result)
 
-            final_df = pd.concat(all_results, axis=0)
-            final_df.reset_index(inplace=True)
-            final_df.to_csv(f"reports/{metric_name}_results.csv", index=False)
-        with open("reports/local_metric_results.pkl", "wb") as f:
-            pickle.dump(self.metric_results, f)
+        os.makedirs(save_dir, exist_ok=True)
+        logger.info(f"Reporting metrics to {save_dir}...")
 
+        # save each DataFrame separately if there are multiple
+        for i, df in enumerate(self.computed_metrics):
+            filename = (
+                f"{save_dir}/all_metrics_results_{i}.csv"
+                if len(self.computed_metrics) > 1
+                else f"{save_dir}/all_metrics_results.csv"
+            )
+            df.to_csv(filename, index=False)
 
-
-    def _plot_metrics(self, metric_results=None, save_dir="plots"):
-        os.makedirs(save_dir,exist_ok=True)
-        figures = super()._plot_metrics(metric_results)
-        for fig, model_name, metric_name in figures:
+    def plot_metrics(self, save_dir="plots"):
+        os.makedirs(save_dir, exist_ok=True)
+        super().plot_metrics()
+        for fig, model_name, metric_name in self.metric_plots:
             fig.write_html(f"{save_dir}/{model_name}_{metric_name}.html")
 
+    def plot_predictions(self, save_dir="plots"):
 
-    def _plot_predictions(self, save_dir="plots"):
-        os.makedirs(save_dir,exist_ok=True)
-        figures = super()._plot_predictions()
-        for fig, model_name,test_idx,offset in figures:
-            fig.write_html(f"{save_dir}/{model_name}_test{test_idx}_offset{offset}.html")
-            
+        os.makedirs(save_dir, exist_ok=True)
+        super().plot_predictions()
+        for fig, model_name, test_idx, offset in self.prediction_plots:
+            fig.write_html(
+                f"{save_dir}/{model_name}_test{test_idx}_offset{offset}.html"
+            )

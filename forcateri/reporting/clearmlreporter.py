@@ -19,65 +19,51 @@ from clearml import Task
 
 logger = logging.getLogger(__name__)
 
+
 class ClearMLReporter(ResultReporter):
 
     def __init__(
         self,
         models: List[ModelAdapter],
         metrics: List[Metric],
+        test_data: List[AdapterInput] = None,
     ):
-        super().__init__(models, metrics)
+        super().__init__(models, metrics, test_data=test_data)
 
-    def report_all(self, test_data: List[AdapterInput]):
-        super().report_all(test_data)
-        print(f"Test of the metric results {self.metric_results}")
+    def report_all(self):
+        super().report_all()
+        print(f"Test of the metric results {self.computed_metrics}")
+        # Task.current_task().upload_artifact(
+        #     name="Report", artifact_object=self.computed_metrics
+        # )
         Task.current_task().upload_artifact(
-            name="Report", artifact_object=self.metric_results
-        )
-        Task.current_task().upload_artifact(
-            name="Model Predictions", artifact_object=self.model_predictions
+            name="Model Predictions", artifact_object=self.computed_predictions
         )
         for model in self.models:
             Task.current_task().upload_artifact(
-                name=model.model_name,
-                artifact_object=model
-        )
+                name=model.model_name, artifact_object=model
+            )
 
     def report_metrics(self):
         super().report_metrics()
-        for metric_name, model_results in self.metric_results.items():
-            all_results = []
-            for model_name, result_df_list in model_results.items():
-                result = pd.concat(result_df_list, axis=0)
-                result["model"] = model_name
-                all_results.append(result)
+        for i, df in enumerate(self.computed_metrics):
+            filename = f"metric_results_{i}.csv"
+            df.to_csv(filename)
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
-            final_df = pd.concat(all_results, axis=0)
-            final_df.reset_index(inplace=True)
+    def plot_metrics(self):
 
-            final_df.to_csv(f"{metric_name}_results.csv", index=False)
-            Task.current_task().upload_artifact(
-                name=f"{metric_name}_results.csv", artifact_object=f"{metric_name}_results.csv"
-            )
-    
-    def _plot_metrics(self, metric_results=None):
+        super().plot_metrics()
 
-        figures = super()._plot_metrics(metric_results)
-
-        for fig, model_name, metric_name in figures:
+        for fig, model_name, metric_name in self.metric_plots:
             filename = f"{model_name}_{metric_name}.html"
             fig.write_html(filename)
-            Task.current_task().upload_artifact(
-                name=filename,
-                artifact_object=filename
-            )
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
+
+    def plot_predictions(self):
         
-    def _plot_predictions(self):
-        figures = super()._plot_predictions()
-        for fig, model_name,test_idx,offset in figures:
+        super().plot_predictions()
+        for fig, model_name, test_idx, offset in self.prediction_plots:
             filename = f"{model_name}_test{test_idx}_offset{offset}.html"
             fig.write_html(filename)
-            Task.current_task().upload_artifact(
-                name = filename,
-                artifact_object = filename
-            )
+            Task.current_task().upload_artifact(name=filename, artifact_object=filename)
