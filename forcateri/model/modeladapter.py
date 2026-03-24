@@ -64,14 +64,32 @@ class ModelAdapter(ABC):
             "Method not overridden in concrete adapter implementation"
         )
 
-    def convert_input(self, input: List[AdapterInput]) -> List[Any]:
-        """
-        Converts the input data into the format required by the model.
-        """
+    def convert_input(self, input: list[AdapterInput]) -> list[Any]:
         target = [self.to_model_format(t.target) for t in input]
-        known = [self.to_model_format(t.known) for t in input]
-        observed = [self.to_model_format(t.observed) for t in input]
-        static = [t.static for t in input]
+
+        # Known
+        known_values = [t.known for t in input]
+        if all(v is not None for v in known_values):
+            known = [self.to_model_format(v) for v in known_values]
+        else:
+            known = None
+            logger.warning("Some 'known' values are missing; setting known=None")
+
+        # Observed
+        observed_values = [t.observed for t in input]
+        if all(v is not None for v in observed_values):
+            observed = [self.to_model_format(v) for v in observed_values]
+        else:
+            observed = None
+            logger.warning("Some 'observed' values are missing; setting observed=None")
+
+        # Static
+        static_values = [t.static for t in input]
+        if all(v is not None for v in static_values):
+            static = static_values
+        else:
+            static = None
+            logger.warning("Some 'static' values are missing; setting static=None")
 
         return target, known, observed, static
 
