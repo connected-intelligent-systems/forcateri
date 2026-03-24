@@ -369,7 +369,7 @@ class ResultReporter:
 
     def report_metrics(self) -> List[pd.DataFrame]:
         logger.info("Reporting metric results...")
-        return self.computed_metrics     
+        _ = self.computed_metrics     
 
     def plot_metrics(self):
         '''
@@ -473,7 +473,7 @@ class ResultReporter:
     
     def report_predictions(self):
         logger.info("Reporting model predictions...")
-        return self.computed_predictions
+        _ = self.computed_predictions
 
 
     def report_debug_samples(self):
