@@ -89,6 +89,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self,
         train_data: List[AdapterInput],
         val_data: Optional[List[AdapterInput]] = None,
+        **kwargs,
     ) -> None:
         """
         Fits the Darts forecasting model using the provided training and validation data.
@@ -107,6 +108,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
             An optional list of AdapterInput objects containing validation data. If provided,
             validation series and covariates will be passed to the model's fit method with
             'val_' prefixes.
+        kwargs : Dict[str, Any]
+            The keyword arguments for the fit function of the underlying darts forecasting model
 
         Returns
         -------
@@ -148,6 +151,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             val_series=val_target,
             val_future_covariates=val_future_covariate,
             val_past_covariates=val_past_covariates,
+            **kwargs,
         )
 
     def predict(
@@ -155,6 +159,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         data: List[AdapterInput],
         n: Optional[int] = 1,
         use_rolling_window: bool = True,
+        **kwargs,
     ) -> List[TimeSeries]:
         """
         Generates predictions using the fitted Darts forecasting model.
@@ -215,6 +220,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 n=n,
                 future_covariates=future_covariates,
                 past_covariates=past_covariates,
+                **kwargs,
             )
             return self.convert_output(output=preds)
 
