@@ -108,7 +108,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             An optional list of AdapterInput objects containing validation data. If provided,
             validation series and covariates will be passed to the model's fit method with
             'val_' prefixes.
-        kwargs : Dict[str, Any]
+        **kwargs : Dict[str, Any]
             The keyword arguments for the fit function of the underlying darts forecasting model
 
         Returns
@@ -214,6 +214,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 series=target,
                 future_covariates=future_covariates,
                 past_covariates=past_covariates,
+                **kwargs,
             )
         else:
             preds = self.model.predict(
@@ -357,6 +358,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         past_covariates: Optional[DartsTimeSeries] = None,
         retrain: bool = False,
         n: Optional[int] = 1,
+        **kwargs,
     ) -> List[TimeSeries]:
         """
         Generates historical forecasts using the provided data.
@@ -368,6 +370,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             static_covariates (Optional[DartsTimeSeries]): Static covariates for the model.
             retrain (bool): Whether to retrain the model before each forecast.
             n (Optional[int]): The forecast horizon for historical forecasts.
+            **kwargs Dict[str, Any]: optional arguments for the historical forecasts method
         Returns:
             List[TimeSeries]: A list of TimeSeries objects representing the forecasts.
         """
@@ -382,6 +385,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             predict_likelihood_parameters=self.is_likelihood,
             forecast_horizon=n,
             last_points_only=False,
+            **kwargs,
         )
         if self.scaler_target:
             logger.debug("Inverse transforming forecasts using target scaler.")
