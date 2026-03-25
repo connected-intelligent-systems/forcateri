@@ -73,7 +73,7 @@ class ModelAdapter(ABC):
             known = [self.to_model_format(v) for v in known_values]
         else:
             known = None
-            logger.warning("Some 'known' values are missing; setting known=None")
+            logger.warning("Some 'known' values are missing or empty; setting known=None")
 
         # Observed
         observed_values = [t.observed for t in input]
@@ -81,7 +81,7 @@ class ModelAdapter(ABC):
             observed = [self.to_model_format(v) for v in observed_values]
         else:
             observed = None
-            logger.warning("Some 'observed' values are missing; setting observed=None")
+            logger.warning("Some 'observed' values are missing or empty; setting observed=None")
 
         # Static
         static_values = [t.static for t in input]
@@ -89,7 +89,7 @@ class ModelAdapter(ABC):
             static = static_values
         else:
             static = None
-            logger.warning("Some 'static' values are missing; setting static=None")
+            logger.warning("Some 'static' values are missing or empty; setting static=None")
 
         return target, known, observed, static
 
