@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 from forcateri.reporting.resultreporter import ResultReporter
 import datetime
 from .metric import Metric
@@ -73,9 +74,11 @@ class LocalResultReporter(ResultReporter):
     
     def report_predictions(self):
         super().report_predictions()
-        for model, predictions in self.computed_predictions:
+        for model_name, predictions in self.computed_predictions.items():
             pred_dir = self.save_path / self.PREDICTIONS_DIR
             pred_dir.mkdir(parents=True, exist_ok=True)
-            filename = pred_dir / f"{model.name}_predictions_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
-            predictions.to_csv(filename, index=False)
-            logger.info(f"Saved predictions for model {model.name} to {filename}")
+            filename = pred_dir / f"{model_name}_predictions_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.pkl"
+            with open(filename, "wb") as f:
+                pd.to_pickle(predictions, f)
+            
+            logger.info(f"Saved predictions for model {model_name} to {filename}")
