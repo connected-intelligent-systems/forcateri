@@ -3,6 +3,7 @@ from typing import Any, List, Tuple, Union, Dict
 from collections import defaultdict
 import pandas as pd
 import plotly.graph_objects as go
+import warnings
 
 from .metric import Metric
 from ..data.adapterinput import AdapterInput
@@ -11,7 +12,7 @@ from ..data.timeseries import TimeSeries
 from .plotting import plot_metric, plot_quantile_predictions, plot_determ_predictions
 
 logger = logging.getLogger(__name__)
-
+warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 class ResultReporter:
     """
