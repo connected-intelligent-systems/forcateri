@@ -102,7 +102,7 @@ def plot_quantile_predictions(
             y=gt_df["Ground Truth"],
             mode="lines",
             name="Ground Truth",
-            line=dict(color="black", dash="dash", width=2),
+            line=dict(color="black",  width=2),
         )
     )
 
@@ -141,7 +141,7 @@ def plot_determ_predictions(
             y=gt_df.iloc[:, 0],
             mode="lines",
             name="Ground Truth",
-            line=dict(color="black", dash="dash", width=2),
+            line=dict(color="black", width=2),
         )
     )
 
