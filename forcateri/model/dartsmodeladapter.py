@@ -443,7 +443,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         logger.debug(f"Flattened DataFrame columns: {df_reset.columns.tolist()}")
         # Drop the 'offset' column if it's not needed
         if "offset" in df_reset.columns:
-            df_reset = df_reset.drop(columns="offset")
+            df_reset = df_reset.drop(columns="offset",level=0)
             logger.debug(
                 "Dropped 'offset' column from DataFrame as part of to_model_format in dartsmodeladapter"
             )
