@@ -64,12 +64,12 @@ class LocalResultReporter(ResultReporter):
 
     def plot_predictions(self):
 
-        predictions_dir = self.save_path / self.PREDICTIONS_DIR
-        predictions_dir.mkdir(parents=True, exist_ok=True)
+        predictions_plot_dir = self.save_path / self.PLOTS_DIR
+        predictions_plot_dir.mkdir(parents=True, exist_ok=True)
         super().plot_predictions()
         for fig, model_name, test_idx, offset in self.prediction_plots:
             fig.write_html(
-                f"{predictions_dir}/{model_name}_test{test_idx}_offset{offset}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.html"
+                f"{predictions_plot_dir}/{model_name}_test{test_idx}_offset{offset}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.html"
             )
     
     def report_predictions(self):
