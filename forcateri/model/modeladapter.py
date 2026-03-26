@@ -1,6 +1,4 @@
 import datetime
-import warnings
-import pandas as pd
 from abc import ABC
 from pathlib import Path
 from typing import Any, List, Optional, Union
@@ -9,10 +7,6 @@ from ..data.adapterinput import AdapterInput
 from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
-warnings.filterwarnings(
-    "ignore",
-    category=pd.errors.PerformanceWarning
-)
 
 class ModelAdapter(ABC):
 
