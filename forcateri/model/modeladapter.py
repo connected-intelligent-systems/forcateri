@@ -8,7 +8,6 @@ from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
 
-
 class ModelAdapter(ABC):
 
     def __init__(self, name: Optional[str] = None):
