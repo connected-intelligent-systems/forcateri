@@ -72,10 +72,10 @@ class ModelAdapter(ABC):
             known = [self.to_model_format(v) for v in known_values]
         elif any(v is not None for v in known_values):
             known = None
-            logger.warning("Some 'known' values are missing; Please make sure that covariates are present along with target for all input samples. Setting known=None for this batch.")
+            logger.warning("Some 'known' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting known=None for this batch.")
         else:
             known = None
-            logger.info("No 'known' values provided; setting known=None")
+            logger.info("No 'known' covariate values provided; setting known=None")
 
         # Observed
         observed_values = [t.observed for t in input]
@@ -83,10 +83,10 @@ class ModelAdapter(ABC):
             observed = [self.to_model_format(v) for v in observed_values]
         elif any(v is not None for v in observed_values):
             observed = None
-            logger.warning("Some 'observed' values are missing; Please make sure that covariates are present along with target for all input samples. Setting observed=None for this batch.")
+            logger.warning("Some 'observed' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting observed=None for this batch.")
         else:
             observed = None
-            logger.info("No 'observed' values provided; setting observed=None")
+            logger.info("No 'observed' covariate values provided; setting observed=None")
 
         # Static
         static_values = [t.static for t in input]
@@ -94,10 +94,10 @@ class ModelAdapter(ABC):
             static = static_values
         elif any(v is not None for v in static_values):
             static = None
-            logger.warning("Some 'static' values are missing; Please make sure that covariates are present along with target for all input samples. Setting static=None for this batch.")
+            logger.warning("Some 'static' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting static=None for this batch.")
         else:
             static = None
-            logger.info("No 'static' values provided; setting static=None")
+            logger.info("No 'static' covariate values provided; setting static=None")
 
         return target, known, observed, static
 
