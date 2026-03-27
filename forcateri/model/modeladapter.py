@@ -8,6 +8,7 @@ from ..data.timeseries import TimeSeries
 
 logger = logging.getLogger(__name__)
 
+
 class ModelAdapter(ABC):
 
     def __init__(self, name: Optional[str] = None):
@@ -17,11 +18,11 @@ class ModelAdapter(ABC):
     @property
     def name(self):
         return self._name
-    
+
     def fit(
         self,
         train_data: List[AdapterInput],
-        val_data: Optional[List[AdapterInput]]=None,
+        val_data: Optional[List[AdapterInput]] = None,
     ):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
@@ -62,32 +63,34 @@ class ModelAdapter(ABC):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
         )
+
     def convert_input(self, input: list[AdapterInput]) -> tuple[Any, Any, Any, Any]:
         """
         Converts the input data into the model-specific format.
         """
         logger.debug("Converting input data to model-specific format")
-        def process_input(cov_type: str)->list[Any]:
-            #Fetch the covariate type from the AdapterInput list, thus making the warning message more clear. 
+
+        def process_input(cov_type: str) -> list[Any]:
+
             covariate = [getattr(t, cov_type) for t in input]
             if all(v is not None for v in covariate):
                 return [self.to_model_format(v) for v in covariate]
             elif any(v is not None for v in covariate):
-                logger.warning(f"Some {cov_type} covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting this covariate to None for this batch.")
+                logger.warning(
+                    f"Some {cov_type} covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting this covariate to None for this batch."
+                )
                 return None
             else:
-                logger.info(f"No {cov_type} covariate values provided; setting this covariate to None")
+                logger.info(
+                    f"No {cov_type} covariate values provided; setting this covariate to None"
+                )
                 return None
+
         target = [self.to_model_format(t.target) for t in input]
         known = process_input("known")
         observed = process_input("observed")
         static = process_input("static")
-        #known = process_input([t.known for t in input])
-        #observed = process_input([t.observed for t in input])
-        #static = process_input([t.static for t in input])
         return target, known, observed, static
-            
-
 
     def convert_output(self, output: List[Any]) -> List[TimeSeries]:
         """
