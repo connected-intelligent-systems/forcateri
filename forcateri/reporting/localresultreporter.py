@@ -26,6 +26,7 @@ class LocalResultReporter(ResultReporter):
         save_path: Path = Path("reports"),
     ):
         super().__init__(models, metrics, test_data=test_data)
+        save_path = save_path / f"reports-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
         save_path.mkdir(parents=True, exist_ok=True)
         self.save_path = save_path
     def report_all(self):
