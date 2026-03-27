@@ -62,44 +62,63 @@ class ModelAdapter(ABC):
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
         )
-
     def convert_input(self, input: list[AdapterInput]) -> list[Any]:
+        """
+        Converts the input data into the model-specific format.
+        """
+        logger.debug("Converting input data to model-specific format")
+        def process_input(covariate:List[TimeSeries])->list[Any]:
+            if all(v is not None for v in covariate):
+                return [self.to_model_format(v) for v in covariate]
+            elif any(v is not None for v in covariate):
+                logger.warning("Some covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting this covariate to None for this batch.")
+                return None
+            else:
+                logger.info("No covariate values provided; setting this covariate to None")
+                return None
         target = [self.to_model_format(t.target) for t in input]
-
-        # Known
-        known_values = [t.known for t in input]
-        if all(v is not None for v in known_values):
-            known = [self.to_model_format(v) for v in known_values]
-        elif any(v is not None for v in known_values):
-            known = None
-            logger.warning("Some 'known' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting known=None for this batch.")
-        else:
-            known = None
-            logger.info("No 'known' covariate values provided; setting known=None")
-
-        # Observed
-        observed_values = [t.observed for t in input]
-        if all(v is not None for v in observed_values):
-            observed = [self.to_model_format(v) for v in observed_values]
-        elif any(v is not None for v in observed_values):
-            observed = None
-            logger.warning("Some 'observed' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting observed=None for this batch.")
-        else:
-            observed = None
-            logger.info("No 'observed' covariate values provided; setting observed=None")
-
-        # Static
-        static_values = [t.static for t in input]
-        if all(v is not None for v in static_values):
-            static = static_values
-        elif any(v is not None for v in static_values):
-            static = None
-            logger.warning("Some 'static' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting static=None for this batch.")
-        else:
-            static = None
-            logger.info("No 'static' covariate values provided; setting static=None")
-
+        known = process_input([t.known for t in input])
+        observed = process_input([t.observed for t in input])
+        static = process_input([t.static for t in input])
         return target, known, observed, static
+            
+    # def convert_input(self, input: list[AdapterInput]) -> list[Any]:
+    #     target = [self.to_model_format(t.target) for t in input]
+
+    #     # Known
+    #     known_values = [t.known for t in input]
+    #     if all(v is not None for v in known_values):
+    #         known = [self.to_model_format(v) for v in known_values]
+    #     elif any(v is not None for v in known_values):
+    #         known = None
+    #         logger.warning("Some 'known' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting known=None for this batch.")
+    #     else:
+    #         known = None
+    #         logger.info("No 'known' covariate values provided; setting known=None")
+
+    #     # Observed
+    #     observed_values = [t.observed for t in input]
+    #     if all(v is not None for v in observed_values):
+    #         observed = [self.to_model_format(v) for v in observed_values]
+    #     elif any(v is not None for v in observed_values):
+    #         observed = None
+    #         logger.warning("Some 'observed' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting observed=None for this batch.")
+    #     else:
+    #         observed = None
+    #         logger.info("No 'observed' covariate values provided; setting observed=None")
+
+    #     # Static
+    #     static_values = [t.static for t in input]
+    #     if all(v is not None for v in static_values):
+    #         static = static_values
+    #     elif any(v is not None for v in static_values):
+    #         static = None
+    #         logger.warning("Some 'static' covariate values are missing; Please make sure that covariates are present along with target for all input samples. Setting static=None for this batch.")
+    #     else:
+    #         static = None
+    #         logger.info("No 'static' covariate values provided; setting static=None")
+
+    #     return target, known, observed, static
 
     def convert_output(self, output: List[Any]) -> List[TimeSeries]:
         """
