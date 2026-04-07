@@ -61,6 +61,7 @@ class ResultReporter:
                 self.add_metric(metric)
 
         self._raw_metric_results = None
+        self._metric_map = None
 
     @property
     def is_frozen(self) -> bool:
@@ -265,102 +266,44 @@ class ResultReporter:
         self.compute_debug_samples()
 
     def compute_metrics(self):
-        logger.info("Computing merics...")
+            logger.info("Computing metrics...")
+            
+            # 1. Create the 1-1 mapping in a single line
+            # Use id(met) to ensure absolute uniqueness even for identical objects
+            self._metric_map = {met: f"{met.name}_{i}" for i, met in enumerate(self.metrics)}
 
-        def _format_metrics(metric_results) -> List[pd.DataFrame]:
-            """
-            Computes, aggregates, and formats metric results into digestible DataFrames.
+            def _format_metrics(metric_results) -> List[pd.DataFrame]:
+                all_results = []
+                for unique_name, model_results in metric_results.items():
+                    for model_name, result_df_list in model_results.items():
+                        result = pd.concat(result_df_list, axis=0).copy()
+                        result["model"], result["metric"] = model_name, unique_name
+                        all_results.append(result)
 
-            This method triggers the computation of model predictions and metrics
-            (if not already cached) and then flattens the nested results into
-            consolidated pandas DataFrames, grouped by their column structure.
+                groups = defaultdict(list)
+                for df in all_results:
+                    groups[tuple(df.columns)].append(df)
 
-            The grouping logic ensures that metrics with different output shapes
-            (e.g., scalar metrics vs. vector-based metrics) are returned as
-            separate DataFrames to maintain tabular integrity.
+                return [pd.concat(dfs, axis=0).reset_index() for dfs in groups.values()]
 
-            Returns:
-                List[pd.DataFrame]: A list of DataFrames where each DataFrame
-                    contains results for a specific set of metrics. Each DataFrame
-                    includes 'metric', 'model', and 'series_id' as leading columns.
+            results = {}
+            for met in self.metrics:
+                unique_name = metric_map[met] # Retrieve 1-1 unique name
+                met_results = {}
 
-            Note:
-                Accessing this method will trigger `self.metric_results`, which in
-                turn triggers `self.predictions` if they have not been computed yet.
-                In child classes report results are either saved to disk or uploaded to ClearML, so the returned DataFrames are not necessarily used.
-            """
+                for model_name, prediction_ts_list in self.computed_predictions.items():
+                    model_results = []
+                    for i, (adapter_input, pred_ts) in enumerate(zip(self.test_data, prediction_ts_list)):
+                        reduced_df = met(adapter_input.target, pred_ts)
+                        reduced_df["series_id"], reduced_df["model"], reduced_df["metric"] = i, model_name, unique_name
+                        model_results.append(reduced_df)
+                    met_results[model_name] = model_results
 
-            all_results = []
+                results[unique_name] = met_results
 
-            for metric_name, model_results in metric_results.items():
-                for model_name, result_df_list in model_results.items():
-                    result = pd.concat(result_df_list, axis=0).copy()
-                    result["model"] = model_name
-                    result["metric"] = metric_name
-                    all_results.append(result)
-
-            groups = defaultdict(list)
-
-            for df in all_results:
-                # use a tuple of column names as the key
-                key = tuple(df.columns)
-                groups[key].append(df)
-
-            final_dfs = []
-
-            for dfs in groups.values():
-                df_concat = pd.concat(dfs, axis=0)
-                logger.warning(
-                    "Formatted metrics may contain mixed time types (Timestamp and Timedelta), "
-                    "depending on the metric and aggregation column."
-                )
-
-                # reset any index to preserve all data as columns
-                df_concat = df_concat.reset_index()
-
-                # reorder columns: metric/model/series_id first, everything else after
-                id_cols = ["metric", "model", "series_id"]
-                other_cols = [c for c in df_concat.columns if c not in id_cols]
-                df_concat = df_concat[id_cols + other_cols]
-
-                final_dfs.append(df_concat)
-            return final_dfs
-
-        results = {}
-
-        # loop over each metrics
-        for met in self.metrics:
-            met_results = {}
-
-            for model_name, prediction_ts_list in self.computed_predictions.items():
-                model_results = []
-                # loop over test data & predictions
-                for i, (adapter_input, pred_ts) in enumerate(
-                    zip(self.test_data, prediction_ts_list)
-                ):
-                    logger.debug(
-                        f"Computing metrics for model {model_name} on test series {i}."
-                    )
-
-                    gt_ts = adapter_input.target
-                    logger.debug(
-                        f"Computing metric {met.name} "
-                        f"for model {model_name} "
-                        f"on test series {i}..."
-                    )
-                    reduced_df = met(gt_ts, pred_ts)
-                    reduced_df["series_id"] = i
-                    reduced_df["model"] = model_name
-                    reduced_df["metric"] = met.reduction.__name__
-                    model_results.append(reduced_df)
-
-                met_results[model_name] = model_results
-
-            results[met.name] = met_results
-        self._is_frozen = True
-        formatted_results = _format_metrics(results)
-        self._computed_metrics = formatted_results
-        self._raw_metric_results = results
+            self._is_frozen = True
+            self._raw_metric_results = results
+            self._computed_metrics = _format_metrics(results)
 
     def report_metrics(self) -> List[pd.DataFrame]:
         logger.info("Reporting metric results...")
