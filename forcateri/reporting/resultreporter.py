@@ -344,7 +344,7 @@ class ResultReporter:
 
                     gt_ts = adapter_input.target
                     logger.debug(
-                        f"Computing metric {str(met)} "
+                        f"Computing metric {met.name} "
                         f"for model {model_name} "
                         f"on test series {i}..."
                     )
@@ -356,7 +356,7 @@ class ResultReporter:
 
                 met_results[model_name] = model_results
 
-            results[str(met)] = met_results
+            results[met.name] = met_results
         self._is_frozen = True
         formatted_results = _format_metrics(results)
         self._computed_metrics = formatted_results
