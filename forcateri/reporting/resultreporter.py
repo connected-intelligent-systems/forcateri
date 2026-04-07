@@ -288,7 +288,7 @@ class ResultReporter:
 
             results = {}
             for met in self.metrics:
-                unique_name = metric_map[met] # Retrieve 1-1 unique name
+                unique_name = self._metric_map[met] # Retrieve 1-1 unique name
                 met_results = {}
 
                 for model_name, prediction_ts_list in self.computed_predictions.items():
