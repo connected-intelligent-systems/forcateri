@@ -270,8 +270,9 @@ class ResultReporter:
             
             # 1. Create the 1-1 mapping in a single line
             # Use id(met) to ensure absolute uniqueness even for identical objects
-            self._metric_map = {met: f"{met.name}_{i}" for i, met in enumerate(self.metrics)}
-
+            
+            self._metric_map = [(met, f"{met.name}_{i}") for i, met in enumerate(self.metrics)]
+            # if the metric is unique no need to add the index, if it has duplicate then add the index.
             def _format_metrics(metric_results) -> List[pd.DataFrame]:
                 all_results = []
                 for unique_name, model_results in metric_results.items():
@@ -287,8 +288,7 @@ class ResultReporter:
                 return [pd.concat(dfs, axis=0).reset_index() for dfs in groups.values()]
 
             results = {}
-            for met in self.metrics:
-                unique_name = self._metric_map[met] # Retrieve 1-1 unique name
+            for met, unique_name in self._metric_map:
                 met_results = {}
 
                 for model_name, prediction_ts_list in self.computed_predictions.items():
