@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from datetime import datetime, tzinfo
 from typing import List, Optional, Union, Tuple, Callable, Dict, Any
+from pathlib import Path
 from typing_extensions import Self
 
 import numpy as np
@@ -23,7 +24,7 @@ class TimeSeries:
     def __init__(
         self,
         data: pd.DataFrame,
-        representation=None,
+        representation: Optional[str] = None,
         quantiles: Optional[List[float]] = None,
         freq: Optional[str] = None,
         static_data: Optional[Dict[str, Any]] = None,
@@ -1327,3 +1328,18 @@ class TimeSeries:
         if scalar == 0:
             raise ZeroDivisionError("Cannot divide TimeSeries by zero.")
         return self.__imul__(1 / scalar)
+
+    @classmethod
+    def from_parquet(
+        cls,
+        path: Union[str, Path],
+        representation: Optional[str] = None,
+        quantiles: Optional[List[float]] = None,
+        freq: Optional[str] = None,
+        static_data: Optional[Dict[str, Any]] = None,
+    ) -> TimeSeries:
+        data = pd.read_parquet(path)
+        return cls(data=data, representation=representation, quantiles=quantiles, freq=freq, static_data=static_data)
+
+    def to_parquet(self, path: Union[str, Path]):
+        self.data.to_parquet(path)
