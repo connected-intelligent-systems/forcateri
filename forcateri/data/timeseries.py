@@ -4,7 +4,7 @@ import logging
 from datetime import datetime, tzinfo
 from typing import List, Optional, Union, Tuple, Callable, Dict, Any
 from typing_extensions import Self
-
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from .timeseriesexceptions import InvalidDataFrameFormat, InvalidRepresentationFormat
@@ -1327,3 +1327,11 @@ class TimeSeries:
         if scalar == 0:
             raise ZeroDivisionError("Cannot divide TimeSeries by zero.")
         return self.__imul__(1 / scalar)
+
+    @classmethod
+    def from_csv(cls, path: Union[str, Path], representation: Optional[str] = None, quantiles: Optional[List[float]] = None, freq: Optional[str] = None, static_data: Optional[Dict[str, Any]] = None) -> TimeSeries:
+        data = pd.read_csv(path,header=[0,1],index_col=[0,1])
+        return cls(data=data, representation=representation, quantiles=quantiles, freq=freq, static_data=static_data)
+    
+    def to_csv(self, path: Union[str, Path]):
+        self.data.to_csv(path)
