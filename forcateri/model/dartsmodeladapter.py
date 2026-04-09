@@ -33,14 +33,12 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.freq = freq
         self.model = None
         self.quantiles = quantiles
-        self.scaler_target = None
-        self.scaler_known = None
-        self.scaler_observed = None
         self.is_likelihood = is_likelihood
         self.num_samples = num_samples
         self.scaler_target: Optional[Scaler] = None
         self.scaler_known: Optional[Scaler] = None
         self.scaler_observed: Optional[Scaler] = None
+        self.target_col_names = None
 
     def _get_covariate_args(self, known, observed):
         """
@@ -127,7 +125,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         """
         logger.debug(f"Starting model fit for {self.name}")
         target, known, observed, static = self.convert_input(train_data)
-        self.target_col_names = [t.components[0] for t in target]
         logger.debug(f"Converted training data to darts format for {self.name}")
 
         future_covariates, past_covariates = self._get_covariate_args(known, observed)
@@ -204,9 +201,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
           TimeSeries format with proper offset and time indexing.
         """
         target, known, observed, static = self.convert_input(data)
-        # predict_args = self._prepare_predict_args(target, known, observed, static)
         future_covariates, past_covariates = self._get_covariate_args(known, observed)
-        # print(f"Predict args: {predict_args.keys()}")
+
         if use_rolling_window:
             logger.debug("Using rolling window prediction.")
             return self._historical_forecasts(
@@ -264,6 +260,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.scaler_target = Scaler().fit(target)
         self.scaler_known = Scaler().fit(known) if known is not None else None
         self.scaler_observed = Scaler().fit(observed) if observed is not None else None
+        self.target_col_names = [t.components[0] for t in target]
         logger.debug("Applying target scaler to target data.")
         target = self.scaler_target.transform(target)
         if self.scaler_known:
@@ -277,8 +274,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
     def convert_output(
         self,
         output: Union[List[DartsTimeSeries], List[List[DartsTimeSeries]]],
-        # is_likelihood: bool,
-        # num_samples: Optional[int] = None,
     ) -> List[TimeSeries]:
         """
         Converts Darts model output to custom TimeSeries format with proper column naming.
@@ -324,7 +319,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             # If the output is a list of lists, flatten it
             logger.debug("Converting list of DartsTimeSeries to TimeSeries format.")
             prediction_ts_format = [
-                DartsModelAdapter.to_time_series(
+                self.to_time_series(
                     ts=pred,
                     quantiles=self.quantiles,
                     is_likelihood=self.is_likelihood,
@@ -342,7 +337,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 )
         else:
             logger.debug("Converting single DartsTimeSeries to TimeSeries format.")
-            prediction_ts_format = DartsModelAdapter.to_time_series(
+            prediction_ts_format = self.to_time_series(
                 ts=output,
                 quantiles=self.quantiles,
                 is_likelihood=self.is_likelihood,
@@ -393,8 +388,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
 
         return self.convert_output(preds)
 
-    @staticmethod
-    def flatten_timeseries_df(df: pd.DataFrame) -> pd.DataFrame:
+    
+    def flatten_timeseries_df(self, df: pd.DataFrame) -> pd.DataFrame:
         """
         Flattens a TimeSeries DataFrame by resetting its MultiIndex and simplifying column structure.
 
@@ -485,7 +480,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             - The method assumes that all columns except 'time' are value
               columns.
         """
-        data = DartsModelAdapter.flatten_timeseries_df(t.data)
+        data = self.flatten_timeseries_df(t.data)
         logger.debug(f"Data after flattening in to_model_format: {data.head()}")
         data["time"] = pd.to_datetime(data["time"])
         if (data["time"].dt.tz is not None) and (data["time"].dt.tz != timezone.utc):
@@ -497,8 +492,8 @@ class DartsModelAdapter(ModelAdapter, ABC):
             data, time_col="time", value_cols=value_cols, freq=self.freq
         )
 
-    @staticmethod
-    def to_time_series(
+    
+    def to_time_series(self,
         ts: Union[DartsTimeSeries, List[DartsTimeSeries]],
         quantiles: Optional[List[float]] = None,
         is_likelihood: bool = False,
