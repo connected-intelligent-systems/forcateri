@@ -33,9 +33,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.freq = freq
         self.model = None
         self.quantiles = quantiles
-        self.scaler_target = None
-        self.scaler_known = None
-        self.scaler_observed = None
         self.is_likelihood = is_likelihood
         self.num_samples = num_samples
         self.scaler_target: Optional[Scaler] = None
