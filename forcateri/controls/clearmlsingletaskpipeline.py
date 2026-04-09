@@ -1,9 +1,9 @@
-from forcateri.utils.config_utils import extract_config, load_config
-from dotenv import load_dotenv
-from pathlib import Path
 import os
-from clearml import Task
 from typing import List, Union, Optional
+
+from clearml import Task
+
+from forcateri.utils.config_utils import extract_config, load_config
 from .pipeline import Pipeline
 from ..model.modeladapter import ModelAdapter
 from ..data.dataprovider import DataProvider
@@ -23,11 +23,11 @@ class ClearMLSingleTaskPipeline(Pipeline):
         init_args: Optional[List] = None,
         requirements: str = None,
         docker: Optional[str] = None,
+        docker_args: str = "",
+        github_oauth_token: str = "",  # shorthand for adding a github_oauth_token to the docker args
         repo: Optional[str] = None,
         branch: Optional[str] = None,
     ):
-        # self.task_name = task_name
-
         super().__init__(data_provider, model_adapter, result_reporter)
 
         self.init_args = init_args or []
@@ -36,15 +36,14 @@ class ClearMLSingleTaskPipeline(Pipeline):
         if config_path and os.path.exists(config_path):
             self.config_path = config_path
             self.config = load_config(config_path)
-            # upd config based on param_args and project_name and task_name. Param args have priority
 
+            # upd config based on param_args and project_name and task_name. Param args have priority
             self.parsed_cfg_args = extract_config(self.config)
             # self.args.append(("config", config_name))
             # update parsed_cfg_args with init_args
             if self.init_args:
                 for k, v in self.init_args:
                     # remove existing arg with same key
-
                     self.parsed_cfg_args = [
                         arg for arg in self.parsed_cfg_args if arg[0] != k
                     ]
@@ -60,6 +59,10 @@ class ClearMLSingleTaskPipeline(Pipeline):
         self.project_name = project_name or clearml_cfg.get("project_name")
         self.task_name = task_name or clearml_cfg.get("task_name")
         self.docker = docker or clearml_cfg.get("docker")
+        self.docker_args = docker_args
+        if github_oauth_token:  # simultaneously check for None and empty string
+            oauth_arg = f"-e CLEARML_AGENT_GIT_USER=oauth2 -e CLEARML_AGENT_GIT_PASS={github_oauth_token}"
+            self.docker_args = self.docker_args + " " + oauth_arg
         self.repo = repo or clearml_cfg.get("repo")
         self.branch = branch or clearml_cfg.get("branch")
 
