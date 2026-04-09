@@ -73,7 +73,10 @@ class ClearMLSingleTaskPipeline(Pipeline):
         )
         function_task = self.task.create_function_task(func=super().run)
 
-        function_task.set_base_docker(docker_image=self.docker)
+        function_task.set_base_docker(
+            docker_image=self.docker,
+            docker_arguments=self.docker_args,
+        )
         function_task.set_packages(self.requirements)
 
         function_task.connect_configuration(
