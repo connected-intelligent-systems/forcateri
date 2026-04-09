@@ -27,6 +27,7 @@ class ClearMLSingleTaskPipeline(Pipeline):
         github_oauth_token: str = "",  # shorthand for adding a github_oauth_token to the docker args
         repo: Optional[str] = None,
         branch: Optional[str] = None,
+        commit: Optional[str] = None,
     ):
         super().__init__(data_provider, model_adapter, result_reporter)
 
@@ -65,6 +66,7 @@ class ClearMLSingleTaskPipeline(Pipeline):
             self.docker_args = self.docker_args + " " + oauth_arg
         self.repo = repo or clearml_cfg.get("repo")
         self.branch = branch or clearml_cfg.get("branch")
+        self.commit = commit or clearml_cfg.get("commit")
 
     def run(self):
         self.task = Task.init(project_name=self.project_name, task_name=self.task_name)
@@ -82,5 +84,9 @@ class ClearMLSingleTaskPipeline(Pipeline):
         function_task.connect_configuration(
             self.parsed_cfg_args, ignore_remote_overrides=False
         )
-        function_task.set_repo(repo=self.repo, branch=self.branch)
+        function_task.set_repo(
+            repo=self.repo,
+            branch=self.branch,
+            commit=self.commit,
+        )
         Task.enqueue(task=function_task, queue_name="default")
