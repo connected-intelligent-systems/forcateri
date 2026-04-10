@@ -1329,9 +1329,14 @@ class TimeSeries:
         return self.__imul__(1 / scalar)
 
     @classmethod
-    def from_csv(cls, path: Union[str, Path], representation: Optional[str] = None, quantiles: Optional[List[float]] = None, freq: Optional[str] = None, static_data: Optional[Dict[str, Any]] = None) -> TimeSeries:
+    def from_csv(cls, path: Union[str, Path]) -> TimeSeries:
         data = pd.read_csv(path,header=[0,1],index_col=[0,1])
-        return cls(data=data, representation=representation, quantiles=quantiles, freq=freq, static_data=static_data)
-    
+        data.index = data.index.set_levels([
+            pd.to_timedelta(data.index.levels[0]), # Level 0 (offset)
+            pd.to_datetime(data.index.levels[1])    # Level 1 (time)
+        ])
+        representation, quantiles = cls._infer_representation(data)
+        return cls(data=data, representation=representation, quantiles=quantiles)
+
     def to_csv(self, path: Union[str, Path]):
         self.data.to_csv(path)
