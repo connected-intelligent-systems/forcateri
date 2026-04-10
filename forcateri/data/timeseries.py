@@ -5,7 +5,7 @@ from datetime import datetime, tzinfo
 from typing import List, Optional, Union, Tuple, Callable, Dict, Any
 from pathlib import Path
 from typing_extensions import Self
-
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from .timeseriesexceptions import InvalidDataFrameFormat, InvalidRepresentationFormat
@@ -1372,3 +1372,16 @@ class TimeSeries:
 
     def to_parquet(self, path: Union[str, Path]):
         self.data.to_parquet(path)
+
+    @classmethod
+    def from_csv(cls, path: Union[str, Path]) -> TimeSeries:
+        data = pd.read_csv(path,header=[0,1],index_col=[0,1])
+        data.index = data.index.set_levels([
+            pd.to_timedelta(data.index.levels[0]), # Level 0 (offset)
+            pd.to_datetime(data.index.levels[1])    # Level 1 (time)
+        ])
+        representation, quantiles = cls._infer_representation(data)
+        return cls(data=data, representation=representation, quantiles=quantiles)
+
+    def to_csv(self, path: Union[str, Path]):
+        self.data.to_csv(path)

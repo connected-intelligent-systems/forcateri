@@ -46,7 +46,8 @@ class ModelAdapter(ABC):
             "Method not overridden in concrete adapter implementation"
         )
 
-    def load(self, path: Union[Path, str]) -> None:
+    @classmethod
+    def load(cls, path: Union[Path, str]) -> None:
         raise NotImplementedError(
             "Method not overridden in concrete adapter implementation"
         )
@@ -107,6 +108,6 @@ class ModelAdapter(ABC):
             "Method not overridden in concrete adapter implementation"
         )
 
-    @classmethod
-    def _default_save_path(cls) -> str:
-        return f"{cls.__name__}_{datetime.datetime.now().strftime('%Y-%m-%d_%H_%M_%S')}"
+    # @classmethod
+    # def _default_save_path(cls) -> str:
+    #     return f"{cls.__name__}_{datetime.datetime.now().strftime('%Y-%m-%d_%H_%M_%S')}"
