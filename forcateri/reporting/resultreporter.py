@@ -394,7 +394,7 @@ class ResultReporter:
     def compute_predictions(self):
         logger.debug("Making predictions...")
         model_predictions = {}
-        for model in self.models:
+        for i, model in enumerate(self.models):
             logger.debug(
                 f"Applying model {model.__class__.__name__} to the test data..."
             )
@@ -402,7 +402,11 @@ class ResultReporter:
             logger.debug(
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
-            model_predictions[model.name] = predictions_ts_list
+            if model.name not in model_predictions:
+                model_predictions[model.name] = predictions_ts_list
+            else:
+                new_model_name = f"{model.name}_{i}"
+                model_predictions[new_model_name] = predictions_ts_list
         self._computed_predictions = model_predictions
 
     def report_predictions(self):
