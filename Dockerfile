@@ -19,6 +19,6 @@ RUN python3.10 -m pip --version
 
 WORKDIR /forcateri
 
-COPY requirements.txt .
-
+COPY . .
 RUN python3.10 -m pip install --no-cache-dir -r requirements.txt
+RUN python3.10 -m pip install .
