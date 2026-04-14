@@ -30,15 +30,10 @@ class TimeSeries:
         static_data: Optional[Dict[str, Any]] = None,
     ):
         if representation is None:
-            try:
-                representation, col_vals = TimeSeries._infer_representation(data)
-                if quantiles is None and representation == TimeSeries.QUANTILE_REP:
-                    quantiles = col_vals
-            except Exception as e:
-                logger.warning(
-                    f"Could not infer representation from data: {e}. Defaulting to deterministic representation."
-                )
-                representation = TimeSeries.DETERM_REP
+            representation, col_vals = TimeSeries._infer_representation(data)
+            if quantiles is None and representation == TimeSeries.QUANTILE_REP:
+                quantiles = col_vals
+
 
         self.quantiles = None
         self._representation = representation
@@ -1336,16 +1331,19 @@ class TimeSeries:
     
     @staticmethod
     def _infer_representation(df: pd.DataFrame) -> str:
+        df = df.copy()  # Avoid modifying the original DataFrame
         # 1. Clean the level 1 values (strip whitespace or ensure they are strings first)
+        if df.columns.nlevels < 2:
+            raise InvalidDataFrameFormat("DataFrame must have a MultiIndex columns for representation inference.")
         level_1_values = df.columns.get_level_values(1).astype(str)
 
-        # 2. Try to cast to float (handles both 0.5 and 1)
+       #casting to numeric (float or int)
         try:
-            # pd.to_numeric is great because it handles float/int conversion automatically
             casted_levels = pd.to_numeric(level_1_values)
             df.columns = df.columns.set_levels(casted_levels, level=1)
         except (ValueError, TypeError):
             # If it can't be numeric, keep it as strings (e.g., if it's "value")
+            logger.debug("Level 1 values could not be cast to numeric. Falling back to string.")
             df.columns = df.columns.set_levels(level_1_values, level=1)
 
         # 3. Now run the checks - the types will now match the isinstance() calls
