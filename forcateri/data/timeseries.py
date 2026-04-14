@@ -1344,7 +1344,7 @@ class TimeSeries:
         except (ValueError, TypeError):
             # If it can't be numeric, keep it as strings (e.g., if it's "value")
             logger.debug("Level 1 values could not be cast to numeric. Falling back to string.")
-            df.columns = df.columns.set_levels(level_1_values, level=1)
+            df.columns = df.columns.set_levels(level_1_values.unique(), level=1)
 
         # 3. Now run the checks - the types will now match the isinstance() calls
         if TimeSeries._check_column_levels(df, TimeSeries.DETERM_REP, strict=True):
