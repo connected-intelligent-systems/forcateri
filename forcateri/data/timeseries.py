@@ -30,9 +30,15 @@ class TimeSeries:
         static_data: Optional[Dict[str, Any]] = None,
     ):
         if representation is None:
-            representation, col_vals = TimeSeries._infer_representation(data)
-            if quantiles is None and representation == TimeSeries.QUANTILE_REP:
-                quantiles = col_vals
+            #if it is multiindex then infer, otherwise make it determinstic by default
+            if isinstance(data.columns, pd.MultiIndex) and isinstance(
+                data.index, pd.MultiIndex
+            ):
+                representation, col_vals = TimeSeries._infer_representation(data)
+                if quantiles is None and representation == TimeSeries.QUANTILE_REP:
+                    quantiles = col_vals
+            else:
+                representation = TimeSeries.DETERM_REP
 
 
         self.quantiles = None
@@ -1365,8 +1371,8 @@ class TimeSeries:
         path: Union[str, Path],
     ) -> TimeSeries:
         data = pd.read_parquet(path)
-        representation, quantiles = cls._infer_representation(data)
-        return cls(data=data, representation=representation, quantiles=quantiles)
+        #representation, quantiles = cls._infer_representation(data)
+        return cls(data=data)
 
     def to_parquet(self, path: Union[str, Path]):
         self.data.to_parquet(path)
@@ -1378,8 +1384,8 @@ class TimeSeries:
             pd.to_timedelta(data.index.levels[0]), # Level 0 (offset)
             pd.to_datetime(data.index.levels[1])    # Level 1 (time)
         ])
-        representation, quantiles = cls._infer_representation(data)
-        return cls(data=data, representation=representation, quantiles=quantiles)
+        #representation, quantiles = cls._infer_representation(data)
+        return cls(data=data)
 
     def to_csv(self, path: Union[str, Path]):
         self.data.to_csv(path)
