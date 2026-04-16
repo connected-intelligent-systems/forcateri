@@ -41,7 +41,7 @@ class ClearMLReporter(ResultReporter):
         )
         for model in self.models:
             Task.current_task().upload_artifact(
-                name=model.model_name, artifact_object=model
+                name=model.name, artifact_object=model
             )
 
     def report_metrics(self):
