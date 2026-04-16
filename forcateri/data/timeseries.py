@@ -37,7 +37,7 @@ class TimeSeries:
                 representation, col_vals = TimeSeries._infer_representation(data)
                 if quantiles is None and representation == TimeSeries.QUANTILE_REP:
                     quantiles = col_vals
-            else:
+            if data.columns.nlevels == 1:
                 representation = TimeSeries.DETERM_REP
 
 
@@ -1339,8 +1339,6 @@ class TimeSeries:
     def _infer_representation(df: pd.DataFrame) -> str:
         df = df.copy()  # Avoid modifying the original DataFrame
         # 1. Clean the level 1 values (strip whitespace or ensure they are strings first)
-        if df.columns.nlevels < 2:
-            raise InvalidDataFrameFormat("DataFrame must have a MultiIndex columns for representation inference.")
         level_1_values = df.columns.get_level_values(1).astype(str)
 
        #casting to numeric (float or int)
