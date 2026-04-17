@@ -815,7 +815,10 @@ class TimeSeries:
                             "Only continuous slices are supported."
                         )
                     else:
-                        upper_bound = None if i.stop == 1.0 else to_dt(i.stop)
+                        float_oob = isinstance(i.stop, float) and i.stop >= 1.0
+                        int_oob = isinstance(i.stop, int) and i.stop >= len(self)
+                        out_of_bounds = float_oob or int_oob
+                        upper_bound = None if out_of_bounds else to_dt(i.stop)
                         return slice(to_dt(i.start), upper_bound)
                 case pd.Timestamp():
                     check_tz_compatibiliy(i)
