@@ -26,9 +26,13 @@ class LocalResultReporter(ResultReporter):
         save_path: Path = Path("reports"),
     ):
         super().__init__(models, metrics, test_data=test_data)
-        save_path = save_path / f"reports-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        save_path = (
+            save_path
+            / f"reports-{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}"
+        )
         save_path.mkdir(parents=True, exist_ok=True)
         self.save_path = save_path
+
     def report_all(self):
 
         super().report_all()
@@ -40,7 +44,7 @@ class LocalResultReporter(ResultReporter):
             logger.info(f"Saved model {model.name} to {save_path}")
 
     def report_metrics(self):
-        
+
         super().report_metrics()
 
         metrics_dir = self.save_path / self.METRICS_DIR
@@ -49,10 +53,10 @@ class LocalResultReporter(ResultReporter):
 
         # save each DataFrame separately if there are multiple
         for i, df in enumerate(self.computed_metrics):
+            col_names = df.columns.tolist()
             filename = (
-                metrics_dir / f"all_metrics_results_{i}.csv"
-                if len(self.computed_metrics) > 1
-                else metrics_dir / f"all_metrics_results.csv"
+                metrics_dir
+                / f"all_metrics_results_{col_names[0]}_{col_names[1]}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
             )
             df.to_csv(filename, index=False)
 
@@ -72,7 +76,7 @@ class LocalResultReporter(ResultReporter):
             fig.write_html(
                 f"{predictions_plot_dir}/{model_name}_test{test_idx}_offset{offset}.html"
             )
-    
+
     def report_predictions(self):
         super().report_predictions()
         for model_name, predictions in self.computed_predictions.items():
@@ -81,5 +85,5 @@ class LocalResultReporter(ResultReporter):
             filename = pred_dir / f"{model_name}_predictions.pkl"
             with open(filename, "wb") as f:
                 pd.to_pickle(predictions, f)
-            
+
             logger.info(f"Saved predictions for model {model_name} to {filename}")

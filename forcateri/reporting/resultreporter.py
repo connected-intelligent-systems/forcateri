@@ -283,7 +283,10 @@ class ResultReporter:
 
                 groups = defaultdict(list)
                 for df in all_results:
-                    groups[tuple(df.columns)].append(df)
+                    # Group by columns AND index level dtypes (always MultiIndex)
+                    idx_dtypes = tuple(lv.dtype for lv in df.index.levels)
+                    key = (tuple(df.columns), idx_dtypes)
+                    groups[key].append(df)
 
                 return [pd.concat(dfs, axis=0).reset_index() for dfs in groups.values()]
 
