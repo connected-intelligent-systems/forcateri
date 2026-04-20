@@ -214,6 +214,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         else:
             preds = self.model.predict(
                 n=n,
+                series=target,
                 future_covariates=future_covariates,
                 past_covariates=past_covariates,
                 **kwargs,
