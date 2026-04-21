@@ -1391,6 +1391,11 @@ class TimeSeries:
         -------
         TimeSeries
             A new TimeSeries instance that is a copy of the original.
+
+        Notes
+        -----
+        This method underlies the behavior of Python's `copy` module via
+        `__copy__` and `__deepcopy__`.
         """
         return TimeSeries(
             data=self.data.copy(deep=deep),
