@@ -1377,3 +1377,35 @@ class TimeSeries:
 
     def to_csv(self, path: Union[str, Path]):
         self.data.to_csv(path)
+
+    def copy(self, deep:bool = True) -> TimeSeries:
+        """
+        Creates a copy of the TimeSeries instance.
+
+        Parameters
+        ----------
+        deep : bool, default=True
+            If True, performs a deep copy of the underlying data. If False, performs a shallow copy.
+
+        Returns
+        -------
+        TimeSeries
+            A new TimeSeries instance that is a copy of the original.
+
+        Notes
+        -----
+        This method underlies the behavior of Python's `copy` module via
+        `__copy__` and `__deepcopy__`.
+        """
+        return TimeSeries(
+            data=self.data.copy(deep=deep),
+            representation=self.representation,
+            quantiles=self.quantiles.copy() if self.quantiles is not None else None,
+            freq=self.freq,
+        )
+
+    def __copy__(self) -> TimeSeries:
+        return self.copy(deep=False)
+    
+    def __deepcopy__(self, memo:Dict) -> TimeSeries:
+        return self.copy(deep=True)
