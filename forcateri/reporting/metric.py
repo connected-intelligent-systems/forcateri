@@ -34,7 +34,7 @@ class Metric:
         ValueError
             If the prediction offset is < 1
         """
-
+        prediction = prediction.copy()
         horizon = prediction.offset.max() // pd.Timedelta(1, prediction.freq)
         logger.debug(
             f"While computing metric the following horizon was calculated on pred_ts: {horizon}"
