@@ -3,8 +3,9 @@ from __future__ import annotations
 import logging
 from datetime import datetime, tzinfo
 from typing import List, Optional, Union, Tuple, Callable, Dict, Any
+from pathlib import Path
 from typing_extensions import Self
-
+from pathlib import Path
 import numpy as np
 import pandas as pd
 from .timeseriesexceptions import InvalidDataFrameFormat, InvalidRepresentationFormat
@@ -23,15 +24,21 @@ class TimeSeries:
     def __init__(
         self,
         data: pd.DataFrame,
-        representation=None,
+        representation: Optional[str] = None,
         quantiles: Optional[List[float]] = None,
         freq: Optional[str] = None,
     ):
         if representation is None:
-            if quantiles is None:
+            #if it is multiindex then infer, otherwise make it determinstic by default
+            if isinstance(data.columns, pd.MultiIndex) and isinstance(
+                data.index, pd.MultiIndex
+            ):
+                representation, col_vals = TimeSeries._infer_representation(data)
+                if quantiles is None and representation == TimeSeries.QUANTILE_REP:
+                    quantiles = col_vals
+            if data.columns.nlevels == 1:
                 representation = TimeSeries.DETERM_REP
-            else:
-                representation = TimeSeries.QUANTILE_REP
+
 
         self.quantiles = None
         self._representation = representation
@@ -1317,3 +1324,56 @@ class TimeSeries:
         if scalar == 0:
             raise ZeroDivisionError("Cannot divide TimeSeries by zero.")
         return self.__imul__(1 / scalar)
+    
+    @staticmethod
+    def _infer_representation(df: pd.DataFrame) -> str:
+        df = df.copy()  # Avoid modifying the original DataFrame
+        # 1. Clean the level 1 values (strip whitespace or ensure they are strings first)
+        level_1_values = df.columns.get_level_values(1).astype(str)
+
+       #casting to numeric (float or int)
+        try:
+            casted_levels = pd.to_numeric(level_1_values)
+            df.columns = df.columns.set_levels(casted_levels, level=1)
+        except (ValueError, TypeError):
+            # If it can't be numeric, keep it as strings (e.g., if it's "value")
+            logger.debug("Level 1 values could not be cast to numeric. Falling back to string.")
+            df.columns = df.columns.set_levels(level_1_values.unique(), level=1)
+
+        # 3. Now run the checks - the types will now match the isinstance() calls
+        if TimeSeries._check_column_levels(df, TimeSeries.DETERM_REP, strict=True):
+            rep = TimeSeries.DETERM_REP
+        elif TimeSeries._check_column_levels(df, TimeSeries.QUANTILE_REP, strict=True):
+            rep = TimeSeries.QUANTILE_REP
+        elif TimeSeries._check_column_levels(df, TimeSeries.SAMPLE_REP, strict=True):
+            rep = TimeSeries.SAMPLE_REP
+        else:
+            raise InvalidRepresentationFormat("Could not infer representation...")
+        vals = df.columns.get_level_values(1).unique().tolist()
+        logger.info(f"Inferred representation: {rep} with values {vals}")
+        return rep, vals
+    
+    @classmethod
+    def from_parquet(
+        cls,
+        path: Union[str, Path],
+    ) -> TimeSeries:
+        data = pd.read_parquet(path)
+        #representation, quantiles = cls._infer_representation(data)
+        return cls(data=data)
+
+    def to_parquet(self, path: Union[str, Path]):
+        self.data.to_parquet(path)
+
+    @classmethod
+    def from_csv(cls, path: Union[str, Path]) -> TimeSeries:
+        data = pd.read_csv(path,header=[0,1],index_col=[0,1])
+        data.index = data.index.set_levels([
+            pd.to_timedelta(data.index.levels[0]), # Level 0 (offset)
+            pd.to_datetime(data.index.levels[1])    # Level 1 (time)
+        ])
+        #representation, quantiles = cls._infer_representation(data)
+        return cls(data=data)
+
+    def to_csv(self, path: Union[str, Path]):
+        self.data.to_csv(path)
