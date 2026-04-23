@@ -34,7 +34,7 @@ class Metric:
         ValueError
             If the prediction offset is < 1
         """
-
+        prediction = prediction.copy()
         horizon = prediction.offset.max() // pd.Timedelta(1, prediction.freq)
         logger.debug(
             f"While computing metric the following horizon was calculated on pred_ts: {horizon}"
@@ -46,7 +46,7 @@ class Metric:
                 f"Horizon is expected to be 1 or greater but was {horizon}."
             )
 
-        ts_gt_shifted = ground_truth.shift_repeat_to_multihorizon(horizon=horizon)
+        ts_gt_shifted = ground_truth.shift_repeat_to_multihorizon(horizon=horizon,in_place=False)
         logger.debug(f"\ngt_shifted:\n{ts_gt_shifted}")
         common_index = ts_gt_shifted.data.index.intersection(prediction.data.index)
         logger.debug(
