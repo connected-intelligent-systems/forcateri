@@ -38,7 +38,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.scaler_target: Optional[Scaler] = None
         self.scaler_known: Optional[Scaler] = None
         self.scaler_observed: Optional[Scaler] = None
-        self.target_col_names = None
+
 
     def _get_covariate_args(self, known, observed):
         """
@@ -118,7 +118,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         -----
         - The method automatically handles covariate support detection based on the model's
           capabilities (supports_future_covariates, supports_past_covariates, etc.).
-        - Target column names are stored in self.target_col_names for later use in predictions.
         - If scalers are configured, they will be applied during the convert_input step.
         - Validation covariates are automatically prefixed with 'val_' to match Darts API
           requirements.
@@ -215,6 +214,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         else:
             preds = self.model.predict(
                 n=n,
+                series=target,
                 future_covariates=future_covariates,
                 past_covariates=past_covariates,
                 **kwargs,
@@ -260,7 +260,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         self.scaler_target = Scaler().fit(target)
         self.scaler_known = Scaler().fit(known) if known is not None else None
         self.scaler_observed = Scaler().fit(observed) if observed is not None else None
-        self.target_col_names = [t.components[0] for t in target]
         logger.debug("Applying target scaler to target data.")
         target = self.scaler_target.transform(target)
         if self.scaler_known:
@@ -304,9 +303,6 @@ class DartsModelAdapter(ModelAdapter, ABC):
         -----
         - The method uses self.quantiles, self.is_likelihood, and self.num_samples
           to determine the output format.
-        - For list outputs, each prediction is converted individually and column names
-          are updated to match the original target column names stored in
-          self.target_col_names.
         - Returns an empty list if the output is None or empty.
         - The conversion process includes proper handling of:
           * Quantile forecasts (for probabilistic models)
@@ -327,14 +323,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 )
                 for pred in output
             ]
-            for ts, new_name in zip(prediction_ts_format, self.target_col_names):
-                ts.data.columns = pd.MultiIndex.from_tuples(
-                    [(new_name, q) for q in ts.data.columns.get_level_values(1)],
-                    names=TimeSeries.COL_INDEX_NAMES,
-                )
-                logger.debug(
-                    f"Renamed column names to match TimeSeries format: {ts.data.columns}"
-                )
+
         else:
             logger.debug("Converting single DartsTimeSeries to TimeSeries format.")
             prediction_ts_format = self.to_time_series(
