@@ -54,8 +54,9 @@ class Metric:
         )
         ts_gt_shifted.data = ts_gt_shifted.data.loc[common_index]
         old_pred_len = len(prediction)
+        old_gt_len = len(ts_gt_shifted)
         prediction.data = prediction.data.loc[common_index]
-        dropped_gt_steps = len(ground_truth) - len(ts_gt_shifted)
+        dropped_gt_steps = old_gt_len - len(ts_gt_shifted)
         dropped_pred_steps = old_pred_len - len(prediction)
         if (dropped_gt_steps, dropped_pred_steps) != (0, 0):
             logger.warning(
