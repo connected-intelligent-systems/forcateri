@@ -51,7 +51,7 @@ class ClearMLReporter(ResultReporter):
         for i, df in enumerate(self.computed_metrics):
             col_names = df.columns.tolist()
             filename = (
-                 f"all_metrics_results_{col_names[0]}_{col_names[1]}_{datetime.datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+                 f"all_metrics_results_{col_names[0]}_{col_names[1]}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
             )
             df.to_csv(filename, index=False)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
