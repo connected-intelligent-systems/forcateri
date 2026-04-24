@@ -43,6 +43,10 @@ class DartsModelAdapter(ModelAdapter, ABC):
     def _get_covariate_args(self, known, observed):
         """
         Helper method to build covariate arguments for model fitting and prediction.
+        
+        Logs warnings only when unexpected mismatches occur:
+        - Covariates are provided but the model doesn't support them
+        - Covariates are not provided but the model would support them
         """
         covariate_map = {
             "future_covariates": (
@@ -59,24 +63,33 @@ class DartsModelAdapter(ModelAdapter, ABC):
             # ),
         }
         args = {key: None for key in covariate_map}
+        
         for key, (supports, value) in covariate_map.items():
-            if not supports or value is None:
-                logger.warning(
-                    f"Model does not support {key} or no {key} provided, skipping this covariate."
-                )
-                continue
-
-            # if value is a list, skip if all elements are None or empty
-            if isinstance(value, list):
-                if all(
-                    v is None or (hasattr(v, "__len__") and len(v) == 0) for v in value
-                ):
-                    logger.warning(
-                        f"All elements in {key} are None or empty, skipping this covariate."
+            # Check if value actually exists (not None and not all empty elements if it's a list)
+            has_value = False
+            if value is not None:
+                if isinstance(value, list):
+                    has_value = not all(
+                        v is None or (hasattr(v, "__len__") and len(v) == 0) for v in value
                     )
-                    continue
-
-            args[key] = value
+                else:
+                    has_value = True
+            
+            # Log only unexpected mismatches
+            if has_value and not supports:
+                # Unexpected: covariates provided but model doesn't support them
+                logger.warning(
+                    f"Ignoring {key}: model does not support {key}, but it was provided."
+                )
+            elif not has_value and supports:
+                # Unexpected: model supports covariates but none were provided
+                logger.debug(
+                    f"Model supports {key}, but none was provided. Consider providing {key} for better predictions."
+                )
+            elif has_value and supports:
+                # Expected and optimal: both available, use them
+                args[key] = value
+            # else: not has_value and not supports - expected, no action needed
 
         return (
             args["future_covariates"],
@@ -122,7 +135,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         - Validation covariates are automatically prefixed with 'val_' to match Darts API
           requirements.
         """
-        logger.debug(f"Starting model fit for {self.name}")
+        logger.info(f"Starting model fit for {self.name}")
         target, known, observed, static = self.convert_input(train_data)
         logger.debug(f"Converted training data to darts format for {self.name}")
 
@@ -203,7 +216,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
         future_covariates, past_covariates = self._get_covariate_args(known, observed)
 
         if use_rolling_window:
-            logger.debug("Using rolling window prediction.")
+            logger.debug("Using rolling window prediction mode.")
             return self._historical_forecasts(
                 n=n,
                 series=target,
@@ -313,7 +326,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             return []
         if isinstance(output, list):
             # If the output is a list of lists, flatten it
-            logger.debug("Converting list of DartsTimeSeries to TimeSeries format.")
+            logger.debug("Converting Darts predictions to TimeSeries format.")
             prediction_ts_format = [
                 self.to_time_series(
                     ts=pred,
@@ -325,7 +338,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
             ]
 
         else:
-            logger.debug("Converting single DartsTimeSeries to TimeSeries format.")
+            logger.debug("Converting Darts predictions to TimeSeries format.")
             prediction_ts_format = self.to_time_series(
                 ts=output,
                 quantiles=self.quantiles,

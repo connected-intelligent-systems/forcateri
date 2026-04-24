@@ -100,7 +100,7 @@ class DataProvider:
         )
 
         for data_source, role in zip(self.data_sources, self.roles):
-            logger.debug(f"Processing data source: {data_source} with roles: {role}")
+            logger.debug(f"Processing data source with roles: {role}")
             columns_observed = role.get(SeriesRole.OBSERVED) or []
             columns_observed = (
                 columns_observed
@@ -119,7 +119,7 @@ class DataProvider:
             )
 
             logger.debug(
-                f"Identified columns - Target: {columns_target}, Known: {columns_known}, Observed: {columns_observed}"
+                f"Identified column roles - Target: {columns_target}, Known: {columns_known}, Observed: {columns_observed}"
             )
             data_list = data_source.get_data()
             for ts_obj in data_list:
@@ -156,10 +156,6 @@ class DataProvider:
                 self.target, self.known, self.observed
             ):
                 if split_type == "train":
-                    logger.debug(
-                        "Processing training split. List[AdapterInput] length: %d",
-                        len(list_of_tuples),
-                    )
                     list_of_tuples.append(
                         AdapterInput(
                             target=target_ts[:start] if target_ts is not None else None,
@@ -171,10 +167,6 @@ class DataProvider:
                         )
                     )
                 elif split_type == "val":
-                    logger.debug(
-                        "Processing validation split. List[AdapterInput] length: %d",
-                        len(list_of_tuples),
-                    )
                     list_of_tuples.append(
                         AdapterInput(
                             target=(
@@ -190,10 +182,6 @@ class DataProvider:
                         )
                     )
                 elif split_type == "test":
-                    logger.debug(
-                        "Processing test split. List[AdapterInput] length: %d",
-                        len(list_of_tuples),
-                    )
                     list_of_tuples.append(
                         AdapterInput(
                             target=target_ts[end:] if target_ts is not None else None,

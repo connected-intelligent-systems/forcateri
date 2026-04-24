@@ -266,7 +266,7 @@ class ResultReporter:
         self.compute_debug_samples()
 
     def compute_metrics(self):
-            logger.info("Computing metrics...")
+            logger.info("Computing metrics for registered models and test data...")
             
             # 1. Create the 1-1 mapping in a single line
             # Use id(met) to ensure absolute uniqueness even for identical objects
@@ -309,14 +309,14 @@ class ResultReporter:
             self._computed_metrics = _format_metrics(results)
 
     def report_metrics(self) -> List[pd.DataFrame]:
-        logger.info("Reporting metric results...")
+        logger.debug("Reporting metric results...")
         _ = self.computed_metrics
 
     def plot_metrics(self):
         """
         Note that in child classes returned figure objects are saved or uploaded to clearml
         """
-        logger.info("Plotting metrics results...")
+        logger.debug("Plotting metrics results...")
 
         figures = []
         if self._raw_metric_results is None:
@@ -337,7 +337,7 @@ class ResultReporter:
         """
         Note that in child classes returned figure objects are saved or uploaded to clearml
         """
-        logger.info("Plotting model predictions...")
+        logger.debug("Plotting model predictions...")
         figures = []
 
         for model_name, prediction_ts_list in self.computed_predictions.items():
@@ -395,7 +395,7 @@ class ResultReporter:
         self._prediction_plots = figures
 
     def compute_predictions(self):
-        logger.debug("Making predictions...")
+        logger.info("Making predictions for all registered models...")
         model_predictions = {}
         for i, model in enumerate(self.models):
             logger.debug(
@@ -413,7 +413,7 @@ class ResultReporter:
         self._computed_predictions = model_predictions
 
     def report_predictions(self):
-        logger.info("Reporting model predictions...")
+        logger.debug("Reporting model predictions...")
         _ = self.computed_predictions
 
     def report_debug_samples(self):
