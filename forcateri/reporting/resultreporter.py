@@ -245,7 +245,7 @@ class ResultReporter:
             )
         self.metrics.append(metric)
 
-    def _generate_unique_names(self, objects: List) -> List[Tuple]:
+    def _generate_unique_names(self, objects: List[ModelAdapter] | List[Metric]) -> List[Tuple]:
         """
         Generate unique names for objects, appending indices only to non-unique names.
 
@@ -441,7 +441,7 @@ class ResultReporter:
             logger.debug(
                 f"Applying model {model.__class__.__name__} to the test data..."
             )
-            predictions_ts_list = model.predict(self.test_data, n=7, use_rolling_window=True)
+            predictions_ts_list = model.predict(self.test_data, use_rolling_window=True)
             logger.debug(
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
