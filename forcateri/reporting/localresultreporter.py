@@ -38,10 +38,11 @@ class LocalResultReporter(ResultReporter):
         super().report_all()
         model_dir = self.save_path / self.MODELS_DIR
         model_dir.mkdir(parents=True, exist_ok=True)
-        for model in self.models:
-            save_path = model_dir / f"{model.name}"
+        model_name_pairs = self._generate_unique_names(self.models)
+        for model, unique_name in model_name_pairs:
+            save_path = model_dir / f"{unique_name}"
             model.save(save_path)
-            logger.info(f"Saved model {model.name} to {save_path}")
+            logger.info(f"Saved model {unique_name} to {save_path}")
 
     def report_metrics(self):
 

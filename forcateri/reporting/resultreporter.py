@@ -61,7 +61,7 @@ class ResultReporter:
                 self.add_metric(metric)
 
         self._raw_metric_results = None
-        self._metric_map = None
+        
 
     @property
     def is_frozen(self) -> bool:
@@ -245,6 +245,49 @@ class ResultReporter:
             )
         self.metrics.append(metric)
 
+    def _generate_unique_names(self, objects: List[ModelAdapter] | List[Metric]) -> List[Tuple]:
+        """
+        Generate unique names for objects, appending indices only to non-unique names.
+
+        For example, with objects having names [MSE, MSE, MAE, RMSE, RMSE]:
+        Returns [(obj0, 'MSE_0'), (obj1, 'MSE_1'), (obj2, 'MAE'), (obj3, 'RMSE_0'), (obj4, 'RMSE_1')]
+
+        Each name is counted individually, so duplicates get sequential indices starting from 0.
+
+        Args:
+            objects: List of objects with a 'name' attribute
+
+        Returns:
+            List of (object, unique_name) tuples
+        """
+        # Count occurrences of each name
+        name_counts = defaultdict(int)
+        for obj in objects:
+            name_counts[obj.name] += 1
+
+        # Generate unique names with indices only for duplicates
+        name_indices = defaultdict(int)
+        result = []
+        for obj in objects:
+            base_name = obj.name
+            if name_counts[base_name] > 1:
+                unique_name = f"{base_name}_{name_indices[base_name]}"
+                name_indices[base_name] += 1
+            else:
+                unique_name = base_name
+            result.append((obj, unique_name))
+
+        return result
+    
+    def _freeze(self):
+        """
+        Freeze the reporter state and lock further modifications.
+
+        This method sets the frozen flag to prevent the addition of new models,
+        data, or metrics after the metric computation pipeline is complete.
+        """
+        self._is_frozen = True
+
     def report_all(self):
 
         logger.info("Reporting all results...")
@@ -268,11 +311,7 @@ class ResultReporter:
     def compute_metrics(self):
             logger.info("Computing metrics...")
             
-            # 1. Create the 1-1 mapping in a single line
-            # Use id(met) to ensure absolute uniqueness even for identical objects
-            
-            self._metric_map = [(met, f"{met.name}_{i}") for i, met in enumerate(self.metrics)]
-            # if the metric is unique no need to add the index, if it has duplicate then add the index.
+            metric_map = self._generate_unique_names(self.metrics)
             def _format_metrics(metric_results) -> List[pd.DataFrame]:
                 all_results = []
                 for unique_name, model_results in metric_results.items():
@@ -291,7 +330,7 @@ class ResultReporter:
                 return [pd.concat(dfs, axis=0).reset_index() for dfs in groups.values()]
 
             results = {}
-            for met, unique_name in self._metric_map:
+            for met, unique_name in metric_map:
                 met_results = {}
 
                 for model_name, prediction_ts_list in self.computed_predictions.items():
@@ -304,9 +343,9 @@ class ResultReporter:
 
                 results[unique_name] = met_results
 
-            self._is_frozen = True
             self._raw_metric_results = results
             self._computed_metrics = _format_metrics(results)
+            self._freeze()
 
     def report_metrics(self) -> List[pd.DataFrame]:
         logger.info("Reporting metric results...")
@@ -397,19 +436,16 @@ class ResultReporter:
     def compute_predictions(self):
         logger.debug("Making predictions...")
         model_predictions = {}
-        for i, model in enumerate(self.models):
+        model_name_pairs = self._generate_unique_names(self.models)
+        for model, unique_name in model_name_pairs:
             logger.debug(
                 f"Applying model {model.__class__.__name__} to the test data..."
             )
-            predictions_ts_list = model.predict(self.test_data)
+            predictions_ts_list = model.predict(self.test_data, use_rolling_window=True)
             logger.debug(
                 f"Model {model.__class__.__name__} predictions: len of the predictions list: {len(predictions_ts_list)}"
             )
-            if model.name not in model_predictions:
-                model_predictions[model.name] = predictions_ts_list
-            else:
-                new_model_name = f"{model.name}_{i}"
-                model_predictions[new_model_name] = predictions_ts_list
+            model_predictions[unique_name] = predictions_ts_list
         self._computed_predictions = model_predictions
 
     def report_predictions(self):
