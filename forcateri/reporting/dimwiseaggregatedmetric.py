@@ -43,6 +43,8 @@ class DimwiseAggregatedMetric(Metric):
         self.axes = axes
         self.reduction = reduction
         super().__init__(name or str(self))
+        self._last_dropped_gt_steps = 0
+        self._last_dropped_pred_steps = 0
 
     @staticmethod
     def get_level_values(df, axis):
@@ -53,9 +55,12 @@ class DimwiseAggregatedMetric(Metric):
         else:
             raise ValueError("Axis not found neither in row nor in column index.")
 
-    def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
+    def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries, suppress_alignment_warning: bool = False):
 
-        ground_truth, prediction = Metric.align(ground_truth, prediction)
+        ground_truth, prediction, dropped_gt, dropped_pred = Metric.align(ground_truth, prediction, suppress_warning=suppress_alignment_warning)
+        self._last_dropped_gt_steps = dropped_gt
+        self._last_dropped_pred_steps = dropped_pred
+        
         flat_pred = prediction.data.copy().stack(level=0, future_stack=True)
         flat_gt = ground_truth.data.copy().stack(level=0, future_stack=True)
         logger.info(f"Reducing axes {self.axes}")
