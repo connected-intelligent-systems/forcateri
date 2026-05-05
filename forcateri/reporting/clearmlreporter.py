@@ -1,3 +1,4 @@
+from datetime import datetime
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -39,16 +40,20 @@ class ClearMLReporter(ResultReporter):
         Task.current_task().upload_artifact(
             name="Model Predictions", artifact_object=self.computed_predictions
         )
-        for model in self.models:
+        model_name_pairs = self._generate_unique_names(self.models)
+        for model, unique_name in model_name_pairs:
             Task.current_task().upload_artifact(
-                name=model.name, artifact_object=model
+                name=unique_name, artifact_object=model
             )
 
     def report_metrics(self):
         super().report_metrics()
         for i, df in enumerate(self.computed_metrics):
-            filename = f"metric_results_{i}.csv"
-            df.to_csv(filename)
+            col_names = df.columns.tolist()
+            filename = (
+                 f"all_metrics_results_{col_names[0]}_{col_names[1]}_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.csv"
+            )
+            df.to_csv(filename, index=False)
             Task.current_task().upload_artifact(name=filename, artifact_object=filename)
 
     def plot_metrics(self):
