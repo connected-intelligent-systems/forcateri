@@ -58,14 +58,14 @@ class TimeSeries:
         if TimeSeries.is_matching_format(data, self._representation):
             self.data = data.copy()
 
-            logger.info("TimeSeries initialized from internal-format DataFrame.")
+            logger.debug("TimeSeries initialized from internal-format DataFrame.")
         elif TimeSeries.is_compatible_format(data, self._representation):
             # If the DataFrame is compatible but not in the expected format, align it
             self.data = data.copy()
             self.align_format(self.data)
-            logger.info("TimeSeries initialized from compatible-format DataFrame.")
+            logger.debug("TimeSeries initialized from compatible-format DataFrame.")
         else:
-            logger.info(f"Raw DataFrame with {representation} cannot be aligned")
+            logger.debug(f"Raw DataFrame with {representation} cannot be aligned")
 
             raise InvalidDataFrameFormat(
                 f"Cannot build TimeSeries from the provided DataFrame: "
@@ -181,7 +181,7 @@ class TimeSeries:
         if not isinstance(index, pd.DatetimeIndex) and not freq:
             raise TypeError("Index must be a pandas.DatetimeIndex")
 
-        logger.info("Checking the frequency format of the DataFrame")
+        logger.debug("Checking the frequency format of the DataFrame")
 
         # Try pandas frequency inference first
         try:
@@ -192,21 +192,21 @@ class TimeSeries:
 
         # Frequency inference logic if pandas fails
         if inferred_freq is None:
-            logger.info("Pandas infer_freq failed, inferring manually")
+            logger.debug("Pandas infer_freq failed, inferring manually")
             diffs = index[1:] - index[:-1]
             # Filter out zero or negative deltas (duplicates or non-monotonic index)
             diffs = diffs[diffs > pd.Timedelta(0)]
 
             if len(diffs) > 0:
                 most_common_delta = diffs.value_counts().idxmax()
-                logger.info(
+                logger.debug(
                     f"Most common delta between points in 'time' index: {most_common_delta}"
                 )
                 try:
                     inferred_freq = pd.tseries.frequencies.to_offset(
                         most_common_delta
                     ).freqstr
-                    logger.info(f"Inferred frequency manually: {inferred_freq}")
+                    logger.debug(f"Inferred frequency manually: {inferred_freq}")
                 except ValueError:
                     logger.warning(
                         "Could not convert most common delta to frequency string"
@@ -215,7 +215,7 @@ class TimeSeries:
 
         # Validation logic
         if freq:
-            logger.info(f"Validating provided frequency: {freq}")
+            logger.debug(f"Validating provided frequency: {freq}")
             if inferred_freq and freq != inferred_freq:
                 # raise ValueError(
                 #     f"Provided freq {freq} is different from inferred freq {inferred_freq}"
@@ -238,7 +238,7 @@ class TimeSeries:
     ) -> bool:
         match representation:
             case TimeSeries.DETERM_REP:
-                logger.info(
+                logger.debug(
                     "Checking DataFrame for deterministic representation. Feature levels must be unique."
                 )
                 feature_level_is_unique = df.columns.get_level_values(
@@ -255,7 +255,7 @@ class TimeSeries:
                 return False
 
             case TimeSeries.QUANTILE_REP:
-                logger.info(
+                logger.debug(
                     "Checking DataFrame for quantile representation. Quantile levels should match accross all features. Also, the levels should be floats."
                 )
                 matching_quantile_levels = (
@@ -276,7 +276,7 @@ class TimeSeries:
                     # If strict is False, we only check that quantile levels are unique across features
                     return matching_quantile_levels
             case TimeSeries.SAMPLE_REP:
-                logger.info(
+                logger.debug(
                     "Checking DataFrame for sample representation. Sample levels should be integers."
                 )
                 sample_level_correct_name = all(
