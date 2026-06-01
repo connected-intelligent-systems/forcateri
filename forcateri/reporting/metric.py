@@ -65,6 +65,17 @@ class Metric:
             )
         else:
             logger.debug("No time steps were dropped during alignment.")
+        gt_features = ts_gt_shifted.data.columns.get_level_values('feature').unique()
+        pred_features = prediction.data.columns.get_level_values('feature').unique()
+        if len(gt_features) == len(pred_features) and not gt_features.equals(pred_features):
+            # Create a mapping from prediction features to ground truth features
+            rename_map = dict(zip(pred_features, gt_features))
+            logger.debug(f"Renaming prediction features: {rename_map}")
+            # Rename the feature level in the prediction columns
+            new_column_index = prediction.data.columns.to_frame(index=False).copy()
+            new_column_index['feature'] = new_column_index['feature'].map(rename_map)
+            prediction.data.columns = pd.MultiIndex.from_frame(new_column_index)
+            logger.debug(f"Prediction columns after rename: {prediction.data.columns}")
         return ts_gt_shifted, prediction
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries) -> Any:
