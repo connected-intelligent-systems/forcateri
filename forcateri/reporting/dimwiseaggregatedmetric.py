@@ -54,9 +54,9 @@ class DimwiseAggregatedMetric(Metric):
         else:
             raise ValueError("Axis not found neither in row nor in column index.")
 
-    def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries, suppress_alignment_warning: bool = False):
+    def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
 
-        ground_truth, prediction= Metric.align(ground_truth, prediction, suppress_warning=suppress_alignment_warning)
+        ground_truth, prediction= Metric.align(ground_truth, prediction)
 
         
         flat_pred = prediction.data.copy().stack(level=0, future_stack=True)
