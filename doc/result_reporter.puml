@@ -1,0 +1,49 @@
+@startuml
+<style>
+class {
+  MaximumWidth 600
+}
+</style>
+
+class ResultReporter {
+  +is_frozen: bool {readOnly}
+
+  +test_data: List[AdapterInput] {readOnly}
+  +models: List[ModelAdapter] {readOnly}
+  +metrics: List[Metric]
+
+  +computed_predictions: List[TimeSeries] {readOnly}
+  +computed_metrics: List[pandas.DataFrame] {readOnly}
+  +computed_debug_samples: List[Tuple[AdapterInput, TimeSeries]] {readOnly}
+
+  +prediction_plots: List[Any] {readOnly}
+  +metric_plots: List[Any] {readOnly}
+  +debug_sample_plots: List[Any] {readOnly}
+
+  --
+  .. constructor ..
+  +__init__(test_data: AdapterInput | Iterable[AdapterInput], models: ModelAdapter | Iterable[ModelAdapter], metrics: Metric | Iterable[Metric])
+
+  .. populating the object ..
+  +add_data(data: AdapterInput | Iterable[AdapterInput]): None
+  +add_models(models: ModelAdapter | Iterable[ModelAdapter]): None
+  +add_metrics(metrics: Metric | Iterable[Metric]): None
+  
+  +compute_predictions(): None
+  +compute_metrics(): None
+  +compute_debug_samples(): None
+  +compute_all(): None
+
+  .. generating and persisting the artifacts ..
+  +report_predictions(): None
+  +report_metrics(): None
+  +report_debug_samples(): None
+  +report_all(): None
+
+  .. generating and persisting the plots ..
+  +plot_predictions(): None
+  +plot_metrics(): None
+  +plot_debug_samples(): None
+  +plot_all(): None
+}
+@enduml
