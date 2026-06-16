@@ -39,10 +39,11 @@ class DimwiseAggregatedMetric(Metric):
             [np.ndarray, np.ndarray], Union[np.ndarray, float]
         ] = column_wise_mae,
         name: Optional[str] = None,
+        suppress_warnings:bool=False
     ):
         self.axes = axes
         self.reduction = reduction
-        super().__init__(name or str(self))
+        super().__init__(name=name or str(self), suppress_warnings=suppress_warnings)
 
 
 
@@ -57,7 +58,7 @@ class DimwiseAggregatedMetric(Metric):
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
 
-        ground_truth, prediction= Metric.align(ground_truth, prediction)
+        ground_truth, prediction= self.align(ground_truth, prediction)
 
         
         flat_pred = prediction.data.copy().stack(level=0, future_stack=True)
