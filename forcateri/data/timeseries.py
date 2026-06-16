@@ -227,7 +227,7 @@ class TimeSeries:
         else:
             if inferred_freq is None:
                 raise ValueError("Could not infer the frequency from the data")
-            logger.warning(
+            logger.info(
                 f"Freq was not provided and inferred freq is: {inferred_freq}"
             )
             self.freq = inferred_freq

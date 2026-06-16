@@ -122,8 +122,7 @@ class DimwiseAggregatedMetric(Metric):
                 reduced_df.loc[pred_label] = reduced
                 logger.debug(f"gt shape: {gt.shape}, pred shape: {pred.shape}")
                 logger.debug(f"Reduced: {reduced}")
-                logger.debug(f"gt shape: {gt.shape}, pred shape: {pred.shape}")
-                logger.debug(f"Reduced: {reduced}")
+
             return reduced_df
 
     def __str__(self):
