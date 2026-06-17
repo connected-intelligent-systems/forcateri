@@ -58,7 +58,7 @@ class DimwiseAggregatedMetric(Metric):
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
 
-        ground_truth, prediction= self.align(ground_truth, prediction)
+        ground_truth, prediction= Metric.align(ground_truth, prediction, suppress_warnings=self._suppress_warnings)
 
         
         flat_pred = prediction.data.copy().stack(level=0, future_stack=True)

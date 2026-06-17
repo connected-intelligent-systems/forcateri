@@ -20,7 +20,8 @@ class Metric:
         return self._name
     
     
-    def align(self, ground_truth: TimeSeries, prediction: TimeSeries) -> Tuple[TimeSeries, TimeSeries]:
+    @staticmethod
+    def align(ground_truth: TimeSeries, prediction: TimeSeries, suppress_warnings: bool = False) -> Tuple[TimeSeries, TimeSeries]:
         """Brings ground truth and prediction into a similar format.
 
         More precisely:
@@ -29,6 +30,14 @@ class Metric:
             3. Cuts away parts of the prediction for which there is no ground truth
             4. Cuts away parts of the ground truth for which there is no prediction
 
+        Parameters
+        ----------
+        ground_truth : TimeSeries
+            The ground truth time series
+        prediction : TimeSeries
+            The prediction time series
+        suppress_warnings : bool, optional
+            Whether to suppress alignment warnings, by default False
 
         Raises
         ------
@@ -59,7 +68,7 @@ class Metric:
         prediction.data = prediction.data.loc[common_index]
         dropped_gt_steps = old_gt_len - len(ts_gt_shifted)
         dropped_pred_steps = old_pred_len - len(prediction)
-        if (dropped_gt_steps, dropped_pred_steps) != (0, 0) and not self._suppress_warnings:
+        if (dropped_gt_steps, dropped_pred_steps) != (0, 0) and not suppress_warnings:
             logger.warning(
                 f"Alignment dropped {dropped_gt_steps} time steps from the ground truth "
                 f"and {dropped_pred_steps} time steps from the prediction."
