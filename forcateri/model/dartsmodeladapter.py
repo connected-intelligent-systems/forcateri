@@ -586,12 +586,14 @@ class DartsModelAdapter(ModelAdapter, ABC):
                     logger.debug(
                         "Converting single DartsTimeSeries with quantiles to TimeSeries"
                     )
+                    clean_cols_list = list({col.rsplit('_', 1)[0] for col in darts_df.columns})
                     ts_obj = TimeSeries(
                         data=darts_df,
                         representation=TimeSeries.QUANTILE_REP,
                         quantiles=quantiles,
                         freq=freq,
                     )
+                    ts_obj.rename_features(pattern=clean_cols_list, in_place=True)
                 elif num_samples is not None and num_samples > 1:
                     logger.debug(
                         "Converting single DartsTimeSeries with samples to TimeSeries"
@@ -627,6 +629,7 @@ class DartsModelAdapter(ModelAdapter, ABC):
                 return TimeSeries(
                     data=df, representation=TimeSeries.QUANTILE_REP, quantiles=quantiles
                 )
+
             else:
                 return TimeSeries(data=df, representation=TimeSeries.DETERM_REP)
         else:
