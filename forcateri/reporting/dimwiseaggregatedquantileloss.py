@@ -14,10 +14,11 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
         self,
         axes: List[str],
         name: Optional[str] = None,
+        suppress_warnings:bool=False
     ):
         self.axes = axes
         self.reduction = None
-        super().__init__(name=name or str(self), axes=axes)
+        super().__init__(name=name or str(self), axes=axes, suppress_warnings=suppress_warnings)
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
 

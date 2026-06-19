@@ -39,10 +39,12 @@ class DimwiseAggregatedMetric(Metric):
             [np.ndarray, np.ndarray], Union[np.ndarray, float]
         ] = column_wise_mae,
         name: Optional[str] = None,
+        suppress_warnings:bool=False
     ):
         self.axes = axes
         self.reduction = reduction
-        super().__init__(name or str(self))
+        super().__init__(name=name or str(self), suppress_warnings=suppress_warnings)
+
 
 
     @staticmethod
@@ -54,9 +56,9 @@ class DimwiseAggregatedMetric(Metric):
         else:
             raise ValueError("Axis not found neither in row nor in column index.")
 
-    def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries, suppress_alignment_warning: bool = False):
+    def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries):
 
-        ground_truth, prediction= Metric.align(ground_truth, prediction, suppress_warning=suppress_alignment_warning)
+        ground_truth, prediction= Metric.align(ground_truth, prediction, suppress_warnings=self._suppress_warnings)
 
         
         flat_pred = prediction.data.copy().stack(level=0, future_stack=True)
@@ -121,6 +123,7 @@ class DimwiseAggregatedMetric(Metric):
                 reduced_df.loc[pred_label] = reduced
                 logger.debug(f"gt shape: {gt.shape}, pred shape: {pred.shape}")
                 logger.debug(f"Reduced: {reduced}")
+
             return reduced_df
 
     def __str__(self):
