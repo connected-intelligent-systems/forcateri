@@ -1409,3 +1409,65 @@ class TimeSeries:
     
     def __deepcopy__(self, memo:Dict) -> TimeSeries:
         return self.copy(deep=True)
+    
+    def rename_features(self, pattern: List[str] | Dict[str, str]) -> TimeSeries:
+        """
+        Rename features in the TimeSeries.
+        
+        Parameters
+        ----------
+        pattern : List[str] | Dict[str, str]
+            - If List[str]: replace all features in order with the provided names
+            - If Dict[str, str]: replace only the specified feature names (keys) with new names (values)
+        
+        Returns
+        -------
+        TimeSeries
+            A new TimeSeries with renamed features
+        
+        Raises
+        ------
+        ValueError
+            If pattern is a List and its length doesn't match the number of features
+        TypeError
+            If pattern is neither a List nor a Dict
+        
+        Examples
+        --------
+        >>> ts = TimeSeries(data)  # with features: ['temp', 'humidity', 'pressure']
+        >>> 
+        >>> # Rename all features in order
+        >>> ts_renamed = ts.rename_features(['temperature', 'moisture', 'atm_pressure'])
+        >>> 
+        >>> # Rename only specific features
+        >>> ts_renamed = ts.rename_features({'temp': 'temperature', 'humidity': 'moisture'})
+        """
+        new_data = self.data.copy()
+        current_features = new_data.columns.get_level_values(0).unique().tolist()
+        
+        if isinstance(pattern, list):
+            # List pattern: replace all features in order
+            if len(pattern) != len(current_features):
+                raise ValueError(
+                    f"Pattern length ({len(pattern)}) must match number of features ({len(current_features)}). "
+                    f"Current features: {current_features}"
+                )
+            feature_mapping = dict(zip(current_features, pattern))
+        elif isinstance(pattern, dict):
+            # Dict pattern: replace only specified features
+            feature_mapping = pattern
+        else:
+            raise TypeError("Pattern must be a List[str] or Dict[str, str]")
+        
+        # Rename the features in the columns
+        new_columns = new_data.columns.map(
+            lambda x: (feature_mapping.get(x[0], x[0]), x[1]) if isinstance(x, tuple) else x
+        )
+        new_data.columns = new_columns
+        
+        return TimeSeries(
+            data=new_data,
+            representation=self._representation,
+            quantiles=self.quantiles,
+            freq=self.freq,
+        )
