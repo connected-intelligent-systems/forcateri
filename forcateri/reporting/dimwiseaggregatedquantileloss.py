@@ -33,7 +33,7 @@ class DimwiseAggregatedQuantileLoss(DimwiseAggregatedMetric):
             return quantile_metric(gt, pred, prediction.quantiles)
 
         self.reduction = quantile_loss
-        return super().__call__(ground_truth, prediction, self._suppress_warnings)
+        return super().__call__(ground_truth, prediction)
 
 
     def __str__(self):
