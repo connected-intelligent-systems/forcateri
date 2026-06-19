@@ -1410,7 +1410,7 @@ class TimeSeries:
     def __deepcopy__(self, memo:Dict) -> TimeSeries:
         return self.copy(deep=True)
     
-    def rename_features(self, pattern: List[str] | Dict[str, str]) -> TimeSeries:
+    def rename_features(self, pattern: List[str] | Dict[str, str], in_place: bool = False) -> TimeSeries:
         """
         Rename features in the TimeSeries.
         
@@ -1419,11 +1419,15 @@ class TimeSeries:
         pattern : List[str] | Dict[str, str]
             - If List[str]: replace all features in order with the provided names
             - If Dict[str, str]: replace only the specified feature names (keys) with new names (values)
+        in_place : bool, default=False
+            If True, modifies the current TimeSeries object and returns `self`.
+            If False, returns a new TimeSeries instance with renamed features.
         
         Returns
         -------
         TimeSeries
-            A new TimeSeries with renamed features
+            The renamed TimeSeries. If `in_place=True`, returns the modified instance.
+            Otherwise, returns a new TimeSeries object with renamed features.
         
         Raises
         ------
@@ -1436,14 +1440,14 @@ class TimeSeries:
         --------
         >>> ts = TimeSeries(data)  # with features: ['temp', 'humidity', 'pressure']
         >>> 
-        >>> # Rename all features in order
+        >>> # Rename all features in order (returns new TimeSeries)
         >>> ts_renamed = ts.rename_features(['temperature', 'moisture', 'atm_pressure'])
         >>> 
-        >>> # Rename only specific features
-        >>> ts_renamed = ts.rename_features({'temp': 'temperature', 'humidity': 'moisture'})
+        >>> # Rename only specific features (in-place)
+        >>> ts.rename_features({'temp': 'temperature', 'humidity': 'moisture'}, in_place=True)
         """
-        new_data = self.data.copy()
-        current_features = new_data.columns.get_level_values(0).unique().tolist()
+        target_data = self.data if in_place else self.data.copy()
+        current_features = target_data.columns.get_level_values(0).unique().tolist()
         
         if isinstance(pattern, list):
             # List pattern: replace all features in order
@@ -1460,14 +1464,18 @@ class TimeSeries:
             raise TypeError("Pattern must be a List[str] or Dict[str, str]")
         
         # Rename the features in the columns
-        new_columns = new_data.columns.map(
+        new_columns = target_data.columns.map(
             lambda x: (feature_mapping.get(x[0], x[0]), x[1]) if isinstance(x, tuple) else x
         )
-        new_data.columns = new_columns
+        target_data.columns = new_columns
         
-        return TimeSeries(
-            data=new_data,
-            representation=self._representation,
-            quantiles=self.quantiles,
-            freq=self.freq,
-        )
+        if in_place:
+            self.data = target_data
+            return self
+        else:
+            return TimeSeries(
+                data=target_data,
+                representation=self._representation,
+                quantiles=self.quantiles,
+                freq=self.freq,
+            )
