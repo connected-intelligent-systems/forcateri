@@ -75,6 +75,10 @@ class Metric:
             )
         else:
             logger.debug("No time steps were dropped during alignment.")
+        gt_features = ts_gt_shifted.data.columns.get_level_values('feature').unique()
+        pred_features = prediction.data.columns.get_level_values('feature').unique()
+        if len(gt_features) == len(pred_features) and not gt_features.equals(pred_features):
+            logger.error(f"cannot align features with different names")
         return ts_gt_shifted, prediction
 
     def __call__(self, ground_truth: TimeSeries, prediction: TimeSeries) -> Any:
