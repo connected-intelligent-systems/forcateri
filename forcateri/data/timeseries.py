@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, tzinfo
-from typing import List, Optional, Union, Tuple, Callable, Dict, Any
+from typing import List, Optional, Union, Tuple, Callable, Dict, Iterable, Any
 from pathlib import Path
 from typing_extensions import Self
 from pathlib import Path
@@ -1410,14 +1410,14 @@ class TimeSeries:
     def __deepcopy__(self, memo:Dict) -> TimeSeries:
         return self.copy(deep=True)
     
-    def rename_features(self, pattern: List[str] | Dict[str, str], in_place: bool = False) -> TimeSeries:
+    def rename_features(self, pattern: Iterable[str] | Dict[str, str], in_place: bool = False) -> TimeSeries:
         """
         Rename features in the TimeSeries.
         
         Parameters
         ----------
-        pattern : List[str] | Dict[str, str]
-            - If List[str]: replace all features in order with the provided names
+        pattern : Iterable[str] | Dict[str, str]
+            - If Iterable[str]: replace all features in order with the provided names
             - If Dict[str, str]: replace only the specified feature names (keys) with new names (values)
         in_place : bool, default=False
             If True, modifies the current TimeSeries object and returns `self`.
@@ -1434,7 +1434,7 @@ class TimeSeries:
         ValueError
             If pattern is a List and its length doesn't match the number of features
         TypeError
-            If pattern is neither a List nor a Dict
+            If pattern is neither an Iterable nor a Dict
         
         Examples
         --------
@@ -1460,8 +1460,16 @@ class TimeSeries:
         elif isinstance(pattern, dict):
             # Dict pattern: replace only specified features
             feature_mapping = pattern
+        elif hasattr(pattern, '__iter__'):
+            pattern_list = list(pattern)
+            if len(pattern_list) != len(current_features):
+                raise ValueError(
+                    f"Pattern length ({len(pattern)}) must match number of features ({len(current_features)}). "
+                    f"Current features: {current_features}"
+                )
+            feature_mapping = dict(zip(current_features,pattern_list))
         else:
-            raise TypeError("Pattern must be a List[str] or Dict[str, str]")
+            raise TypeError("Pattern must be a Iterable[str] or Dict[str, str]")
         
         # Rename the features in the columns
         new_columns = target_data.columns.map(
